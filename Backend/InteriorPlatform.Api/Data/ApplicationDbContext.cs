@@ -1,0 +1,24 @@
+using InteriorPlatform.Api.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+
+namespace InteriorPlatform.Api.Data;
+
+/// <summary>
+/// Identity EF Core database context backed by SQL Server.
+/// Authentication (AddIdentity/AddAuthentication/UseAuthentication) is
+/// intentionally not wired up yet — this context only exposes the
+/// Identity model so migrations and the database can be prepared first.
+/// </summary>
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+{
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : base(options)
+    {
+    }
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+    }
+}
