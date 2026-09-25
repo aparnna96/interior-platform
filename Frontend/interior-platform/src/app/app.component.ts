@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RoomVisualizerComponent } from './room-visualizer/room-visualizer.component';
 import { FloorPlanComponent } from './floor-plan/floor-plan.component';
 import { RegisterComponent } from './register/register.component';
+import { DEMO_RATE, calculateEstimateTotal } from './estimate/estimate-calculator';
 
 interface Swatch {
   name: string;
@@ -41,8 +42,6 @@ interface SavedProject {
   created: string;
 }
 
-const DEMO_RATE = 1500;
-
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -67,7 +66,7 @@ export class AppComponent {
 
   area = computed(() => this.appliedWidth() * this.appliedLength());
   planAspect = computed(() => `${this.appliedWidth()} / ${this.appliedLength()}`);
-  estimateTotal = computed(() => this.area() * DEMO_RATE);
+  estimateTotal = computed(() => calculateEstimateTotal(this.area(), DEMO_RATE));
   demoRate = DEMO_RATE;
 
   rooms = ['Living Room', 'Bedroom', 'Home Office'];
