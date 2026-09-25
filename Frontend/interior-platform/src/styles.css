@@ -1,1 +1,47 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --bg: #f4f3f1;
+  --surface: #ffffff;
+  --surface-soft: #f8f7f5;
+  --ink: #1c1917;
+  --ink-2: #57534e;
+  --muted: #8a8580;
+  --border: #e4ded4;
+  --border-soft: #ede8de;
+  --accent: #7c5c3e;
+  --accent-ink: #5f452d;
+  --accent-soft: #f3ebe0;
+  --success-bg: #eef3ec;
+  --success-bd: #cfdfd2;
+  --success-tx: #3d6a4c;
+  --danger: #a44a35;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.06);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, p, dl, dd, dt { margin: 0; }
+
+button { font-family: inherit; }
+input, select { font-family: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::selection { background: #e7d9c3; }

@@ -1,0 +1,89 @@
+<div
+  class="scene"
+  [style.--wall]="wall"
+  [style.--floor]="floor"
+  [style.--fabric]="fabric"
+  [style.--accent]="accent"
+  [attr.data-light]="light"
+  role="img"
+  [attr.aria-label]="room + ' preview in ' + light + ' light'"
+>
+  <!-- architecture -->
+  <div class="wall-back"></div>
+  <div class="wall-left"></div>
+  <div class="baseboard"></div>
+  <div class="floor"></div>
+  <div class="floor-grain"></div>
+
+  <!-- window -->
+  <div class="window">
+    <div class="window-frame">
+      <div class="pane"></div>
+      <div class="pane"></div>
+      <div class="mullion-v"></div>
+      <div class="mullion-h"></div>
+      <div class="sun"></div>
+    </div>
+    <div class="sill"></div>
+  </div>
+  <div class="curtain left-c"></div>
+  <div class="curtain right-c"></div>
+
+  <!-- wall art -->
+  <div class="art art-a"><span></span></div>
+  <div class="art art-b"><span></span></div>
+
+  <!-- rug -->
+  <div class="rug"><div class="rug-inner"></div></div>
+
+  <!-- sofa -->
+  <div class="sofa">
+    <div class="sofa-back"></div>
+    <div class="cushion c1"></div>
+    <div class="cushion c2"></div>
+    <div class="pillow p1"></div>
+    <div class="pillow p2"></div>
+    <div class="arm arm-l"></div>
+    <div class="arm arm-r"></div>
+    <div class="sofa-base"></div>
+    <div class="leg l1"></div>
+    <div class="leg l2"></div>
+  </div>
+
+  <!-- coffee table -->
+  <div class="table">
+    <div class="table-top"></div>
+    <div class="table-leg tl1"></div>
+    <div class="table-leg tl2"></div>
+    <div class="book"></div>
+    <div class="vase"><i></i></div>
+  </div>
+
+  <!-- armchair hint -->
+  <div class="chair">
+    <div class="chair-back"></div>
+    <div class="chair-seat"></div>
+  </div>
+
+  <!-- floor lamp -->
+  <div class="lamp">
+    <div class="lamp-glow"></div>
+    <div class="lamp-shade"></div>
+    <div class="lamp-pole"></div>
+    <div class="lamp-foot"></div>
+  </div>
+
+  <!-- plant -->
+  <div class="plant">
+    <div class="pot"></div>
+    <div class="leaf l-a"></div>
+    <div class="leaf l-b"></div>
+    <div class="leaf l-c"></div>
+    <div class="leaf l-d"></div>
+  </div>
+
+  <!-- light atmosphere -->
+  <div class="sun-patch"></div>
+  <div class="light-veil"></div>
+  <div class="vignette"></div>
+</div>

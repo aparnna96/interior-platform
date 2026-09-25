@@ -20,10 +20,10 @@ describe('AppComponent', () => {
     expect(app.title).toEqual('interior-platform');
   });
 
-  it('should render title', () => {
+  it('should render brand name', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, interior-platform');
+    expect(compiled.textContent).toContain('Interior Platform');
   });
 });

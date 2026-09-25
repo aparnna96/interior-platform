@@ -1,0 +1,53 @@
+<div class="reg">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+    <div class="reg-grid">
+      <div>
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          placeholder="you@studio.com"
+          autocomplete="email"
+        />
+        @if (form.get('email')?.touched && form.get('email')?.invalid) {
+          <p class="msg err">
+            @if (form.get('email')?.errors?.['required']) {
+              Email is required.
+            } @else if (form.get('email')?.errors?.['email']) {
+              Enter a valid email address.
+            }
+          </p>
+        }
+      </div>
+      <div>
+        <label for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          placeholder="Minimum 8 characters"
+          autocomplete="new-password"
+        />
+        @if (form.get('password')?.touched && form.get('password')?.invalid) {
+          <p class="msg err">Password is required.</p>
+        }
+      </div>
+    </div>
+
+    <div class="reg-actions">
+      <button class="btn btn-primary btn-sm" type="submit" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Saving…' : 'Create account' }}
+      </button>
+      <span class="sub small">Optional · workspace works without login</span>
+    </div>
+
+    @if (successMessage) {
+      <p class="msg ok">{{ successMessage }}</p>
+    }
+
+    @if (errorMessage) {
+      <p class="msg err">{{ errorMessage }}</p>
+    }
+  </form>
+</div>

@@ -1,0 +1,87 @@
+.plan-outer { background: var(--surface-soft); border: 1px solid var(--border-soft); border-radius: 7px; padding: 14px 12px 10px; min-width: 0; max-width: 100%; overflow: hidden; }
+.dim { display: flex; justify-content: center; }
+.dim-top { align-items: center; gap: 8px; margin-bottom: 8px; }
+.dim-top .dl { flex: 1; height: 1px; background: #a09a92; position: relative; }
+.dim-top .dl:first-child::before, .dim-top .dl:last-child::after { content: ""; position: absolute; top: -3.5px; width: 1px; height: 8px; background: #a09a92; }
+.dim-top .dl:first-child::before { left: 0; }
+.dim-top .dl:last-child::after { right: 0; }
+.dlab { font-size: 11.5px; font-weight: 700; color: var(--ink-2); background: #fff; border: 1px solid var(--border); border-radius: 99px; padding: 3px 10px; white-space: nowrap; }
+.plan-row { display: flex; gap: 8px; align-items: stretch; justify-content: center; }
+.dim-side { flex-direction: column; align-items: center; gap: 8px; }
+.dim-side .dl { flex: 1; min-height: 26px; width: 1px; background: #a09a92; position: relative; }
+.dim-side .dl:first-child::before, .dim-side .dl:last-child::after { content: ""; position: absolute; left: -3.5px; height: 1px; width: 8px; background: #a09a92; }
+.dim-side .dl:first-child::before { top: 0; }
+.dim-side .dl:last-child::after { bottom: 0; }
+.dim-side .dlab { writing-mode: vertical-rl; }
+.plan-scale { flex: 1; display: flex; justify-content: center; min-width: 0; max-width: 100%; overflow: hidden; }
+
+.plan {
+  --wall: #e4d7c0; --floor: #c9a87c; --fabric: #ece1d1; --accent: #7c5c3e;
+  position: relative; margin: 0 auto; width: 100%; max-width: 100%; min-height: 320px;
+  background: var(--floor);
+  border: 12px solid var(--wall);
+  outline: 1px solid rgba(0,0,0,0.18); outline-offset: -1px;
+  border-radius: 4px; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.14), 0 1px 3px rgba(28,25,23,0.12);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.floor-tex { position: absolute; inset: 0; pointer-events: none; }
+.plan[data-floor="FL-21"] .floor-tex { background: repeating-linear-gradient(90deg, rgba(60,35,10,0.09) 0 1px, transparent 1px 30px), linear-gradient(180deg, rgba(255,255,255,0.10), rgba(0,0,0,0.05)); }
+.plan[data-floor="FL-22"] .floor-tex { background: repeating-linear-gradient(90deg, rgba(60,35,10,0.055) 0 1px, transparent 1px 38px), linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02)); }
+.plan[data-floor="FL-23"] .floor-tex { background: repeating-linear-gradient(90deg, rgba(0,0,0,0.13) 0 1px, transparent 1px 30px), linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.04)); }
+.plan[data-floor="FL-24"] .floor-tex { background: repeating-linear-gradient(45deg, rgba(60,35,10,0.07) 0 1px, transparent 1px 9px), repeating-linear-gradient(-45deg, rgba(60,35,10,0.07) 0 1px, transparent 1px 9px); }
+.plan-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(60,35,10,0.10) 1px, transparent 1px), linear-gradient(90deg, rgba(60,35,10,0.10) 1px, transparent 1px); background-size: 28px 28px; pointer-events: none; }
+.plan-veil { position: absolute; inset: 0; pointer-events: none; }
+.plan[data-light="evening"] .plan-veil { background: linear-gradient(180deg, rgba(255,166,88,0.16), rgba(120,70,30,0.16)); }
+.plan[data-light="night"] .plan-veil { background: linear-gradient(180deg, rgba(20,28,58,0.34), rgba(20,20,40,0.30)); }
+
+.win { position: absolute; top: -9px; left: 35%; width: 30%; height: 15px; background: #fbf8f1; border: 1px solid rgba(0,0,0,0.22); border-radius: 2px; z-index: 3; pointer-events: none; }
+.win span { position: absolute; left: 50%; top: 1px; bottom: 1px; width: 2px; background: rgba(0,0,0,0.22); }
+.door { position: absolute; right: 4%; bottom: 3px; width: 64px; height: 64px; z-index: 1; pointer-events: none; overflow: visible; }
+.door-gap, .door-leaf, .door-arc { vector-effect: non-scaling-stroke; }
+.door-gap { fill: var(--floor); stroke: none; }
+.door-leaf { stroke: #4a443c; stroke-width: 1.4; }
+.door-arc { fill: none; stroke: #8a8580; stroke-width: 1; stroke-dasharray: 3 2; }
+
+.f-item { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; overflow: visible; z-index: 1; touch-action: manipulation; }
+.f-graphic { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.f-graphic * { vector-effect: non-scaling-stroke; }
+.g-shadow { fill: rgba(28,25,23,0.13); stroke: none; }
+.g-frame { fill: #fffdf9; stroke: #4a443c; stroke-width: 1.2; }
+.g-cushion { fill: var(--fabric); stroke: #4a443c; stroke-width: 1; }
+.g-seat { fill: #fffefb; stroke: #4a443c; stroke-width: 1; }
+.g-arm { fill: var(--accent); opacity: 0.88; stroke: #4a443c; stroke-width: 0.8; }
+.g-inset { fill: none; stroke: #8a8580; stroke-width: 0.9; }
+.g-leg { fill: #4a443c; stroke: none; }
+.g-head { fill: var(--accent); opacity: 0.85; }
+.g-mattress { fill: #ffffff; stroke: #4a443c; stroke-width: 1; }
+.g-pillow { fill: var(--fabric); stroke: #4a443c; stroke-width: 0.9; }
+.g-fold { stroke: #8a8580; stroke-width: 0.9; stroke-dasharray: 3 2; }
+.g-carcass { fill: #f5efe3; stroke: #4a443c; stroke-width: 1.1; }
+.g-panel { stroke: #4a443c; stroke-width: 1; }
+.g-handle { stroke: #4a443c; stroke-width: 1.1; stroke-linecap: round; }
+.g-back { fill: var(--accent); opacity: 0.85; }
+.f-item:hover .g-frame, .f-item:hover .g-seat, .f-item:hover .g-mattress, .f-item:hover .g-carcass { stroke: #1c1917; }
+.f-item.selected { outline: 2px solid #1c1917; outline-offset: 1px; z-index: 5; box-shadow: 0 0 0 4px rgba(28,25,23,0.16); }
+.f-item:focus-visible { outline: 2px solid #1c1917; outline-offset: 2px; z-index: 5; }
+.sel-ring { display: none; position: absolute; inset: -5px; border: 1.5px dashed #5f452d; border-radius: 3px; pointer-events: none; }
+.f-item.selected .sel-ring { display: block; }
+.f-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; line-height: 1.25; background: rgba(255,253,249,0.92); border: 1px solid rgba(74,68,60,0.28); border-radius: 4px; padding: 1px 5px; pointer-events: none; max-width: max-content; z-index: 2; box-shadow: 0 1px 2px rgba(28,25,23,0.12); }
+.f-label b { font-size: 8.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #1c1917; white-space: nowrap; }
+.f-label em { font-style: normal; font-size: 8px; font-weight: 600; color: #57534e; white-space: nowrap; }
+
+.plan-empty { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 2px; align-items: center; justify-content: center; color: rgba(28,25,23,0.6); text-align: center; padding: 0 16px; }
+.plan-empty p { font-size: 14px; font-weight: 650; margin: 0; }
+.plan-empty span { font-size: 12px; }
+.hint { font-size: 11.5px; color: var(--muted); text-align: center; margin: 8px 0 0; }
+
+/* Narrow screens: keep labels readable without causing page overflow. */
+@media (max-width: 480px) {
+  .plan-outer { padding: 10px 8px 8px; }
+  .plan { min-height: 260px; border-width: 10px; }
+  .dlab { font-size: 11px; padding: 2px 8px; }
+  .plan-row { gap: 6px; }
+  .f-label b { font-size: 8px; }
+  .f-label em { font-size: 7.5px; }
+  .door { width: 48px; height: 48px; }
+}
