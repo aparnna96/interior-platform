@@ -45,3 +45,26 @@ input, select { font-family: inherit; }
 }
 
 ::selection { background: #e7d9c3; }
+
+/* Public top navbar (Home / Interiors / Furniture). Workspace views keep the sidebar. */
+.pubnav{position:sticky;top:0;z-index:80;background:var(--surface);border-bottom:1px solid var(--border);min-width:0;max-width:100%;overflow-x:clip}
+.pubnav-bar{display:flex;align-items:center;justify-content:space-between;gap:12px 16px;padding:10px 24px;min-width:0;max-width:1200px;width:100%;margin:0 auto}
+.pubnav-brand{display:flex;align-items:center;gap:10px;border:0;background:none;padding:4px 2px;cursor:pointer;flex:none;min-width:0;color:var(--ink)}
+.pubnav-brand .brand-text strong{font-size:14px}
+.pubnav-links{display:flex;align-items:center;gap:2px;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:thin}
+.pubnav-links button{flex:none;border:1px solid transparent;background:transparent;border-radius:7px;padding:8px 12px;font-size:13.5px;font-weight:550;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.pubnav-links button:hover{background:var(--surface-soft);color:var(--ink)}
+.pubnav-links button.active{background:var(--accent-soft);border-color:#e3d3bd;color:var(--accent-ink)}
+.pubmenu{display:none}
+.shell.public{display:block}
+.shell.public .sidebar{display:none}
+.shell.public .main{max-width:100%}
+@media (max-width:900px){
+.pubnav-bar{padding:8px 14px}
+.pubnav-links{display:none}
+.pubmenu{display:grid;gap:2px;padding:6px 14px 12px;border-top:1px solid var(--border-soft);min-width:0;max-width:100%}
+.pubmenu button{border:1px solid transparent;background:transparent;border-radius:7px;padding:10px 12px;min-height:44px;font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer;text-align:left;width:100%;min-width:0;max-width:100%}
+.pubmenu button.active{background:var(--accent-soft);border-color:#e3d3bd;color:var(--accent-ink)}
+.shell.public .content,.shell.public .notice-wrap,.shell.public .account-wrap{padding-left:14px;padding-right:14px}
+.shell.public .statusbar{padding:10px 14px}
+}

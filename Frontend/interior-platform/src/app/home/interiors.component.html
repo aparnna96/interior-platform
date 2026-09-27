@@ -1,0 +1,55 @@
+<section class="interiors" aria-label="Interiors">
+  <header class="in-head">
+    <div>
+      <p class="kicker">Showcase · Demo</p>
+      <h1>Interiors</h1>
+      <p class="standfirst">Room ideas and recent looks from the studio floor.</p>
+    </div>
+  </header>
+
+  <section class="block" aria-label="Rooms">
+    <div class="block-head">
+      <div>
+        <p class="kicker">Rooms</p>
+        <h2>Browse by room</h2>
+      </div>
+    </div>
+    <div class="rooms-grid">
+      @for (s of spaces; track s.name) {
+        <figure class="room-tile">
+          <span class="room-media"><img [src]="s.image" [alt]="s.imageAlt" loading="lazy" /></span>
+          <figcaption>
+            <strong>{{ s.name }}</strong>
+            <span>{{ s.blurb }}</span>
+          </figcaption>
+        </figure>
+      }
+    </div>
+    <p class="note">Room-wise filtering arrives in a later stage — for now, shop every piece in Furniture.</p>
+  </section>
+
+  <section class="block" aria-label="Recent looks">
+    <div class="block-head">
+      <div>
+        <p class="kicker">Showcase</p>
+        <h2>Recent looks</h2>
+      </div>
+    </div>
+    <div class="looks-grid">
+      @for (w of showcase; track w.label) {
+        <figure class="look-tile">
+          <img [src]="w.image" [alt]="w.imageAlt" loading="lazy" />
+          <figcaption>
+            <strong>{{ w.label }}</strong>
+            <span>{{ w.note }}</span>
+          </figcaption>
+        </figure>
+      }
+    </div>
+  </section>
+
+  <div class="in-actions">
+    <button class="hp-btn hp-primary" (click)="go('catalogue')">Explore Furniture</button>
+    <button class="hp-btn hp-outline" (click)="go('visualizer')">Open Visualizer</button>
+  </div>
+</section>

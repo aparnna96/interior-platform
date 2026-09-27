@@ -1,0 +1,172 @@
+<section class="home" aria-label="Home">
+  <!-- ── 1 · Hero ─────────────────────────────────── -->
+  <header class="hero">
+    <figure class="hero-media" role="group" aria-roledescription="carousel" aria-label="Featured interiors">
+      @for (sl of slides; track sl.image; let i = $index) {
+        <img
+          class="hero-slide"
+          [class.active]="slideIndex() === i"
+          [src]="sl.image"
+          [alt]="sl.imageAlt"
+          [attr.aria-hidden]="slideIndex() === i ? 'false' : 'true'"
+          [loading]="i === 0 ? 'eager' : 'lazy'"
+        />
+      }
+      <div class="hero-shade" aria-hidden="true"></div>
+    </figure>
+    <div class="hero-copy">
+      <p class="kicker kicker-light">{{ hero.eyebrow }}</p>
+      <h1>{{ hero.title }}</h1>
+      <p class="hero-standfirst">{{ hero.standfirst }}</p>
+      <ul class="hero-points">
+        @for (pt of hero.points; track pt) {
+          <li>{{ pt }}</li>
+        }
+      </ul>
+      <div class="hero-actions">
+        <button class="hp-btn hp-light" (click)="go('visualizer')">Start Designing</button>
+        <button class="hp-btn hp-ghost" (click)="go('interiors')">Explore Interiors</button>
+      </div>
+    </div>
+    <button class="hero-arrow hero-prev" (click)="prevSlide()" aria-label="Previous slide">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="hero-arrow hero-next" (click)="nextSlide()" aria-label="Next slide">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="hero-dots" role="group" aria-label="Choose slide">
+      @for (sl of slides; track sl.image; let i = $index) {
+        <button
+          [class.active]="slideIndex() === i"
+          (click)="goToSlide(i)"
+          [attr.aria-label]="'Show slide ' + (i + 1) + ' of ' + slides.length"
+          [attr.aria-current]="slideIndex() === i ? 'true' : null"
+        ></button>
+      }
+    </div>
+  </header>
+
+  <!-- ── 2 · Explore spaces ───────────────────────── -->
+  <section class="block" aria-label="Explore spaces">
+    <div class="block-head">
+      <div>
+        <p class="kicker">Rooms</p>
+        <h2>Explore spaces</h2>
+        <p class="block-sub">Discover ideas for every room.</p>
+      </div>
+    </div>
+    <div class="spaces-grid">
+      @for (s of spaces; track s.name) {
+        <button class="space-tile" (click)="go(s.destination)" [attr.aria-label]="'Explore ' + s.name">
+          <span class="space-media"><img [src]="s.image" [alt]="s.imageAlt" loading="lazy" /></span>
+          <span class="space-info">
+            <span class="space-name">{{ s.name }}</span>
+            <span class="space-blurb">{{ s.blurb }}</span>
+          </span>
+        </button>
+      }
+    </div>
+  </section>
+
+  <!-- ── 3 · Furniture ────────────────────────────── -->
+  <section class="block" aria-label="Featured furniture">
+    <div class="block-head split">
+      <div>
+        <p class="kicker">Showroom</p>
+        <h2>Furniture for your space</h2>
+        <p class="block-sub">Explore furniture selected for modern interiors.</p>
+      </div>
+      <button class="hp-btn hp-outline" (click)="go('catalogue')">Explore Furniture</button>
+    </div>
+    <div class="feat-grid">
+      @for (p of featured; track p.id) {
+        <article class="feat" [attr.aria-label]="p.name">
+          <button class="feat-media" (click)="go('catalogue')" [attr.aria-label]="'View ' + p.name + ' in the furniture catalogue'">
+            <img [src]="p.image" [alt]="p.name" loading="lazy" />
+          </button>
+          <div class="feat-info">
+            <p class="feat-cat">{{ p.category }} · {{ p.room }}</p>
+            <h3 class="feat-name">{{ p.name }}</h3>
+            <p class="feat-price">₹{{ inr(p.price) }}</p>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+
+  <!-- ── 4 · Design your space ────────────────────── -->
+  <section class="block design" aria-label="Design your space">
+    <figure class="design-media">
+      <img [src]="designImage.image" [alt]="designImage.imageAlt" loading="lazy" />
+    </figure>
+    <div class="design-copy">
+      <p class="kicker">2D Visualizer</p>
+      <h2>Design your space</h2>
+      <p class="block-sub">Set your room dimensions, place furniture, choose finishes and see your space in 2D.</p>
+      <ol class="steps">
+        @for (st of designSteps; track st.title; let i = $index) {
+          <li>
+            <span class="step-no" aria-hidden="true">0{{ i + 1 }}</span>
+            <span class="step-text"><strong>{{ st.title }}</strong><span>{{ st.text }}</span></span>
+          </li>
+        }
+      </ol>
+      <div class="design-actions">
+        <button class="hp-btn hp-primary" (click)="go('visualizer')">Open Visualizer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 5 · Showcase ─────────────────────────────── -->
+  <section class="block" aria-label="Interior inspiration">
+    <div class="block-head split">
+      <div>
+        <p class="kicker">Showcase</p>
+        <h2>Interior inspiration</h2>
+        <p class="block-sub">Recent looks from the studio floor.</p>
+      </div>
+      <button class="hp-btn hp-outline" (click)="go('interiors')">Explore Interiors</button>
+    </div>
+    <div class="show-grid">
+      @for (w of showcase; track w.label; let i = $index) {
+        <figure class="show-tile" [class.show-lead]="i === 0">
+          <img [src]="w.image" [alt]="w.imageAlt" loading="lazy" />
+          <figcaption>
+            <strong>{{ w.label }}</strong>
+            <span>{{ w.note }}</span>
+          </figcaption>
+        </figure>
+      }
+    </div>
+  </section>
+
+  <!-- ── 6 · How it works ─────────────────────────── -->
+  <section class="block" aria-label="How it works">
+    <div class="block-head">
+      <div>
+        <p class="kicker">Process</p>
+        <h2>From idea to interior</h2>
+      </div>
+    </div>
+    <ol class="journey">
+      @for (j of journey; track j.title; let i = $index) {
+        <li>
+          <span class="step-no" aria-hidden="true">0{{ i + 1 }}</span>
+          <strong>{{ j.title }}</strong>
+          <span>{{ j.text }}</span>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <!-- ── 7 · Final CTA ────────────────────────────── -->
+  <section class="cta" aria-label="Get started">
+    <p class="kicker kicker-light">Get started</p>
+    <h2>Ready to design your space?</h2>
+    <p>Start with an idea, explore your options, and build your room step by step.</p>
+    <div class="cta-actions">
+      <button class="hp-btn hp-light" (click)="go('visualizer')">Start Designing</button>
+      <button class="hp-btn hp-ghost" (click)="go('catalogue')">Explore Furniture</button>
+    </div>
+  </section>
+</section>

@@ -1,6 +1,6 @@
-<div class="shell">
+<div class="shell" [class.rail]="sidebarCollapsed()" [class.drawer]="drawerOpen()" [class.public]="isPublicView()">
   <!-- ── Sidebar (desktop) ─────────────────── -->
-  <aside class="sidebar" aria-label="Primary navigation">
+  <aside class="sidebar" id="app-sidebar" aria-label="Primary navigation" (keydown.escape)="closeDrawer()">
     <div class="brand">
       <span class="mark" aria-hidden="true"></span>
       <span class="brand-text">
@@ -9,28 +9,68 @@
       </span>
     </div>
 
+    <nav class="nav" aria-label="Studio">
+      <p class="nav-label">Studio</p>
+      <button
+        class="nav-item"
+        aria-label="Home"
+        [attr.title]="sidebarCollapsed() ? 'Home' : null"
+        [class.active]="activeView() === 'home' && !showAccount()"
+        (click)="activeView.set('home'); showAccount.set(false); closeDrawer()"
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8.5 8 3l6 5.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 7.5V13.5h8V7.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        <span>Home</span>
+      </button>
+      <button
+        class="nav-item"
+        aria-label="Interiors"
+        [attr.title]="sidebarCollapsed() ? 'Interiors' : null"
+        [class.active]="activeView() === 'interiors' && !showAccount()"
+        (click)="activeView.set('interiors'); showAccount.set(false); closeDrawer()"
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="3" width="13" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="5.5" cy="7" r="1.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 11.5 6 8l2.5 2.5 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Interiors</span>
+      </button>
+      <button
+        class="nav-item"
+        aria-label="Furniture"
+        [attr.title]="sidebarCollapsed() ? 'Furniture' : null"
+        [class.active]="activeView() === 'catalogue' && !showAccount()"
+        (click)="activeView.set('catalogue'); showAccount.set(false); closeDrawer()"
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+        <span>Furniture</span>
+      </button>
+    </nav>
+
     <nav class="nav" aria-label="Workspace">
       <p class="nav-label">Workspace</p>
       <button
         class="nav-item"
+        aria-label="Visualizer"
+        [attr.title]="sidebarCollapsed() ? 'Visualizer' : null"
         [class.active]="activeView() === 'visualizer' && !showAccount()"
-        (click)="activeView.set('visualizer'); showAccount.set(false)"
+        (click)="activeView.set('visualizer'); showAccount.set(false); closeDrawer()"
       >
         <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="1.5" y1="6" x2="14.5" y2="6" stroke="currentColor" stroke-width="1.4"/><line x1="6" y1="6" x2="6" y2="14.5" stroke="currentColor" stroke-width="1.4"/></svg>
         <span>Visualizer</span>
       </button>
       <button
         class="nav-item"
+        aria-label="Estimates"
+        [attr.title]="sidebarCollapsed() ? 'Estimates' : null"
         [class.active]="activeView() === 'estimates' && !showAccount()"
-        (click)="activeView.set('estimates'); showAccount.set(false)"
+        (click)="activeView.set('estimates'); showAccount.set(false); closeDrawer()"
       >
         <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="11.5" x2="8.5" y2="11.5" stroke="currentColor" stroke-width="1.4"/></svg>
         <span>Estimates</span>
       </button>
       <button
         class="nav-item"
+        aria-label="Projects"
+        [attr.title]="sidebarCollapsed() ? 'Projects' : null"
         [class.active]="activeView() === 'projects' && !showAccount()"
-        (click)="activeView.set('projects'); showAccount.set(false)"
+        (click)="activeView.set('projects'); showAccount.set(false); closeDrawer()"
       >
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5a2 2 0 0 1 2-2h3l1.5 2h4.5a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
         <span>Projects</span>
@@ -42,7 +82,7 @@
 
     <nav class="nav" aria-label="General">
       <p class="nav-label">General</p>
-      <button class="nav-item" [class.active]="showAccount()" (click)="toggleAccount()">
+      <button class="nav-item" aria-label="Account" [attr.title]="sidebarCollapsed() ? 'Account' : null" [class.active]="showAccount()" (click)="toggleAccount(); closeDrawer()">
         <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 14c.8-2.6 3-4 5.5-4s4.7 1.4 5.5 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         <span>Account</span>
       </button>
@@ -56,13 +96,82 @@
       </div>
       <span class="demo-tag">Demo pricing</span>
     </div>
+    <button
+      class="btn btn-secondary side-toggle"
+      (click)="toggleSidebar()"
+      [attr.aria-expanded]="!sidebarCollapsed()"
+      [attr.aria-label]="sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+      [attr.title]="sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>{{ sidebarCollapsed() ? 'Expand' : 'Collapse' }}</span>
+    </button>
   </aside>
 
+  @if (drawerOpen()) {
+    <div class="drawer-backdrop" (click)="closeDrawer()" aria-hidden="true"></div>
+  }
+
   <!-- ── Main column ───────────────────────── -->
-  <div class="main">
+  <div class="main" [attr.inert]="drawerOpen() ? '' : null">
+    @if (isPublicView()) {
+    <!-- Public top navbar (Home / Interiors / Furniture) -->
+    <header class="pubnav" aria-label="Primary navigation">
+      <div class="pubnav-bar">
+        <button
+          class="pubnav-brand"
+          (click)="activeView.set('home'); showAccount.set(false); closeDrawer()"
+          aria-label="Interior Platform home"
+        >
+          <span class="mark" aria-hidden="true"></span>
+          <span class="brand-text">
+            <strong>Interior Platform</strong>
+          </span>
+        </button>
+        <nav class="pubnav-links" aria-label="Primary">
+          <button [class.active]="activeView() === 'home' && !showAccount()" (click)="activeView.set('home'); showAccount.set(false); closeDrawer()">Home</button>
+          <button [class.active]="activeView() === 'interiors' && !showAccount()" (click)="activeView.set('interiors'); showAccount.set(false); closeDrawer()">Interiors</button>
+          <button [class.active]="activeView() === 'catalogue' && !showAccount()" (click)="activeView.set('catalogue'); showAccount.set(false); closeDrawer()">Furniture</button>
+          <button [class.active]="activeView() === 'visualizer' && !showAccount()" (click)="activeView.set('visualizer'); showAccount.set(false); closeDrawer()">Visualizer</button>
+          <button [class.active]="activeView() === 'estimates' && !showAccount()" (click)="activeView.set('estimates'); showAccount.set(false); closeDrawer()">Estimates</button>
+          <button [class.active]="activeView() === 'projects' && !showAccount()" (click)="activeView.set('projects'); showAccount.set(false); closeDrawer()">Projects</button>
+          <button [class.active]="showAccount()" (click)="toggleAccount(); closeDrawer()">Account</button>
+        </nav>
+        <button
+          class="menu-btn pubnav-menu-btn"
+          (click)="drawerOpen() ? closeDrawer() : openDrawer()"
+          aria-label="Open navigation menu"
+          aria-controls="pubnav-menu"
+          [attr.aria-expanded]="drawerOpen()"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true"><line x1="2" y1="4" x2="14" y2="4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="2" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      @if (drawerOpen()) {
+      <nav class="pubmenu" id="pubnav-menu" aria-label="Menu">
+        <button [class.active]="activeView() === 'home' && !showAccount()" (click)="activeView.set('home'); showAccount.set(false); closeDrawer()">Home</button>
+        <button [class.active]="activeView() === 'interiors' && !showAccount()" (click)="activeView.set('interiors'); showAccount.set(false); closeDrawer()">Interiors</button>
+        <button [class.active]="activeView() === 'catalogue' && !showAccount()" (click)="activeView.set('catalogue'); showAccount.set(false); closeDrawer()">Furniture</button>
+        <button [class.active]="activeView() === 'visualizer' && !showAccount()" (click)="activeView.set('visualizer'); showAccount.set(false); closeDrawer()">Visualizer</button>
+        <button [class.active]="activeView() === 'estimates' && !showAccount()" (click)="activeView.set('estimates'); showAccount.set(false); closeDrawer()">Estimates</button>
+        <button [class.active]="activeView() === 'projects' && !showAccount()" (click)="activeView.set('projects'); showAccount.set(false); closeDrawer()">Projects</button>
+        <button [class.active]="showAccount()" (click)="toggleAccount(); closeDrawer()">Account</button>
+      </nav>
+      }
+    </header>
+    } @else {
     <!-- Mobile top navigation -->
     <header class="topbar">
       <div class="topbar-row">
+        <button
+          class="menu-btn"
+          (click)="openDrawer()"
+          aria-label="Open navigation"
+          aria-controls="app-sidebar"
+          [attr.aria-expanded]="drawerOpen()"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true"><line x1="2" y1="4" x2="14" y2="4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="2" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
         <div class="brand brand-compact">
           <span class="mark" aria-hidden="true"></span>
           <span class="brand-text">
@@ -73,6 +182,9 @@
         <span class="area-chip">{{ area() }} sq ft</span>
       </div>
       <nav class="mnav" aria-label="Workspace">
+        <button [class.active]="activeView() === 'home' && !showAccount()" (click)="activeView.set('home'); showAccount.set(false)">Home</button>
+        <button [class.active]="activeView() === 'interiors' && !showAccount()" (click)="activeView.set('interiors'); showAccount.set(false)">Interiors</button>
+        <button [class.active]="activeView() === 'catalogue' && !showAccount()" (click)="activeView.set('catalogue'); showAccount.set(false)">Furniture</button>
         <button [class.active]="activeView() === 'visualizer' && !showAccount()" (click)="activeView.set('visualizer'); showAccount.set(false)">Visualizer</button>
         <button [class.active]="activeView() === 'estimates' && !showAccount()" (click)="activeView.set('estimates'); showAccount.set(false)">Estimates</button>
         <button [class.active]="activeView() === 'projects' && !showAccount()" (click)="activeView.set('projects'); showAccount.set(false)">
@@ -81,8 +193,10 @@
         <button [class.active]="showAccount()" (click)="toggleAccount()">Account</button>
       </nav>
     </header>
+    }
 
-    <!-- Workspace header -->
+    <!-- Workspace header — Visualizer controls only; hidden in Home, Interiors and Catalogue views -->
+    @if (activeView() !== 'catalogue' && activeView() !== 'home' && activeView() !== 'interiors') {
     <header class="ws-head">
       <div class="ws-title">
         <div>
@@ -107,6 +221,7 @@
         </div>
       </div>
     </header>
+    }
 
     @if (projectNotice()) {
       <div class="notice-wrap"><p class="notice">{{ projectNotice() }}</p></div>
@@ -372,6 +487,24 @@
             <button class="btn btn-secondary btn-sm btn-block" (click)="activeView.set('estimates')">Open estimate detail</button>
           </section>
         </div>
+      </main>
+    }
+
+    @if (activeView() === 'home') {
+      <main class="content home-main">
+        <app-home (navigate)="activeView.set($event); showAccount.set(false)" />
+      </main>
+    }
+
+    @if (activeView() === 'interiors') {
+      <main class="content home-main">
+        <app-interiors (navigate)="activeView.set($event); showAccount.set(false)" />
+      </main>
+    }
+
+    @if (activeView() === 'catalogue') {
+      <main class="content cat-main">
+        <app-catalogue />
       </main>
     }
 

@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { RoomVisualizerComponent } from './room-visualizer/room-visualizer.component';
 import { FloorPlanComponent } from './floor-plan/floor-plan.component';
 import { RegisterComponent } from './register/register.component';
+import { CatalogueComponent } from './catalogue/catalogue.component';
+import { HomeComponent } from './home/home.component';
+import { InteriorsComponent } from './home/interiors.component';
 import { DEMO_RATE, calculateEstimateTotal } from './estimate/estimate-calculator';
 
 interface Swatch {
@@ -45,7 +48,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, RegisterComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, RegisterComponent, CatalogueComponent, HomeComponent, InteriorsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -53,8 +56,32 @@ export class AppComponent {
   title = 'interior-platform';
 
   // ── views ──────────────────────────────────
-  activeView = signal<'visualizer' | 'estimates' | 'projects'>('visualizer');
+  activeView = signal<'home' | 'interiors' | 'visualizer' | 'catalogue' | 'estimates' | 'projects'>('home');
   showAccount = signal(false);
+
+  /** Public website views use the top navbar; workspace views keep the sidebar. */
+  isPublicView = computed(
+    () =>
+      this.activeView() === 'home' ||
+      this.activeView() === 'interiors' ||
+      this.activeView() === 'catalogue'
+  );
+
+  // ── sidebar shell state (local only, not persisted) ──
+  sidebarCollapsed = signal(false);
+  drawerOpen = signal(false);
+
+  toggleSidebar(): void {
+    this.sidebarCollapsed.update((v) => !v);
+  }
+
+  openDrawer(): void {
+    this.drawerOpen.set(true);
+  }
+
+  closeDrawer(): void {
+    this.drawerOpen.set(false);
+  }
   canvasTab = signal<'plan' | 'preview'>('plan');
 
   // ── room setup (draft vs applied) ──────────

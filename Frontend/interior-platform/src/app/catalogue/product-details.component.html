@@ -1,0 +1,79 @@
+<section class="pd" [attr.aria-label]="product.name + ' details'">
+  <button class="pd-back" (click)="goBack()" aria-label="Back to Furniture">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Back to Furniture</span>
+  </button>
+
+  <div class="pd-grid">
+    <figure class="pd-media">
+      <span class="pd-tint" [style.background]="product.swatch" aria-hidden="true"></span>
+      <img [src]="product.image" [alt]="product.name" loading="eager" />
+    </figure>
+
+    <div class="pd-info">
+      <p class="kicker">{{ product.category }} · {{ product.room }}</p>
+      <h1 class="pd-name">{{ product.name }}</h1>
+      <p class="pd-finish">{{ product.material }} · {{ product.finish }}</p>
+      <p class="pd-price">₹{{ inr(product.price) }}</p>
+      <p class="pd-desc">{{ product.description }}</p>
+
+      <dl class="spec">
+        <div><dt>Dimensions</dt><dd>{{ product.dimensions }}</dd></div>
+        <div><dt>Material</dt><dd>{{ product.material }}</dd></div>
+        <div><dt>Finish</dt><dd>{{ product.finish }}</dd></div>
+        <div><dt>Room</dt><dd>{{ product.room }}</dd></div>
+        <div><dt>Category</dt><dd>{{ product.category }}</dd></div>
+      </dl>
+
+      <ul class="pd-list">
+        @for (d of product.details; track d) {
+          <li>{{ d }}</li>
+        }
+      </ul>
+
+      @if (cartQty > 0) {
+        <p class="pd-incart" aria-live="polite">{{ cartQty }} in cart</p>
+      }
+
+      <div class="qty-row">
+        <span class="qty-label" id="pd-qty-label">Quantity</span>
+        <div class="qty-ctrl" role="group" aria-labelledby="pd-qty-label">
+          <button
+            class="qty-btn"
+            (click)="decrement()"
+            [disabled]="quantity() <= 1"
+            [attr.aria-label]="'Decrease quantity (current ' + quantity() + ')'"
+          >−</button>
+          <input
+            class="qty-input"
+            type="number"
+            min="1"
+            step="1"
+            inputmode="numeric"
+            [value]="quantity()"
+            (input)="onQtyInput($any($event.target).value)"
+            aria-label="Quantity"
+          />
+          <button
+            class="qty-btn"
+            (click)="increment()"
+            [attr.aria-label]="'Increase quantity (current ' + quantity() + ')'"
+          >+</button>
+        </div>
+      </div>
+
+      <div class="pd-actions">
+        <button class="btn-primary" (click)="handleAddToCart()" [attr.aria-label]="'Add ' + product.name + ' to cart'">
+          Add to Cart@if (quantity() > 1) { · {{ quantity() }} }
+        </button>
+        <button class="btn-outline" (click)="handleAddToVisualizer()">Add to Visualizer</button>
+      </div>
+
+      @if (visualizerNote()) {
+        <p class="pd-note" aria-live="polite">{{ visualizerNote() }}</p>
+      } @else {
+        <p class="pd-hint">Catalogue → Visualizer pairing, prototype only.</p>
+      }
+    </div>
+  </div>
+</section>

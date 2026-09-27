@@ -7,6 +7,7 @@
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   position: sticky; top: 0; height: 100vh;
+  transition: width 0.2s ease;
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 16px 16px 12px; }
 .mark { width: 30px; height: 30px; border-radius: 7px; background: #1c1917; position: relative; flex: none; }
@@ -33,6 +34,21 @@
 .side-room strong { font-size: 12.5px; }
 .side-sub { font-size: 12px; color: var(--ink-2); }
 .demo-tag { justify-self: start; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8a5a1e; background: #fdf0dd; border: 1px solid #ecd3a3; padding: 3px 8px; border-radius: 99px; }
+
+/* Desktop collapse toggle (hidden on mobile; see responsive rules) */
+.side-toggle { margin: 4px 12px 12px; }
+.side-toggle svg { width: 15px; height: 15px; transition: transform 0.2s ease; }
+
+/* Mobile drawer controls (menu button shown only on mobile) */
+.menu-btn {
+  display: none;
+  width: 40px; height: 40px; flex: none; padding: 0;
+  align-items: center; justify-content: center;
+  border: 1px solid var(--border); background: #fff; border-radius: 7px;
+  color: var(--ink); cursor: pointer;
+}
+.menu-btn svg { width: 18px; height: 18px; }
+.drawer-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(28, 25, 23, 0.45); }
 
 /* ── Main ── */
 .main { flex: 1; min-width: 0; max-width: 100%; display: flex; flex-direction: column; }
@@ -78,6 +94,8 @@
 /* Workspace grid */
 .workspace { display: grid; gap: 14px; padding: 14px 24px 20px; grid-template-columns: 264px minmax(0, 1fr) 296px; align-items: start; width: 100%; }
 .content { padding: 14px 24px 20px; max-width: 760px; width: 100%; }
+.cat-main { max-width: 1100px; }
+.home-main { max-width: none; }
 .detail { display: grid; gap: 10px; }
 .est-page { display: grid; gap: 14px; align-content: start; max-width: 880px; }
 .est-page .panel { display: grid; gap: 8px; align-content: start; }
@@ -209,9 +227,19 @@
 .statusbar strong { font-weight: 650; }
 
 /* ── Responsive ── */
+/* Manual icon rail on wide desktop (mirrors the automatic rail below). */
+@media (min-width: 1280px) {
+  .shell.rail .sidebar { width: 68px; }
+  .shell.rail .brand-text, .shell.rail .nav-label, .shell.rail .nav-item span,
+  .shell.rail .side-foot, .shell.rail .side-toggle span { display: none; }
+  .shell.rail .brand { justify-content: center; }
+  .shell.rail .nav-item { justify-content: center; padding: 9px; }
+  .shell.rail .side-toggle { justify-content: center; margin: 4px 8px 12px; }
+  .shell.rail .side-toggle svg { transform: rotate(180deg); }
+}
 @media (min-width: 960px) and (max-width: 1279px) {
   .sidebar { width: 68px; }
-  .brand-text, .nav-label, .nav-item span, .side-foot { display: none; }
+  .brand-text, .nav-label, .nav-item span, .side-foot, .side-toggle { display: none; }
   .brand { justify-content: center; padding: 14px 8px 10px; }
   .nav { padding: 4px 8px; }
   .nav-item { justify-content: center; padding: 9px; }
@@ -219,7 +247,6 @@
   .inspector { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
 }
 @media (min-width: 720px) and (max-width: 959px) {
-  .sidebar { display: none; }
   .topbar { display: block; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 40; }
   .workspace { grid-template-columns: 1fr 1fr; }
   .canvas { grid-column: 1 / -1; order: -1; }
@@ -227,7 +254,18 @@
   .inspector .estimate { grid-column: 1 / -1; }
 }
 @media (max-width: 959px) {
-  .sidebar { display: none; }
+  /* Sidebar is an off-canvas drawer on mobile: hidden by default,
+     slides in when .drawer is set on the shell. Off-canvas content
+     sits left of the viewport so it never causes page overflow. */
+  .sidebar {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 80;
+    width: min(300px, 84vw); height: 100dvh;
+    transform: translateX(-105%); visibility: hidden;
+    transition: transform 0.22s ease, visibility 0.22s;
+  }
+  .shell.drawer .sidebar { transform: none; visibility: visible; }
+  .side-toggle { display: none; }
+  .menu-btn { display: inline-flex; }
   .topbar { display: block; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 40; }
   .topbar-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 6px; }
   .brand-compact { padding: 0; }
@@ -275,4 +313,8 @@
   .quick-move button { min-width: 32px; height: 32px; }
   .pos-row button { padding: 8px 12px; min-height: 32px; }
   .field-row input { min-height: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, .side-toggle svg { transition: none; }
 }
