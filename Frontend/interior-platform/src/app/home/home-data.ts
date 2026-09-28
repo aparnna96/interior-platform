@@ -52,7 +52,7 @@ export interface NumberedStep {
 }
 
 export const HERO = {
-  eyebrow: 'Interior Platform · Home',
+  eyebrow: 'Confident Group · Home',
   title: 'Design your space',
   standfirst: 'Interiors, furniture and tools to bring your space together.',
   points: [

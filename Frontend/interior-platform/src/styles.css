@@ -47,15 +47,22 @@ input, select { font-family: inherit; }
 ::selection { background: #e7d9c3; }
 
 /* Public top navbar (Home / Interiors / Furniture). Workspace views keep the sidebar. */
-.pubnav{position:sticky;top:0;z-index:80;background:var(--surface);border-bottom:1px solid var(--border);min-width:0;max-width:100%;overflow-x:clip}
-.pubnav-bar{display:flex;align-items:center;justify-content:space-between;gap:12px 16px;padding:10px 24px;min-width:0;max-width:1200px;width:100%;margin:0 auto}
+.pubnav{position:sticky;top:0;z-index:80;background:var(--surface);border-bottom:1px solid var(--border);min-width:0;max-width:100%;overflow-x:clip;transition:box-shadow .25s ease,background-color .25s ease}
+.pubnav.scrolled{background:#fffdf9;box-shadow:0 10px 28px rgba(28,25,23,.12)}
+.pubnav-bar{display:flex;align-items:center;justify-content:space-between;gap:12px 16px;padding:12px 24px;min-width:0;max-width:1200px;width:100%;margin:0 auto;transition:padding .25s ease}
+.pubnav.scrolled .pubnav-bar{padding-top:8px;padding-bottom:8px}
+.pubnav-brand img{transition:transform .3s ease}
+.pubnav-brand:hover img,.pubnav-brand:focus-visible img{transform:scale(1.02)}
 .pubnav-brand{display:flex;align-items:center;gap:10px;border:0;background:none;padding:4px 2px;cursor:pointer;flex:none;min-width:0;color:var(--ink)}
-.pubnav-brand .brand-text strong{font-size:14px}
 .pubnav-links{display:flex;align-items:center;gap:2px;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:thin}
-.pubnav-links button{flex:none;border:1px solid transparent;background:transparent;border-radius:7px;padding:8px 12px;font-size:13.5px;font-weight:550;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.pubnav-links button{flex:none;border:1px solid transparent;background:transparent;border-radius:7px;padding:8px 12px;font-size:13.5px;font-weight:550;color:var(--ink-2);cursor:pointer;white-space:nowrap;transition:background-color .25s ease,border-color .25s ease,color .25s ease}
 .pubnav-links button:hover{background:var(--surface-soft);color:var(--ink)}
 .pubnav-links button.active{background:var(--accent-soft);border-color:#e3d3bd;color:var(--accent-ink)}
 .pubmenu{display:none}
+@keyframes pubmenu-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.pubmenu{animation:pubmenu-in .25s ease}
+.pubmenu button{transition:background-color .25s ease,border-color .25s ease,color .25s ease}
+.cart-badge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;margin-left:6px;border-radius:99px;background:var(--accent-soft);border:1px solid #e3d3bd;color:var(--accent-ink);font-size:11px;font-weight:700;line-height:18px;vertical-align:1px}
 .shell.public{display:block}
 .shell.public .sidebar{display:none}
 .shell.public .main{max-width:100%}
@@ -67,4 +74,55 @@ input, select { font-family: inherit; }
 .pubmenu button.active{background:var(--accent-soft);border-color:#e3d3bd;color:var(--accent-ink)}
 .shell.public .content,.shell.public .notice-wrap,.shell.public .account-wrap{padding-left:14px;padding-right:14px}
 .shell.public .statusbar{padding:10px 14px}
+}
+
+/* Workspace sidebar: light premium theme matching white/navy/gold branding. */
+div.shell .sidebar{background:#fffdf9;border-right:1px solid var(--border);color:#2b3a55}
+.shell .sidebar .brand{padding:18px 16px 14px}
+.shell .sidebar .brand-mark{display:block;padding:8px 12px;min-width:0}
+.shell .sidebar .brand-window{display:block;height:52px;overflow:hidden}
+.shell .sidebar .brand-window .brand-logo{height:108px;width:auto;margin-top:-23px}
+.shell .sidebar .nav-item{color:#33415e}
+.shell .sidebar .nav-item:hover{background:#f4f0e8;color:#1f2c47}
+.shell .sidebar .nav-item.active{color:#1f2c47}
+.shell .sidebar .nav[aria-label="General"]{margin-top:10px}
+@media (min-width: 1280px){
+.pubnav .pubnav-brand{display:block;height:58px;padding:0;margin:-7px 0;overflow:hidden;transition:height .25s ease,margin .25s ease}
+.pubnav .pubnav-brand .brand-logo{height:150px;margin-top:-37px}
+.pubnav.scrolled .pubnav-brand{height:54px;margin:-9px 0}
+.shell.rail .brand-mark{width:44px;height:45px;padding:0;background:#fff;border:1px solid var(--border-soft);border-radius:10px;overflow:hidden}
+.shell.rail .brand-window{height:45px}
+.shell.rail .brand-window .brand-logo{height:184px;width:auto;margin:-28px 0 0 -10px}
+}
+@media (min-width: 960px) and (max-width: 1279px){
+.pubnav .pubnav-brand{display:block;height:50px;padding:0;margin:-10px 0;overflow:hidden;transition:height .25s ease,margin .25s ease}
+.pubnav .pubnav-brand .brand-logo{height:128px;margin-top:-31px}
+.pubnav.scrolled .pubnav-brand{height:46px;margin:-11px 0}
+.shell .sidebar .brand-mark{width:44px;height:45px;padding:0;background:#fff;border:1px solid var(--border-soft);border-radius:10px;overflow:hidden}
+.shell .sidebar .brand-window{height:45px}
+.shell .sidebar .brand-window .brand-logo{height:184px;width:auto;margin:-28px 0 0 -10px}
+}
+@media (max-width: 900px){
+.pubnav .pubnav-brand{display:block;height:44px;padding:0;margin:-2px 0;overflow:hidden}
+.pubnav .pubnav-brand .brand-logo{height:100px;width:auto;margin-top:-22px}
+}
+
+/* Restrained premium motion system (paired with the reveal directive).
+   Hidden state exists only once the directive adds .reveal, so content
+   stays fully visible when JS is unavailable. */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s cubic-bezier(.22,.61,.36,1);transition-delay:var(--reveal-delay,0ms)}
+.reveal.in{opacity:1;transform:none}
+.reveal-scale{transform:translateY(14px) scale(.985)}
+/* Mask variant for large editorial images: slow clip-path wipe instead of
+   the rise; opacity still fades. Final state matches the static design. */
+.reveal-mask{transform:none;clip-path:inset(10% 7% 10% 7% round 12px);transition:opacity .8s ease,clip-path .9s cubic-bezier(.22,.61,.36,1);transition-delay:var(--reveal-delay,0ms)}
+.reveal-mask.in{clip-path:inset(0 round 12px)}
+@media (prefers-reduced-motion: reduce){
+.reveal,.reveal.in{opacity:1;transform:none;transition:none}
+.reveal-mask,.reveal-mask.in{clip-path:none;transition:none}
+.pubnav{transition:none}
+.pubnav-bar,.pubnav .pubnav-brand{transition:none}
+.pubnav-brand img{transition:none}
+.pubnav-links button,.pubmenu button{transition:none}
+.pubmenu{animation:none}
 }

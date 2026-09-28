@@ -2,11 +2,7 @@
   <!-- ── Sidebar (desktop) ─────────────────── -->
   <aside class="sidebar" id="app-sidebar" aria-label="Primary navigation" (keydown.escape)="closeDrawer()">
     <div class="brand">
-      <span class="mark" aria-hidden="true"></span>
-      <span class="brand-text">
-        <strong>Interior Platform</strong>
-        <em>Workspace</em>
-      </span>
+      <span class="brand-mark" aria-hidden="true"><span class="brand-window" aria-hidden="true"><img class="brand-logo" src="/branding/confident-group-horizontal.png" alt="" aria-hidden="true" /></span></span>
     </div>
 
     <nav class="nav" aria-label="Studio">
@@ -113,20 +109,20 @@
   }
 
   <!-- ── Main column ───────────────────────── -->
-  <div class="main" [attr.inert]="drawerOpen() ? '' : null">
+  <!-- Inert only when the off-canvas sidebar drawer is in use (workspace views).
+       In public views the sidebar is hidden and the mobile menu lives inside
+       .main, so it must stay interactive. -->
+  <div class="main" [attr.inert]="drawerOpen() && !isPublicView() ? '' : null">
     @if (isPublicView()) {
     <!-- Public top navbar (Home / Interiors / Furniture) -->
-    <header class="pubnav" aria-label="Primary navigation">
+    <header class="pubnav" [class.scrolled]="navScrolled()" aria-label="Primary navigation">
       <div class="pubnav-bar">
         <button
           class="pubnav-brand"
           (click)="activeView.set('home'); showAccount.set(false); closeDrawer()"
-          aria-label="Interior Platform home"
+          aria-label="Confident Group home"
         >
-          <span class="mark" aria-hidden="true"></span>
-          <span class="brand-text">
-            <strong>Interior Platform</strong>
-          </span>
+          <img class="brand-logo" src="/branding/confident-group-horizontal.png" alt="" aria-hidden="true" />
         </button>
         <nav class="pubnav-links" aria-label="Primary">
           <button [class.active]="activeView() === 'home' && !showAccount()" (click)="activeView.set('home'); showAccount.set(false); closeDrawer()">Home</button>
@@ -135,6 +131,7 @@
           <button [class.active]="activeView() === 'visualizer' && !showAccount()" (click)="activeView.set('visualizer'); showAccount.set(false); closeDrawer()">Visualizer</button>
           <button [class.active]="activeView() === 'estimates' && !showAccount()" (click)="activeView.set('estimates'); showAccount.set(false); closeDrawer()">Estimates</button>
           <button [class.active]="activeView() === 'projects' && !showAccount()" (click)="activeView.set('projects'); showAccount.set(false); closeDrawer()">Projects</button>
+          <button [class.active]="activeView() === 'cart' && !showAccount()" (click)="activeView.set('cart'); showAccount.set(false); closeDrawer()" aria-label="Open cart">Cart@if (cart.totalQty() > 0) { <span class="cart-badge">{{ cart.totalQty() }}</span> }</button>
           <button [class.active]="showAccount()" (click)="toggleAccount(); closeDrawer()">Account</button>
         </nav>
         <button
@@ -155,6 +152,7 @@
         <button [class.active]="activeView() === 'visualizer' && !showAccount()" (click)="activeView.set('visualizer'); showAccount.set(false); closeDrawer()">Visualizer</button>
         <button [class.active]="activeView() === 'estimates' && !showAccount()" (click)="activeView.set('estimates'); showAccount.set(false); closeDrawer()">Estimates</button>
         <button [class.active]="activeView() === 'projects' && !showAccount()" (click)="activeView.set('projects'); showAccount.set(false); closeDrawer()">Projects</button>
+        <button [class.active]="activeView() === 'cart' && !showAccount()" (click)="activeView.set('cart'); showAccount.set(false); closeDrawer()" aria-label="Open cart">Cart@if (cart.totalQty() > 0) { <span class="cart-badge">{{ cart.totalQty() }}</span> }</button>
         <button [class.active]="showAccount()" (click)="toggleAccount(); closeDrawer()">Account</button>
       </nav>
       }
@@ -173,9 +171,9 @@
           <svg viewBox="0 0 16 16" aria-hidden="true"><line x1="2" y1="4" x2="14" y2="4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="2" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
         <div class="brand brand-compact">
-          <span class="mark" aria-hidden="true"></span>
+          <img class="brand-logo" src="/branding/confident-group-horizontal.png" alt="" aria-hidden="true" />
           <span class="brand-text">
-            <strong>Interior Platform</strong>
+            <strong>Confident Group</strong>
             <em>Workspace</em>
           </span>
         </div>
@@ -195,8 +193,8 @@
     </header>
     }
 
-    <!-- Workspace header — Visualizer controls only; hidden in Home, Interiors and Catalogue views -->
-    @if (activeView() !== 'catalogue' && activeView() !== 'home' && activeView() !== 'interiors') {
+    <!-- Workspace header — Visualizer controls only; hidden in Home, Interiors, Furniture and Cart views -->
+    @if (activeView() !== 'catalogue' && activeView() !== 'cart' && activeView() !== 'home' && activeView() !== 'interiors') {
     <header class="ws-head">
       <div class="ws-title">
         <div>
@@ -504,7 +502,13 @@
 
     @if (activeView() === 'catalogue') {
       <main class="content cat-main">
-        <app-catalogue />
+        <app-catalogue (openCart)="activeView.set('cart'); showAccount.set(false); closeDrawer()" />
+      </main>
+    }
+
+    @if (activeView() === 'cart') {
+      <main class="content cat-main">
+        <app-cart (browse)="activeView.set('catalogue'); showAccount.set(false); closeDrawer()" />
       </main>
     }
 
@@ -630,7 +634,7 @@
     }
 
     <footer class="statusbar">
-      <span><strong>Interior Platform</strong> · Workspace</span>
+      <span><strong>Confident Group</strong> · Workspace</span>
       <span class="sub small">Demo pricing · Frontend only</span>
     </footer>
   </div>

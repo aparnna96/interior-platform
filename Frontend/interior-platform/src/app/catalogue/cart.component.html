@@ -1,0 +1,72 @@
+<section class="cart" aria-label="Shopping cart">
+  <header class="cart-head">
+    <div>
+      <p class="kicker">Furniture · Cart</p>
+      <h1>Your Cart</h1>
+      @if (cart.totalQty() > 0) {
+        <p class="standfirst">{{ cart.totalQty() }} item{{ cart.totalQty() === 1 ? '' : 's' }}</p>
+      }
+    </div>
+    @if (cart.totalQty() > 0) {
+      <button class="linklike" (click)="goBrowse()">Continue browsing</button>
+    }
+  </header>
+
+  @if (cart.lines().length === 0) {
+    <div class="cart-empty">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </span>
+      <p>Your cart is empty</p>
+      <span>Beautiful pieces are waiting in the showroom.</span>
+      <button class="btn-primary" (click)="goBrowse()">Browse Furniture</button>
+    </div>
+  } @else {
+    <div class="cart-grid">
+      <div class="lines" aria-live="polite">
+        @for (l of cart.lines(); track l.product.id) {
+          <article class="line" [attr.aria-label]="l.product.name">
+            <figure class="line-media">
+              <span class="line-tint" [style.background]="l.product.swatch" aria-hidden="true"></span>
+              <img [src]="l.product.image" [alt]="l.product.name" loading="lazy" />
+            </figure>
+            <div class="line-info">
+              <p class="line-cat">{{ l.product.category }} · {{ l.product.room }}</p>
+              <h2 class="line-name">{{ l.product.name }}</h2>
+              <p class="line-unit">₹{{ inr(l.product.price) }} each</p>
+              <div class="qty-row">
+                <div class="qty-ctrl" role="group" [attr.aria-label]="'Quantity for ' + l.product.name">
+                  <button
+                    class="qty-btn"
+                    (click)="cart.decrement(l.product.id)"
+                    [disabled]="l.qty <= 1"
+                    [attr.aria-label]="'Decrease quantity (current ' + l.qty + ')'"
+                  >−</button>
+                  <span class="qty-val" aria-live="polite">{{ l.qty }}</span>
+                  <button
+                    class="qty-btn"
+                    (click)="cart.increment(l.product.id)"
+                    [attr.aria-label]="'Increase quantity (current ' + l.qty + ')'"
+                  >+</button>
+                </div>
+                <button class="linklike danger" (click)="cart.remove(l.product.id)" [attr.aria-label]="'Remove ' + l.product.name">Remove</button>
+              </div>
+            </div>
+            <p class="line-sub">₹{{ inr(l.subtotal) }}</p>
+          </article>
+        }
+      </div>
+
+      <aside class="summary" aria-label="Cart summary">
+        <h2>Summary</h2>
+        <dl class="sum-rows">
+          <div><dt>Items</dt><dd>{{ cart.totalQty() }}</dd></div>
+          <div><dt>Subtotal</dt><dd>₹{{ inr(cart.subtotal()) }}</dd></div>
+          <div class="total"><dt>Total</dt><dd>₹{{ inr(cart.subtotal()) }}</dd></div>
+        </dl>
+        <button class="btn-primary btn-block" disabled>Proceed to Checkout</button>
+        <p class="sum-hint">Checkout arrives in a later stage.</p>
+      </aside>
+    </div>
+  }
+</section>

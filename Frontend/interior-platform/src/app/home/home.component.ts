@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RevealDirective } from '../shared/reveal.directive';
 import {
   PRODUCTS,
   type CatalogueProduct,
@@ -18,7 +19,7 @@ import {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RevealDirective],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
 })

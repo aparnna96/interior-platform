@@ -9,7 +9,7 @@
   } @else {
   <!-- ── Showroom header ─────────────────────────────── -->
   <header class="sr-head">
-    <div class="sr-head-top">
+    <div class="sr-head-top" reveal>
       <div class="sr-title">
         <p class="kicker">The Showroom</p>
         <h1>Furniture</h1>
@@ -26,10 +26,10 @@
             (input)="setSearch($any($event.target).value)"
           />
         </label>
-        <span class="sr-cart" aria-live="polite">
+        <button class="sr-cart" (click)="goToCart()" aria-label="Open cart" aria-live="polite">
           <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
           Cart · {{ cartCount() }}
-        </span>
+        </button>
       </div>
     </div>
     <nav class="room-nav" aria-label="Shop by room">
@@ -44,7 +44,7 @@
   </header>
 
   <!-- ── Featured collection ─────────────────────────── -->
-  <section class="spotlight" aria-label="Featured collection">
+  <section class="spotlight" reveal aria-label="Featured collection">
     <figure class="spotlight-media">
       <img [src]="featured.image" [alt]="featured.imageAlt" loading="eager" />
     </figure>
@@ -65,7 +65,7 @@
   </section>
 
   <!-- ── Listing ─────────────────────────────────────── -->
-  <div class="listing-bar">
+  <div class="listing-bar" reveal>
     <h2 class="listing-title">
       @if (room() === 'All') { All pieces } @else { {{ room() }} }
     </h2>
@@ -75,7 +75,7 @@
   @if (filtered().length > 0) {
     <div class="sr-grid">
       @for (p of filtered(); track p.id; let i = $index) {
-        <article class="tile" [class.tile-feature]="i % 6 === 0" [attr.aria-label]="p.name">
+        <article class="tile" reveal [revealDelay]="(i % 6) * 60" [attr.aria-label]="p.name">
           <button class="tile-media" (click)="viewDetails(p.id)" [attr.aria-label]="'View ' + p.name + ' details'" tabindex="0">
             <span class="tile-tint" [style.background]="p.swatch" aria-hidden="true"></span>
             <img [src]="p.image" [alt]="p.name" loading="lazy" />

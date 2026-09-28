@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RevealDirective } from '../shared/reveal.directive';
 import type { CatalogueProduct } from './catalogue-products';
 
 export interface AddToCartEvent {
@@ -17,7 +18,7 @@ export interface AddToCartEvent {
 @Component({
   selector: 'app-product-details',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RevealDirective],
   templateUrl: './product-details.component.html',
   styleUrl: './product-details.component.css',
 })

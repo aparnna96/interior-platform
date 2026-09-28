@@ -1,9 +1,11 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RoomVisualizerComponent } from './room-visualizer/room-visualizer.component';
 import { FloorPlanComponent } from './floor-plan/floor-plan.component';
 import { RegisterComponent } from './register/register.component';
 import { CatalogueComponent } from './catalogue/catalogue.component';
+import { CartComponent } from './catalogue/cart.component';
+import { CartService } from './catalogue/cart.service';
 import { HomeComponent } from './home/home.component';
 import { InteriorsComponent } from './home/interiors.component';
 import { DEMO_RATE, calculateEstimateTotal } from './estimate/estimate-calculator';
@@ -48,7 +50,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, RegisterComponent, CatalogueComponent, HomeComponent, InteriorsComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, RegisterComponent, CatalogueComponent, CartComponent, HomeComponent, InteriorsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -56,20 +58,48 @@ export class AppComponent {
   title = 'interior-platform';
 
   // ── views ──────────────────────────────────
-  activeView = signal<'home' | 'interiors' | 'visualizer' | 'catalogue' | 'estimates' | 'projects'>('home');
+  activeView = signal<'home' | 'interiors' | 'visualizer' | 'catalogue' | 'cart' | 'estimates' | 'projects'>('home');
   showAccount = signal(false);
+
+  /** Shared frontend cart store (Pillar 2) — badge count in the navbar. */
+  readonly cart = inject(CartService);
 
   /** Public website views use the top navbar; workspace views keep the sidebar. */
   isPublicView = computed(
     () =>
       this.activeView() === 'home' ||
       this.activeView() === 'interiors' ||
-      this.activeView() === 'catalogue'
+      this.activeView() === 'catalogue' ||
+      this.activeView() === 'cart'
   );
+
+  constructor() {
+    // All views render in the same document: no router, and no app container
+    // owns the scroll (verified: no overflow-y on .shell/.main), so the
+    // window keeps the previous page's position across view switches.
+    // Reset it instantly whenever the Visualizer is entered, from any entry
+    // point (Home buttons, navbar, sidebar, project loading).
+    effect(() => {
+      if (this.activeView() === 'visualizer') {
+        window.scrollTo(0, 0);
+      }
+    });
+  }
 
   // ── sidebar shell state (local only, not persisted) ──
   sidebarCollapsed = signal(false);
   drawerOpen = signal(false);
+
+  /** Subtle compact state for the sticky public navbar once scrolled. */
+  navScrolled = signal(false);
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    const scrolled = window.scrollY > 8;
+    if (scrolled !== this.navScrolled()) {
+      this.navScrolled.set(scrolled);
+    }
+  }
 
   toggleSidebar(): void {
     this.sidebarCollapsed.update((v) => !v);

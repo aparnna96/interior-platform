@@ -5,12 +5,12 @@
   </button>
 
   <div class="pd-grid">
-    <figure class="pd-media">
+    <figure class="pd-media reveal-scale" reveal>
       <span class="pd-tint" [style.background]="product.swatch" aria-hidden="true"></span>
       <img [src]="product.image" [alt]="product.name" loading="eager" />
     </figure>
 
-    <div class="pd-info">
+    <div class="pd-info" reveal>
       <p class="kicker">{{ product.category }} · {{ product.room }}</p>
       <h1 class="pd-name">{{ product.name }}</h1>
       <p class="pd-finish">{{ product.material }} · {{ product.finish }}</p>

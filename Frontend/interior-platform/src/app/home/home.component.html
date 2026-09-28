@@ -14,7 +14,7 @@
       }
       <div class="hero-shade" aria-hidden="true"></div>
     </figure>
-    <div class="hero-copy">
+    <div class="hero-copy" [attr.data-hero-slide]="slideIndex()">
       <p class="kicker kicker-light">{{ hero.eyebrow }}</p>
       <h1>{{ hero.title }}</h1>
       <p class="hero-standfirst">{{ hero.standfirst }}</p>
@@ -48,7 +48,7 @@
 
   <!-- ── 2 · Explore spaces ───────────────────────── -->
   <section class="block" aria-label="Explore spaces">
-    <div class="block-head">
+    <div class="block-head" reveal>
       <div>
         <p class="kicker">Rooms</p>
         <h2>Explore spaces</h2>
@@ -56,9 +56,9 @@
       </div>
     </div>
     <div class="spaces-grid">
-      @for (s of spaces; track s.name) {
-        <button class="space-tile" (click)="go(s.destination)" [attr.aria-label]="'Explore ' + s.name">
-          <span class="space-media"><img [src]="s.image" [alt]="s.imageAlt" loading="lazy" /></span>
+      @for (s of spaces; track s.name; let i = $index) {
+        <button class="space-tile" reveal [revealDelay]="(i % 4) * 70" (click)="go(s.destination)" [attr.aria-label]="'Explore ' + s.name">
+          <span class="space-media"><img [src]="s.image" [alt]="s.imageAlt" loading="lazy" /><span class="space-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8h10M9.5 4.5 13 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
           <span class="space-info">
             <span class="space-name">{{ s.name }}</span>
             <span class="space-blurb">{{ s.blurb }}</span>
@@ -68,38 +68,12 @@
     </div>
   </section>
 
-  <!-- ── 3 · Furniture ────────────────────────────── -->
-  <section class="block" aria-label="Featured furniture">
-    <div class="block-head split">
-      <div>
-        <p class="kicker">Showroom</p>
-        <h2>Furniture for your space</h2>
-        <p class="block-sub">Explore furniture selected for modern interiors.</p>
-      </div>
-      <button class="hp-btn hp-outline" (click)="go('catalogue')">Explore Furniture</button>
-    </div>
-    <div class="feat-grid">
-      @for (p of featured; track p.id) {
-        <article class="feat" [attr.aria-label]="p.name">
-          <button class="feat-media" (click)="go('catalogue')" [attr.aria-label]="'View ' + p.name + ' in the furniture catalogue'">
-            <img [src]="p.image" [alt]="p.name" loading="lazy" />
-          </button>
-          <div class="feat-info">
-            <p class="feat-cat">{{ p.category }} · {{ p.room }}</p>
-            <h3 class="feat-name">{{ p.name }}</h3>
-            <p class="feat-price">₹{{ inr(p.price) }}</p>
-          </div>
-        </article>
-      }
-    </div>
-  </section>
-
-  <!-- ── 4 · Design your space ────────────────────── -->
+  <!-- ── 3 · Design your space (editorial) ──── -->
   <section class="block design" aria-label="Design your space">
-    <figure class="design-media">
+    <figure class="design-media reveal-mask" reveal>
       <img [src]="designImage.image" [alt]="designImage.imageAlt" loading="lazy" />
     </figure>
-    <div class="design-copy">
+    <div class="design-copy" reveal [revealDelay]="120">
       <p class="kicker">2D Visualizer</p>
       <h2>Design your space</h2>
       <p class="block-sub">Set your room dimensions, place furniture, choose finishes and see your space in 2D.</p>
@@ -117,9 +91,35 @@
     </div>
   </section>
 
+  <!-- ── 4 · Furniture ────────────────────────────── -->
+  <section class="block" aria-label="Featured furniture">
+    <div class="block-head split" reveal>
+      <div>
+        <p class="kicker">Showroom</p>
+        <h2>Furniture for your space</h2>
+        <p class="block-sub">Explore furniture selected for modern interiors.</p>
+      </div>
+      <button class="hp-btn hp-outline" (click)="go('catalogue')">Explore Furniture</button>
+    </div>
+    <div class="feat-grid">
+      @for (p of featured; track p.id; let i = $index) {
+        <article class="feat" reveal [revealDelay]="(i % 4) * 70" [attr.aria-label]="p.name">
+          <button class="feat-media" (click)="go('catalogue')" [attr.aria-label]="'View ' + p.name + ' in the furniture catalogue'">
+            <img [src]="p.image" [alt]="p.name" loading="lazy" />
+          </button>
+          <div class="feat-info">
+            <p class="feat-cat">{{ p.category }} · {{ p.room }}</p>
+            <h3 class="feat-name">{{ p.name }}</h3>
+            <p class="feat-price">₹{{ inr(p.price) }}</p>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+
   <!-- ── 5 · Showcase ─────────────────────────────── -->
   <section class="block" aria-label="Interior inspiration">
-    <div class="block-head split">
+    <div class="block-head split" reveal>
       <div>
         <p class="kicker">Showcase</p>
         <h2>Interior inspiration</h2>
@@ -129,7 +129,7 @@
     </div>
     <div class="show-grid">
       @for (w of showcase; track w.label; let i = $index) {
-        <figure class="show-tile" [class.show-lead]="i === 0">
+        <figure class="show-tile" reveal [revealDelay]="(i % 4) * 70" [class.show-lead]="i === 0" [class.reveal-mask]="i === 0">
           <img [src]="w.image" [alt]="w.imageAlt" loading="lazy" />
           <figcaption>
             <strong>{{ w.label }}</strong>
@@ -142,7 +142,7 @@
 
   <!-- ── 6 · How it works ─────────────────────────── -->
   <section class="block" aria-label="How it works">
-    <div class="block-head">
+    <div class="block-head" reveal>
       <div>
         <p class="kicker">Process</p>
         <h2>From idea to interior</h2>
@@ -150,7 +150,7 @@
     </div>
     <ol class="journey">
       @for (j of journey; track j.title; let i = $index) {
-        <li>
+        <li reveal [revealDelay]="(i % 4) * 70">
           <span class="step-no" aria-hidden="true">0{{ i + 1 }}</span>
           <strong>{{ j.title }}</strong>
           <span>{{ j.text }}</span>
@@ -160,7 +160,7 @@
   </section>
 
   <!-- ── 7 · Final CTA ────────────────────────────── -->
-  <section class="cta" aria-label="Get started">
+  <section class="cta" reveal aria-label="Get started">
     <p class="kicker kicker-light">Get started</p>
     <h2>Ready to design your space?</h2>
     <p>Start with an idea, explore your options, and build your room step by step.</p>

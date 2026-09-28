@@ -1,5 +1,13 @@
-/* Interiors showcase — same editorial language as Home. */
-.interiors { display: grid; gap: 30px; align-content: start; min-width: 0; max-width: 100%; }
+/* Interiors showcase — same editorial language as Home and Furniture. */
+.interiors {
+  display: grid;
+  gap: 30px;
+  align-content: start;
+  min-width: 0;
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+}
 
 .kicker {
   font-size: 11px;
@@ -9,39 +17,42 @@
   color: var(--muted);
 }
 
-.in-head h1 { font-size: 30px; font-weight: 750; letter-spacing: -0.02em; line-height: 1.1; margin-top: 4px; }
-.standfirst { font-size: 13.5px; color: var(--ink-2); margin-top: 4px; }
+.in-head h1 { font-size: 32px; font-weight: 750; letter-spacing: -0.025em; line-height: 1.08; margin-top: 6px; }
+.standfirst { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
 
 .block { display: grid; gap: 16px; min-width: 0; }
-.block-head h2 { font-size: 20px; font-weight: 750; letter-spacing: -0.015em; margin-top: 4px; }
+.block-head h2 { font-size: 22px; font-weight: 750; letter-spacing: -0.02em; margin-top: 4px; }
 
 .rooms-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
 .room-tile {
   margin: 0;
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.05);
   overflow: hidden;
   min-width: 0;
 }
 .room-media { display: block; position: relative; aspect-ratio: 16 / 10; background: #eee7d9; }
-.room-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.room-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.35s ease; }
+.room-tile:hover .room-media img { transform: scale(1.03); }
 .room-tile figcaption { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 2px; }
-.room-tile figcaption strong { font-size: 14px; }
-.room-tile figcaption span { font-size: 12px; color: var(--ink-2); }
+.room-tile figcaption strong { font-size: 14.5px; letter-spacing: -0.005em; }
+.room-tile figcaption span { font-size: 12.5px; color: var(--ink-2); }
 .note { font-size: 12.5px; color: var(--muted); }
 
 .looks-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
 .look-tile {
   position: relative;
   margin: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   aspect-ratio: 4 / 3;
   background: #e9e2d5;
   min-width: 0;
 }
-.look-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.look-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.35s ease; }
+.look-tile:hover img { transform: scale(1.03); }
 .look-tile figcaption {
   position: absolute;
   left: 12px;
@@ -78,8 +89,16 @@
 .hp-outline:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
 
 @media (max-width: 640px) {
+  .interiors { gap: 28px; }
   .rooms-grid,
   .looks-grid { grid-template-columns: minmax(0, 1fr); }
   .in-head h1 { font-size: 26px; }
   .in-actions .hp-btn { flex: 1 1 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-media img,
+  .look-tile img { transition: none; }
+  .room-tile:hover .room-media img,
+  .look-tile:hover img { transform: none; }
 }

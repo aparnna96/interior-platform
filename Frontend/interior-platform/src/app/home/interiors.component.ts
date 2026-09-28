@@ -1,5 +1,6 @@
 import { Component, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RevealDirective } from '../shared/reveal.directive';
 import {
   SPACES,
   SHOWCASE,
@@ -9,7 +10,7 @@ import {
 @Component({
   selector: 'app-interiors',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RevealDirective],
   templateUrl: './interiors.component.html',
   styleUrl: './interiors.component.css',
 })

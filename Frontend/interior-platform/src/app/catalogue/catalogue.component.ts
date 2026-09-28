@@ -1,5 +1,6 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RevealDirective } from '../shared/reveal.directive';
 import {
   ROOMS,
   PRODUCTS,
@@ -8,12 +9,13 @@ import {
   type CatalogueProduct,
   type RoomFilter,
 } from './catalogue-products';
+import { CartService } from './cart.service';
 import { ProductDetailsComponent, type AddToCartEvent } from './product-details.component';
 
 @Component({
   selector: 'app-catalogue',
   standalone: true,
-  imports: [CommonModule, ProductDetailsComponent],
+  imports: [CommonModule, ProductDetailsComponent, RevealDirective],
   templateUrl: './catalogue.component.html',
   styleUrl: './catalogue.component.css',
 })
@@ -21,17 +23,19 @@ export class CatalogueComponent {
   rooms = ROOMS;
   featured = FEATURED_COLLECTION;
 
+  private readonly cart = inject(CartService);
+
+  /** Requests the shell to open the Cart view. No routing. */
+  openCart = output<void>();
+
   search = signal('');
   room = signal<RoomFilter>('All');
-  quantities = signal<Record<string, number>>({});
   /** Dedicated details view selection. Null = listing; set = details replaces listing. */
   selectedId = signal<string | null>(null);
 
   filtered = computed(() => filterProducts(PRODUCTS, this.search(), this.room()));
 
-  cartCount = computed(() =>
-    Object.values(this.quantities()).reduce((sum, q) => sum + q, 0)
-  );
+  cartCount = computed(() => this.cart.totalQty());
 
   selected = computed<CatalogueProduct | null>(
     () => PRODUCTS.find((p) => p.id === this.selectedId()) ?? null
@@ -51,17 +55,20 @@ export class CatalogueComponent {
   }
 
   qtyOf(id: string): number {
-    return this.quantities()[id] ?? 0;
+    return this.cart.qtyOf(id);
   }
 
   addToCart(id: string): void {
-    this.quantities.update((q) => ({ ...q, [id]: (q[id] ?? 0) + 1 }));
+    this.cart.add(id, 1);
   }
 
   /** Details-view add: honours the selected quantity (min 1). */
   addToCartQty(event: AddToCartEvent): void {
-    const qty = Math.max(1, Math.floor(event.qty) || 1);
-    this.quantities.update((q) => ({ ...q, [event.id]: (q[event.id] ?? 0) + qty }));
+    this.cart.add(event.id, event.qty);
+  }
+
+  goToCart(): void {
+    this.openCart.emit();
   }
 
   viewDetails(id: string): void {
