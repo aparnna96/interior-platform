@@ -115,7 +115,7 @@
   <div class="main" [attr.inert]="drawerOpen() && !isPublicView() ? '' : null">
     @if (isPublicView()) {
     <!-- Public top navbar (Home / Interiors / Furniture) -->
-    <header class="pubnav" [class.scrolled]="navScrolled()" aria-label="Primary navigation">
+    <header class="pubnav" [class.scrolled]="navScrolled()" [class.nav-hidden]="navHidden()" aria-label="Primary navigation">
       <div class="pubnav-bar">
         <button
           class="pubnav-brand"
@@ -134,6 +134,16 @@
           <button [class.active]="activeView() === 'cart' && !showAccount()" (click)="activeView.set('cart'); showAccount.set(false); closeDrawer()" aria-label="Open cart">Cart@if (cart.totalQty() > 0) { <span class="cart-badge">{{ cart.totalQty() }}</span> }</button>
           <button [class.active]="showAccount()" (click)="toggleAccount(); closeDrawer()">Account</button>
         </nav>
+        <button
+          type="button"
+          class="pubnav-compact"
+          (click)="expandNavbar()"
+          aria-label="Confident Group — show navigation"
+          [attr.aria-hidden]="!navHidden()"
+          [attr.tabindex]="navHidden() ? '0' : '-1'"
+        >
+          <img class="brand-logo" src="/branding/confident-group-horizontal.png" alt="" aria-hidden="true" />
+        </button>
         <button
           class="menu-btn pubnav-menu-btn"
           (click)="drawerOpen() ? closeDrawer() : openDrawer()"

@@ -90,15 +90,98 @@ export class AppComponent {
   sidebarCollapsed = signal(false);
   drawerOpen = signal(false);
 
-  /** Subtle compact state for the sticky public navbar once scrolled. */
+  /** Subtle elevated state for the sticky public navbar once scrolled. */
   navScrolled = signal(false);
+
+  /**
+   * Somany-style compact state for the public navbar.
+   * True while the user is scrolling downward past the header; false at the
+   * top of the page, while scrolling upward, while the mobile menu is open,
+   * or when reduced motion is preferred. When true the full bar (links and
+   * normal brand) collapses and a compact centered logo remains visible;
+   * the header itself is never translated away. Driven by the same single
+   * window:scroll listener as {@link navScrolled} (no competing listeners).
+   */
+  navHidden = signal(false);
+
+  /** Last seen scrollY, used for scroll-direction detection with tolerance. */
+  private lastScrollY = 0;
+
+  /** Scroll past this point before the header is allowed to collapse. */
+  private static readonly NAV_HIDE_AFTER = 140;
+  /** Downward travel required to collapse (filters out jitter/bounce). */
+  private static readonly NAV_DOWN_TOLERANCE = 8;
+  /** Upward travel required to expand. Smaller than the down tolerance so
+   *  the header feels responsive without flickering. */
+  private static readonly NAV_UP_TOLERANCE = 4;
+
+  /**
+   * Expand the full navbar from the compact centered-logo state.
+   * Used by the compact logo button. Scroll-driven expands set
+   * {@link navHidden} directly so they never steal focus; syncing
+   * lastScrollY here prevents an immediate re-collapse on the next
+   * downward scroll.
+   */
+  expandNavbar(): void {
+    if (!this.navHidden()) return;
+    this.navHidden.set(false);
+    if (typeof window !== 'undefined') {
+      this.lastScrollY = window.scrollY ?? this.lastScrollY;
+    }
+  }
 
   @HostListener('window:scroll')
   onWindowScroll(): void {
-    const scrolled = window.scrollY > 8;
+    const y = window.scrollY ?? 0;
+    const scrolled = y > 8;
     if (scrolled !== this.navScrolled()) {
       this.navScrolled.set(scrolled);
     }
+
+    // Reduced motion: never collapse; the full header stays put.
+    if (
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      if (this.navHidden()) this.navHidden.set(false);
+      this.lastScrollY = y;
+      return;
+    }
+
+    // Keep the full header (and its mobile menu) expanded while the menu is open.
+    // Note: a hamburger remains reachable in the compact state, so the menu can
+    // be opened while collapsed; this branch covers scrolling with it open.
+    if (this.drawerOpen()) {
+      if (this.navHidden()) this.navHidden.set(false);
+      this.lastScrollY = y;
+      return;
+    }
+
+    // Keep the full header expanded while keyboard focus is inside it (other
+    // than on the compact logo itself) so tabbing never strands focus on
+    // visibility-hidden full-bar contents.
+    const active = typeof document !== 'undefined' ? document.activeElement : null;
+    if (active && active !== document.body) {
+      const header =
+        typeof document !== 'undefined'
+          ? document.querySelector('header.pubnav')
+          : null;
+      const compact = header?.querySelector('.pubnav-compact');
+      if (header?.contains(active) && !(compact?.contains(active))) {
+        if (this.navHidden()) this.navHidden.set(false);
+        this.lastScrollY = y;
+        return;
+      }
+    }
+
+    if (y <= AppComponent.NAV_HIDE_AFTER) {
+      if (this.navHidden()) this.navHidden.set(false);
+    } else if (y > this.lastScrollY + AppComponent.NAV_DOWN_TOLERANCE) {
+      if (!this.navHidden()) this.navHidden.set(true);
+    } else if (y < this.lastScrollY - AppComponent.NAV_UP_TOLERANCE) {
+      if (this.navHidden()) this.navHidden.set(false);
+    }
+    this.lastScrollY = y;
   }
 
   toggleSidebar(): void {
@@ -107,6 +190,12 @@ export class AppComponent {
 
   openDrawer(): void {
     this.drawerOpen.set(true);
+    // Opening the mobile menu always restores the full bar immediately so the
+    // menu appears in its existing place below the full bar (no wait for scroll).
+    if (this.navHidden()) this.navHidden.set(false);
+    if (typeof window !== 'undefined') {
+      this.lastScrollY = window.scrollY ?? this.lastScrollY;
+    }
   }
 
   closeDrawer(): void {
