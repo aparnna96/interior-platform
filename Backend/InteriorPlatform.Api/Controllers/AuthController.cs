@@ -46,6 +46,17 @@ public class AuthController : ControllerBase
             return BadRequest(new { Errors = errors });
         }
 
+        // Every public registration receives the Customer role. No public
+        // endpoint accepts a role choice, so users cannot self-assign.
+        var roleResult = await _userManager.AddToRoleAsync(user, "Customer");
+        if (!roleResult.Succeeded)
+        {
+            // Avoid leaving a partially configured account behind.
+            await _userManager.DeleteAsync(user);
+            var errors = roleResult.Errors.Select(e => e.Description).ToArray();
+            return BadRequest(new { Errors = errors });
+        }
+
         // Never return password or password hash.
         return Ok(new { user.Id, user.Email });
     }
@@ -71,12 +82,13 @@ public class AuthController : ControllerBase
             return Unauthorized();
         }
 
-        var token = GenerateJwtToken(user);
+        var roles = await _userManager.GetRolesAsync(user);
+        var token = GenerateJwtToken(user, roles);
 
         return Ok(new { Token = token });
     }
 
-    private string GenerateJwtToken(ApplicationUser user)
+    private string GenerateJwtToken(ApplicationUser user, IList<string>? roles = null)
     {
         var jwtSecret = _configuration["Jwt:Secret"];
         if (string.IsNullOrWhiteSpace(jwtSecret))
@@ -87,12 +99,22 @@ public class AuthController : ControllerBase
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id),
             new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        // Role claims use ClaimTypes.Role so [Authorize(Roles = "...")] works
+        // with the default Identity role claim mapping.
+        if (roles is not null)
+        {
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+        }
 
         var token = new JwtSecurityToken(
             claims: claims,

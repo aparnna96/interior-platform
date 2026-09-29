@@ -50,6 +50,12 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
+// Seed application roles (Customer, FieldStaff, Admin). Idempotent.
+using (var scope = app.Services.CreateScope())
+{
+    await RoleSeeder.SeedAsync(scope.ServiceProvider);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
