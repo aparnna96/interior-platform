@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RevealDirective } from '../shared/reveal.directive';
+import { LeadFormComponent } from '../leads/lead-form.component';
 import type { CatalogueProduct } from './catalogue-products';
 
 export interface AddToCartEvent {
@@ -18,7 +19,7 @@ export interface AddToCartEvent {
 @Component({
   selector: 'app-product-details',
   standalone: true,
-  imports: [CommonModule, RevealDirective],
+  imports: [CommonModule, LeadFormComponent, RevealDirective],
   templateUrl: './product-details.component.html',
   styleUrl: './product-details.component.css',
 })
@@ -32,6 +33,8 @@ export class ProductDetailsComponent implements OnChanges {
 
   /** Local purchase quantity. Always >= 1. */
   quantity = signal(1);
+  /** Whether the product enquiry form is shown. */
+  showEnquiry = signal(false);
   /** Prototype-only hint for the future Catalogue → Visualizer link. No shared state. */
   visualizerNote = signal<string | null>(null);
 
@@ -39,6 +42,7 @@ export class ProductDetailsComponent implements OnChanges {
     if (changes['product']) {
       this.quantity.set(1);
       this.visualizerNote.set(null);
+      this.showEnquiry.set(false);
     }
   }
 
@@ -65,6 +69,10 @@ export class ProductDetailsComponent implements OnChanges {
   /** Prototype action only — communicates the future Catalogue → Visualizer link. */
   handleAddToVisualizer(): void {
     this.visualizerNote.set('Noted for the Visualizer — room linking arrives in a later stage.');
+  }
+
+  toggleEnquiry(): void {
+    this.showEnquiry.update((v) => !v);
   }
 
   goBack(): void {

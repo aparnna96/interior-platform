@@ -74,6 +74,20 @@
       } @else {
         <p class="pd-hint">Catalogue → Visualizer pairing, prototype only.</p>
       }
+
+      <div class="pd-actions">
+        <button class="btn-outline" (click)="toggleEnquiry()" [attr.aria-expanded]="showEnquiry()" [attr.aria-label]="'Enquire about ' + product.name">
+          Enquire
+        </button>
+      </div>
+
+      @if (showEnquiry()) {
+        <app-lead-form
+          [interestedProductId]="product.id"
+          [contextLabel]="product.name"
+          source="Furniture Product"
+        />
+      }
     </div>
   </div>
 </section>

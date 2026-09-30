@@ -29,6 +29,8 @@ describe('ProductDetailsComponent', () => {
   async function setup(cartQty = 0) {
     await TestBed.configureTestingModule({
       imports: [ProductDetailsComponent],
+      // ProductDetails embeds the lead enquiry form (LeadService → HttpClient).
+      providers: [provideHttpClient()],
     }).compileComponents();
     const fixture = TestBed.createComponent(ProductDetailsComponent);
     fixture.componentInstance.product = product;
@@ -115,6 +117,27 @@ describe('ProductDetailsComponent', () => {
     expect(cmp.visualizerNote()).toContain('Visualizer');
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Visualizer');
+  });
+
+  it('hides the enquiry form until Enquire is chosen', async () => {
+    const fixture = await setup();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.showEnquiry()).toBe(false);
+    expect(el.querySelector('app-lead-form')).toBeFalsy();
+  });
+
+  it('shows the enquiry form with product context when Enquire is chosen', async () => {
+    const fixture = await setup();
+    const cmp = fixture.componentInstance;
+    cmp.toggleEnquiry();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const form = el.querySelector('app-lead-form');
+    expect(form).toBeTruthy();
+    expect(el.textContent).toContain(product.name);
+    cmp.toggleEnquiry();
+    fixture.detectChanges();
+    expect(el.querySelector('app-lead-form')).toBeFalsy();
   });
 });
 

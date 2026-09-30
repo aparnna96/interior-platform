@@ -1,0 +1,110 @@
+<section class="lead" aria-label="Send an enquiry">
+  <p class="kicker">Enquire</p>
+  <h2 class="lead-title">Send an enquiry</h2>
+  <p class="lead-sub">
+    Share your details and requirement — the design team will get back to you.
+    @if (contextLabel) {
+      <span class="lead-context">Enquiring about: <strong>{{ contextLabel }}</strong></span>
+    }
+  </p>
+
+  @if (submitted) {
+    <div class="msg ok" role="status">
+      <p><strong>Thank you! Your enquiry was submitted successfully.</strong></p>
+      <p>Our design team will contact you shortly.</p>
+      <button class="btn-outline" type="button" (click)="sendAnother()">Make another enquiry</button>
+    </div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+      <div class="lead-grid">
+        <div>
+          <label for="lead-name">Name *</label>
+          <input
+            id="lead-name"
+            type="text"
+            formControlName="name"
+            placeholder="Your full name"
+            autocomplete="name"
+          />
+          @if (form.get('name')?.touched && form.get('name')?.invalid) {
+            <p class="msg err">
+              @if (form.get('name')?.errors?.['required'] || form.get('name')?.errors?.['blank']) {
+                Name is required.
+              } @else if (form.get('name')?.errors?.['maxlength']) {
+                Name must be 100 characters or fewer.
+              }
+            </p>
+          }
+        </div>
+        <div>
+          <label for="lead-phone">Phone *</label>
+          <input
+            id="lead-phone"
+            type="tel"
+            formControlName="phone"
+            placeholder="Your phone number"
+            autocomplete="tel"
+          />
+          @if (form.get('phone')?.touched && form.get('phone')?.invalid) {
+            <p class="msg err">
+              @if (form.get('phone')?.errors?.['required'] || form.get('phone')?.errors?.['blank']) {
+                Phone is required.
+              } @else if (form.get('phone')?.errors?.['maxlength']) {
+                Phone must be 20 characters or fewer.
+              }
+            </p>
+          }
+        </div>
+      </div>
+
+      <div>
+        <label for="lead-email">Email <span class="opt">(optional)</span></label>
+        <input
+          id="lead-email"
+          type="email"
+          formControlName="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+        />
+        @if (form.get('email')?.touched && form.get('email')?.invalid) {
+          <p class="msg err">
+            @if (form.get('email')?.errors?.['email']) {
+              Enter a valid email address.
+            } @else if (form.get('email')?.errors?.['maxlength']) {
+              Email must be 256 characters or fewer.
+            }
+          </p>
+        }
+      </div>
+
+      <div>
+        <label for="lead-message">Requirement *</label>
+        <textarea
+          id="lead-message"
+          formControlName="message"
+          rows="4"
+          placeholder="Describe your requirement — room, size, style, budget…"
+        ></textarea>
+        @if (form.get('message')?.touched && form.get('message')?.invalid) {
+          <p class="msg err">
+            @if (form.get('message')?.errors?.['required'] || form.get('message')?.errors?.['blank']) {
+              Please describe your requirement.
+            } @else if (form.get('message')?.errors?.['maxlength']) {
+              Requirement must be 2000 characters or fewer.
+            }
+          </p>
+        }
+      </div>
+
+      <div class="lead-actions">
+        <button class="btn-primary" type="submit" [disabled]="isSubmitting">
+          {{ isSubmitting ? 'Sending…' : 'Send enquiry' }}
+        </button>
+      </div>
+
+      @if (errorMessage) {
+        <p class="msg err" role="alert">{{ errorMessage }}</p>
+      }
+    </form>
+  }
+</section>
