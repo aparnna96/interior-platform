@@ -1,6 +1,7 @@
-import { Component, output } from '@angular/core';
+import { Component, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RevealDirective } from '../shared/reveal.directive';
+import { LeadFormComponent } from '../leads/lead-form.component';
 import {
   SPACES,
   SHOWCASE,
@@ -10,7 +11,7 @@ import {
 @Component({
   selector: 'app-interiors',
   standalone: true,
-  imports: [CommonModule, RevealDirective],
+  imports: [CommonModule, LeadFormComponent, RevealDirective],
   templateUrl: './interiors.component.html',
   styleUrl: './interiors.component.css',
 })
@@ -21,7 +22,14 @@ export class InteriorsComponent {
   spaces = SPACES;
   showcase = SHOWCASE;
 
+  /** Whether the general interior enquiry form is shown. */
+  showEnquiry = signal(false);
+
   go(d: HomeDestination): void {
     this.navigate.emit(d);
+  }
+
+  toggleEnquiry(): void {
+    this.showEnquiry.update((v) => !v);
   }
 }

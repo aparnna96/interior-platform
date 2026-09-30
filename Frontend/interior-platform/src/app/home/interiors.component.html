@@ -51,5 +51,13 @@
   <div class="in-actions" reveal>
     <button class="hp-btn hp-primary" (click)="go('catalogue')">Explore Furniture</button>
     <button class="hp-btn hp-outline" (click)="go('visualizer')">Open Visualizer</button>
+    <button class="hp-btn hp-outline" (click)="toggleEnquiry()" [attr.aria-expanded]="showEnquiry()" aria-label="Talk to us about your interiors">Talk to us</button>
   </div>
+
+  @if (showEnquiry()) {
+    <app-lead-form
+      contextLabel="Interior Enquiry"
+      source="Interior Enquiry"
+    />
+  }
 </section>
