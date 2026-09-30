@@ -1,10 +1,13 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
 import { AppComponent } from './app.component';
 
 describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
+      // AppComponent injects CartService → ProductService → HttpClient.
+      providers: [provideHttpClient()],
     }).compileComponents();
   });
 

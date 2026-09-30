@@ -102,7 +102,7 @@
       <button class="hp-btn hp-outline" (click)="go('catalogue')">Explore Furniture</button>
     </div>
     <div class="feat-grid">
-      @for (p of featured; track p.id; let i = $index) {
+      @for (p of featured(); track p.id; let i = $index) {
         <article class="feat" reveal [revealDelay]="(i % 4) * 70" [attr.aria-label]="p.name">
           <button class="feat-media" (click)="go('catalogue')" [attr.aria-label]="'View ' + p.name + ' in the furniture catalogue'">
             <img [src]="p.image" [alt]="p.name" loading="lazy" />

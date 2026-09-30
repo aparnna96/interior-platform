@@ -1,19 +1,66 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { CartComponent } from './cart.component';
 import { CartService } from './cart.service';
-import { PRODUCTS } from './catalogue-products';
+import { ProductService, type ProductDto } from './product.service';
+import type { CatalogueProduct } from './catalogue-products';
+
+const PRODUCTS_URL = 'http://localhost:5175/api/products';
+
+const API_PRODUCTS: ProductDto[] = [
+  {
+    id: 'aria-3s-sofa',
+    name: 'Aria 3-Seater Fabric Sofa',
+    category: 'Sofas',
+    room: 'Living Room',
+    price: 42999,
+    material: 'Performance Bouclé',
+    finish: 'Bouclé · Warm Beige',
+    blurb: 'Deep-seat bouclé sofa.',
+    description: 'A generous three-seater.',
+    dimensions: '220 × 92 × 82 cm',
+    image: 'https://example.com/aria.jpg',
+    details: ['Bouclé cream upholstery'],
+  },
+  {
+    id: 'sona-loveseat',
+    name: 'Sona 2-Seater Loveseat',
+    category: 'Sofas',
+    room: 'Living Room',
+    price: 28499,
+    material: 'Woven Cotton Blend',
+    finish: 'Weave · Terracotta',
+    blurb: 'Compact loveseat.',
+    description: 'A compact two-seater.',
+    dimensions: '152 × 86 × 84 cm',
+    image: 'https://example.com/sona.jpg',
+    details: ['Terracotta woven fabric'],
+  },
+];
 
 describe('CartComponent', () => {
   let cart: CartService;
-  const first = PRODUCTS[0];
-  const second = PRODUCTS[1];
+  let first: CatalogueProduct;
+  let second: CatalogueProduct;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CartComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     cart = TestBed.inject(CartService);
+    const products = TestBed.inject(ProductService);
+    const httpMock = TestBed.inject(HttpTestingController);
     cart.clear();
+    products.load();
+    httpMock.expectOne(PRODUCTS_URL).flush(API_PRODUCTS);
+    httpMock.verify();
+    first = products.products()[0];
+    second = products.products()[1];
   });
 
   function setup() {

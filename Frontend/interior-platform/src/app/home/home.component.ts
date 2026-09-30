@@ -1,10 +1,8 @@
-import { Component, OnDestroy, OnInit, output, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RevealDirective } from '../shared/reveal.directive';
-import {
-  PRODUCTS,
-  type CatalogueProduct,
-} from '../catalogue/catalogue-products';
+import type { CatalogueProduct } from '../catalogue/catalogue-products';
+import { ProductService } from '../catalogue/product.service';
 import {
   HERO,
   SPACES,
@@ -39,16 +37,26 @@ export class HomeComponent implements OnInit, OnDestroy {
   designSteps = DESIGN_STEPS;
   journey = JOURNEY;
 
-  /** Featured pieces resolved live from catalogue data — never duplicated. */
-  featured: CatalogueProduct[] = FEATURED_PRODUCT_IDS.map((id) =>
-    PRODUCTS.find((p) => p.id === id)
-  ).filter((p): p is CatalogueProduct => !!p);
+  private readonly productService = inject(ProductService);
+
+  /** Featured pieces resolved from ProductService in curated FEATURED_PRODUCT_IDS order. */
+  readonly featured = computed<CatalogueProduct[]>(() => {
+    const products = this.productService.products();
+    return FEATURED_PRODUCT_IDS.map((id) =>
+      products.find((p) => p.id === id)
+    ).filter((p): p is CatalogueProduct => !!p);
+  });
 
   go(d: HomeDestination): void {
     this.navigate.emit(d);
   }
 
   ngOnInit(): void {
+    // Reuse the shared load: skipped when products are already present,
+    // deduplicated while a request is in flight by ProductService.load().
+    if (this.productService.products().length === 0) {
+      this.productService.load();
+    }
     if (this.prefersReducedMotion()) return;
     this.startAutoplay();
   }

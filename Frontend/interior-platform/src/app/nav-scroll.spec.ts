@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
 import { AppComponent } from './app.component';
 
 /** Regression guard: the public navbar must gain/lose its scrolled state
@@ -7,6 +8,8 @@ describe('AppComponent navbar scroll state', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
+      // AppComponent injects CartService → ProductService → HttpClient.
+      providers: [provideHttpClient()],
     }).compileComponents();
   });
 
