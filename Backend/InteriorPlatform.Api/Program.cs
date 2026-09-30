@@ -48,6 +48,19 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 
+// CORS for the local Angular development frontend. Restricted to exactly
+// http://localhost:4200 (no wildcard). JWT travels in the Authorization
+// header, so no credentials are required.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AngularDev", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
+            .WithHeaders("Content-Type", "Authorization");
+    });
+});
+
 var app = builder.Build();
 
 // Seed application roles (Customer, FieldStaff, Admin). Idempotent.
@@ -69,6 +82,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// CORS must run before authentication/authorization so controller
+// endpoints and preflight (OPTIONS) requests are handled correctly.
+app.UseCors("AngularDev");
 
 app.UseAuthentication();
 app.UseAuthorization();
