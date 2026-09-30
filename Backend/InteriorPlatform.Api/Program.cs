@@ -56,6 +56,12 @@ using (var scope = app.Services.CreateScope())
     await RoleSeeder.SeedAsync(scope.ServiceProvider);
 }
 
+// Seed catalogue products from the Angular catalogue. Idempotent.
+using (var scope = app.Services.CreateScope())
+{
+    await ProductSeeder.SeedAsync(scope.ServiceProvider);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
