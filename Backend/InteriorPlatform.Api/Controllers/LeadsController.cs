@@ -153,6 +153,71 @@ public class LeadsController : ControllerBase
             ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
     }
 
+    // GET /api/leads — FieldStaff/Admin only. Newest first, all statuses.
+    [HttpGet]
+    [Authorize(Roles = "FieldStaff,Admin")]
+    public async Task<ActionResult<IEnumerable<LeadResponse>>> GetLeads()
+    {
+        var leads = await _db.Leads
+            .AsNoTracking()
+            .OrderByDescending(l => l.CreatedAt)
+            .Select(l => ToResponse(l))
+            .ToListAsync();
+
+        return Ok(leads);
+    }
+
+    // GET /api/leads/{id} — FieldStaff/Admin only.
+    [HttpGet("{id:guid}")]
+    [Authorize(Roles = "FieldStaff,Admin")]
+    public async Task<ActionResult<LeadResponse>> GetLead(Guid id)
+    {
+        var lead = await _db.Leads
+            .AsNoTracking()
+            .FirstOrDefaultAsync(l => l.Id == id);
+
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(ToResponse(lead));
+    }
+
+    // PATCH /api/leads/{id}/status — FieldStaff/Admin only. Status only;
+    // every other field (including CreatedAt, UserId, InterestedProductId)
+    // is immutable here.
+    [HttpPatch("{id:guid}/status")]
+    [Authorize(Roles = "FieldStaff,Admin")]
+    public async Task<ActionResult<LeadResponse>> UpdateLeadStatus(
+        Guid id,
+        [FromBody] LeadStatusUpdateRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        if (request.Status is null || !Enum.IsDefined(request.Status.Value))
+        {
+            ModelState.AddModelError(
+                nameof(LeadStatusUpdateRequest.Status),
+                "Status must be one of: New, InProgress, Closed.");
+            return ValidationProblem(ModelState);
+        }
+
+        var lead = await _db.Leads.FirstOrDefaultAsync(l => l.Id == id);
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        lead.Status = request.Status.Value;
+        await _db.SaveChangesAsync();
+
+        return Ok(ToResponse(lead));
+    }
+
     private static LeadResponse ToResponse(Lead l) => new()
     {
         Id = l.Id,
