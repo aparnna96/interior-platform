@@ -6,11 +6,25 @@ import {
 } from '@angular/common/http/testing';
 import { ProductDetailsComponent } from './product-details.component';
 import { CatalogueComponent } from './catalogue.component';
-import { PRODUCTS } from './catalogue-products';
+import type { CatalogueProduct } from './catalogue-products';
 import type { ProductDto } from './product.service';
 
 describe('ProductDetailsComponent', () => {
-  const product = PRODUCTS.find((p) => p.id === 'aria-3s-sofa') ?? PRODUCTS[0];
+  const product: CatalogueProduct = {
+    id: 'aria-3s-sofa',
+    name: 'Aria 3-Seater Fabric Sofa',
+    category: 'Sofas',
+    room: 'Living Room',
+    price: 42999,
+    finish: 'Bouclé · Warm Beige',
+    blurb: 'Deep-seat bouclé sofa for everyday lounging.',
+    details: ['Bouclé cream upholstery', 'Solid wood frame'],
+    swatch: '',
+    image: 'https://example.com/aria.jpg',
+    material: 'Performance Bouclé',
+    dimensions: '220 × 92 × 82 cm',
+    description: 'A generous three-seater.',
+  };
 
   async function setup(cartQty = 0) {
     await TestBed.configureTestingModule({

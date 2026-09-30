@@ -4,58 +4,102 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { ROOMS, PRODUCTS, filterProducts } from './catalogue-products';
+import { ROOMS, filterProducts, type CatalogueProduct } from './catalogue-products';
 import { CatalogueComponent } from './catalogue.component';
 import type { ProductDto } from './product.service';
 
-describe('catalogue demo data', () => {
-  it('has 8 products', () => {
-    expect(PRODUCTS.length).toBe(8);
-  });
+function fixtureProduct(partial: Partial<CatalogueProduct> & { id: string }): CatalogueProduct {
+  return {
+    name: `${partial.id} name`,
+    category: 'Sofas',
+    room: 'Living Room',
+    price: 10000,
+    finish: 'Test Finish',
+    blurb: `${partial.id} blurb.`,
+    details: [`${partial.id} detail`],
+    swatch: '',
+    image: `https://example.com/${partial.id}.jpg`,
+    material: 'Test Material',
+    dimensions: '10 × 10 × 10 cm',
+    description: `${partial.id} description.`,
+    ...partial,
+  };
+}
 
-  it('has unique ids with valid rooms, finishes and positive prices', () => {
-    const ids = PRODUCTS.map((p) => p.id);
-    expect(new Set(ids).size).toBe(PRODUCTS.length);
-    for (const p of PRODUCTS) {
-      expect(ROOMS).toContain(p.room);
-      expect(p.finish.length).toBeGreaterThan(0);
-      expect(p.price).toBeGreaterThan(0);
-      expect(p.name.length).toBeGreaterThan(0);
-    }
-  });
-
-  it('covers every listed room', () => {
-    const rooms = ROOMS.filter((r) => r !== 'All');
-    for (const r of rooms) {
-      expect(PRODUCTS.some((p) => p.room === r)).toBeTrue();
-    }
-  });
-});
+/** Small local fixtures exercising every filter axis (no backend data). */
+const FIXTURES: CatalogueProduct[] = [
+  fixtureProduct({
+    id: 'sofa-a',
+    name: 'Bouclé Lounge Sofa',
+    category: 'Sofas',
+    room: 'Living Room',
+    price: 42999,
+    finish: 'Bouclé · Warm Beige',
+    material: 'Performance Bouclé',
+    blurb: 'Deep-seat sofa for everyday lounging.',
+  }),
+  fixtureProduct({
+    id: 'sofa-b',
+    name: 'Terracotta Loveseat',
+    category: 'Sofas',
+    room: 'Living Room',
+    price: 28499,
+    finish: 'Weave · Terracotta',
+    material: 'Woven Cotton Blend',
+  }),
+  fixtureProduct({
+    id: 'bed-a',
+    name: 'Oak Storage Bed',
+    category: 'Beds',
+    room: 'Bedroom',
+    price: 38999,
+    finish: 'Oak · Natural Finish',
+    material: 'Oak Veneer · Engineered Wood',
+  }),
+  fixtureProduct({
+    id: 'desk-a',
+    name: 'Foldable Study Desk',
+    category: 'Tables',
+    room: 'Workspace',
+    price: 9999,
+    finish: 'Oak · Natural',
+    material: 'Engineered Wood · Oak Finish',
+  }),
+  fixtureProduct({
+    id: 'chair-a',
+    name: 'Slate Velvet Chair',
+    category: 'Chairs',
+    room: 'Dining',
+    price: 14499,
+    finish: 'Velvet · Slate',
+    material: 'Cotton Velvet · Solid Wood',
+  }),
+];
 
 describe('filterProducts', () => {
   it('returns all products for All with empty query', () => {
-    expect(filterProducts(PRODUCTS, '', 'All').length).toBe(8);
+    expect(filterProducts(FIXTURES, '', 'All').length).toBe(5);
   });
 
   it('filters by room', () => {
-    const living = filterProducts(PRODUCTS, '', 'Living Room');
-    expect(living.length).toBe(3);
+    const living = filterProducts(FIXTURES, '', 'Living Room');
+    expect(living.length).toBe(2);
     expect(living.every((p) => p.room === 'Living Room')).toBeTrue();
   });
 
   it('matches search case-insensitively across name, finish and room', () => {
-    expect(filterProducts(PRODUCTS, 'velvet', 'All').length).toBe(1);
-    expect(filterProducts(PRODUCTS, 'BOUCLÉ', 'All').length).toBe(1);
-    expect(filterProducts(PRODUCTS, 'bedroom', 'All').length).toBe(3);
+    expect(filterProducts(FIXTURES, 'velvet', 'All').length).toBe(1);
+    expect(filterProducts(FIXTURES, 'BOUCLÉ', 'All').length).toBe(1);
+    expect(filterProducts(FIXTURES, 'bedroom', 'All').length).toBe(1);
   });
 
   it('combines search and room', () => {
-    expect(filterProducts(PRODUCTS, 'sofa', 'Bedroom').length).toBe(0);
-    expect(filterProducts(PRODUCTS, 'oak', 'Bedroom').length).toBe(2);
+    expect(filterProducts(FIXTURES, 'sofa', 'Bedroom').length).toBe(0);
+    expect(filterProducts(FIXTURES, 'oak', 'Bedroom').length).toBe(1);
   });
 
   it('returns empty for no match', () => {
-    expect(filterProducts(PRODUCTS, 'xyz-no-match', 'All')).toEqual([]);
+    expect(filterProducts(FIXTURES, 'xyz-no-match', 'All')).toEqual([]);
   });
 });
 

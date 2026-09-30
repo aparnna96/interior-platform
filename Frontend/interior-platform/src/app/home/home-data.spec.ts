@@ -7,7 +7,6 @@ import {
   JOURNEY,
   FEATURED_PRODUCT_IDS,
 } from './home-data';
-import { PRODUCTS } from '../catalogue/catalogue-products';
 
 describe('home demo content', () => {
   it('has four room spaces with Pexels imagery', () => {
@@ -40,10 +39,12 @@ describe('home demo content', () => {
     }
   });
 
-  it('resolves every featured id against catalogue products', () => {
+  it('defines a curated, unique featured-id list', () => {
     expect(FEATURED_PRODUCT_IDS.length).toBeGreaterThan(0);
+    expect(new Set(FEATURED_PRODUCT_IDS).size).toBe(FEATURED_PRODUCT_IDS.length);
     for (const id of FEATURED_PRODUCT_IDS) {
-      expect(PRODUCTS.some((p) => p.id === id)).toBeTrue();
+      expect(typeof id).toBe('string');
+      expect(id.length).toBeGreaterThan(0);
     }
   });
 
