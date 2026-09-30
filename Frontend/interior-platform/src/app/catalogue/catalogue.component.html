@@ -72,7 +72,18 @@
     <p class="listing-count">{{ filtered().length }} piece{{ filtered().length === 1 ? '' : 's' }}</p>
   </div>
 
-  @if (filtered().length > 0) {
+  @if (productService.loading() && productService.products().length === 0) {
+    <div class="sr-empty" aria-live="polite">
+      <p>Loading furniture…</p>
+      <span>Fetching the latest pieces.</span>
+    </div>
+  } @else if (productService.error() && productService.products().length === 0) {
+    <div class="sr-empty" role="alert">
+      <p>Could not load furniture.</p>
+      <span>{{ productService.error() }}</span>
+      <button class="addbtn" (click)="productService.load()" aria-label="Retry loading furniture">Retry</button>
+    </div>
+  } @else if (filtered().length > 0) {
     <div class="sr-grid">
       @for (p of filtered(); track p.id; let i = $index) {
         <article class="tile" reveal [revealDelay]="(i % 6) * 60" [attr.aria-label]="p.name">

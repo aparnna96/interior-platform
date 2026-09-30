@@ -1,15 +1,15 @@
-import { Component, computed, inject, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RevealDirective } from '../shared/reveal.directive';
 import {
   ROOMS,
-  PRODUCTS,
   FEATURED_COLLECTION,
   filterProducts,
   type CatalogueProduct,
   type RoomFilter,
 } from './catalogue-products';
 import { CartService } from './cart.service';
+import { ProductService } from './product.service';
 import { ProductDetailsComponent, type AddToCartEvent } from './product-details.component';
 
 @Component({
@@ -19,11 +19,12 @@ import { ProductDetailsComponent, type AddToCartEvent } from './product-details.
   templateUrl: './catalogue.component.html',
   styleUrl: './catalogue.component.css',
 })
-export class CatalogueComponent {
+export class CatalogueComponent implements OnInit {
   rooms = ROOMS;
   featured = FEATURED_COLLECTION;
 
   private readonly cart = inject(CartService);
+  readonly productService = inject(ProductService);
 
   /** Requests the shell to open the Cart view. No routing. */
   openCart = output<void>();
@@ -33,12 +34,20 @@ export class CatalogueComponent {
   /** Dedicated details view selection. Null = listing; set = details replaces listing. */
   selectedId = signal<string | null>(null);
 
-  filtered = computed(() => filterProducts(PRODUCTS, this.search(), this.room()));
+  ngOnInit(): void {
+    this.productService.load();
+  }
+
+  filtered = computed(() =>
+    filterProducts(this.productService.products(), this.search(), this.room())
+  );
 
   cartCount = computed(() => this.cart.totalQty());
 
   selected = computed<CatalogueProduct | null>(
-    () => PRODUCTS.find((p) => p.id === this.selectedId()) ?? null
+    () =>
+      this.productService.products().find((p) => p.id === this.selectedId()) ??
+      null
   );
 
   setSearch(raw: string): void {
@@ -49,9 +58,10 @@ export class CatalogueComponent {
     this.room.set(r);
   }
 
-  /** Number of demo pieces in a room (used for the room navigation counts). */
+  /** Number of loaded pieces in a room (used for the room navigation counts). */
   countFor(r: RoomFilter): number {
-    return r === 'All' ? PRODUCTS.length : PRODUCTS.filter((p) => p.room === r).length;
+    const products = this.productService.products();
+    return r === 'All' ? products.length : products.filter((p) => p.room === r).length;
   }
 
   qtyOf(id: string): number {

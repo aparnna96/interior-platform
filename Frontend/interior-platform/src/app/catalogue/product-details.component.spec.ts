@@ -1,7 +1,13 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ProductDetailsComponent } from './product-details.component';
 import { CatalogueComponent } from './catalogue.component';
 import { PRODUCTS } from './catalogue-products';
+import type { ProductDto } from './product.service';
 
 describe('ProductDetailsComponent', () => {
   const product = PRODUCTS.find((p) => p.id === 'aria-3s-sofa') ?? PRODUCTS[0];
@@ -99,13 +105,58 @@ describe('ProductDetailsComponent', () => {
 });
 
 describe('CatalogueComponent product-details wiring', () => {
-  it('selects a valid product and returns to Furniture', async () => {
+  const apiProducts: ProductDto[] = [
+    {
+      id: 'aria-3s-sofa',
+      name: 'Aria 3-Seater Fabric Sofa',
+      category: 'Sofas',
+      room: 'Living Room',
+      price: 42999,
+      material: 'Performance Bouclé',
+      finish: 'Bouclé · Warm Beige',
+      blurb: 'Deep-seat bouclé sofa.',
+      description: 'A generous three-seater.',
+      dimensions: '220 × 92 × 82 cm',
+      image: 'https://example.com/aria.jpg',
+      details: ['Bouclé cream upholstery'],
+    },
+    {
+      id: 'sona-loveseat',
+      name: 'Sona 2-Seater Loveseat',
+      category: 'Sofas',
+      room: 'Living Room',
+      price: 28499,
+      material: 'Woven Cotton Blend',
+      finish: 'Weave · Terracotta',
+      blurb: 'Compact loveseat.',
+      description: 'A compact two-seater.',
+      dimensions: '152 × 86 × 84 cm',
+      image: 'https://example.com/sona.jpg',
+      details: ['Terracotta woven fabric'],
+    },
+  ];
+
+  async function setupCatalogue() {
     await TestBed.configureTestingModule({
       imports: [CatalogueComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const fixture = TestBed.createComponent(CatalogueComponent);
     fixture.detectChanges();
-    const cmp = fixture.componentInstance;
+    const httpMock = TestBed.inject(HttpTestingController);
+    httpMock
+      .expectOne('http://localhost:5175/api/products')
+      .flush(apiProducts);
+    fixture.detectChanges();
+    return { fixture, cmp: fixture.componentInstance, httpMock };
+  }
+
+  afterEach(() => {
+    TestBed.inject(HttpTestingController, null)?.verify();
+  });
+
+  it('selects a valid product and returns to Furniture', async () => {
+    const { fixture, cmp } = await setupCatalogue();
 
     expect(cmp.selected()).toBeNull();
     cmp.viewDetails('sona-loveseat');
@@ -123,11 +174,7 @@ describe('CatalogueComponent product-details wiring', () => {
   });
 
   it('adds the details quantity to the existing cart count', async () => {
-    await TestBed.configureTestingModule({
-      imports: [CatalogueComponent],
-    }).compileComponents();
-    const fixture = TestBed.createComponent(CatalogueComponent);
-    const cmp = fixture.componentInstance;
+    const { cmp } = await setupCatalogue();
     expect(cmp.cartCount()).toBe(0);
     cmp.addToCartQty({ id: 'aria-3s-sofa', qty: 3 });
     expect(cmp.qtyOf('aria-3s-sofa')).toBe(3);
