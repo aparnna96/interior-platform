@@ -1,7 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { AppComponent } from './app.component';
-import { AUTH_TOKEN_KEY } from './auth.service';
+import { AuthService, AUTH_TOKEN_KEY } from './auth.service';
+import { environment } from '../environments/environment';
+
+const ESTIMATES_URL = `${environment.apiBaseUrl}/api/estimates`;
+const CART_URL = `${environment.apiBaseUrl}/api/cart`;
 
 describe('AppComponent', () => {
   beforeEach(async () => {
@@ -9,7 +17,7 @@ describe('AppComponent', () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
       // AppComponent injects CartService → HttpClient (+ AuthService).
-      providers: [provideHttpClient()],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
   });
 
@@ -130,6 +138,207 @@ describe('AppComponent', () => {
       expect(app.appliedLength()).toBe(10);
       expect(el.textContent).toContain('200 sq ft');
       expect(el.textContent).toContain(`₹${(300000).toLocaleString('en-IN')}`);
+    });
+  });
+
+  describe('Estimate persistence', () => {
+    const TOKEN = 'test-jwt';
+    const SAVE_URL = `${environment.apiBaseUrl}/api/estimates`;
+    const LOGIN_URL = `${environment.apiBaseUrl}/api/auth/login`;
+
+    function savedRow(id: string) {
+      return {
+        id,
+        width: 12,
+        length: 15,
+        area: 180,
+        ratePerSquareFoot: 1500,
+        estimatedAmount: 270000,
+        createdAt: '2026-10-01T10:00:00Z',
+      };
+    }
+
+    function savedDetail() {
+      // Deliberately off the local demo rate: the UI must show these.
+      return {
+        id: 'est-1',
+        width: 12,
+        length: 15,
+        area: 180,
+        ratePerSquareFoot: 2000,
+        estimatedAmount: 360000,
+        createdAt: '2026-10-01T10:00:00Z',
+      };
+    }
+
+    function openEstimatesAuthed() {
+      localStorage.setItem(AUTH_TOKEN_KEY, TOKEN);
+      const fixture = TestBed.createComponent(AppComponent);
+      const app = fixture.componentInstance;
+      const httpMock = TestBed.inject(HttpTestingController);
+      httpMock.expectOne(CART_URL).flush({ items: [], itemCount: 0, subtotal: 0 });
+      app.activeView.set('estimates');
+      fixture.detectChanges();
+      httpMock.expectOne(SAVE_URL).flush([]);
+      fixture.detectChanges();
+      return { fixture, app, httpMock, el: fixture.nativeElement as HTMLElement };
+    }
+
+    function savePanel(el: HTMLElement): HTMLElement | null {
+      return el.querySelector('section[aria-label="Room estimate"]');
+    }
+
+    it('logged-out calculation works and save asks for login without any POST', () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      const app = fixture.componentInstance;
+      const httpMock = TestBed.inject(HttpTestingController);
+      app.activeView.set('estimates');
+      fixture.detectChanges();
+
+      const panel = savePanel(fixture.nativeElement as HTMLElement);
+      expect(panel?.textContent).toContain('180 sq ft');
+      expect(panel?.textContent).toContain('Log in to save this estimate');
+      expect(panel?.querySelector('button')).toBeFalsy();
+
+      app.saveEstimate();
+      expect(app.savedEstimate()).toBeNull();
+      httpMock.expectNone(SAVE_URL);
+    });
+
+    it('authenticated save posts only width/length and shows the server record', () => {
+      const { fixture, app, httpMock, el } = openEstimatesAuthed();
+
+      const button = savePanel(el)?.querySelector('button') as HTMLButtonElement;
+      expect(button?.textContent).toContain('Save Estimate');
+      button.click();
+
+      const req = httpMock.expectOne(SAVE_URL);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ width: 12, length: 15 });
+      expect(Object.keys(req.request.body).sort()).toEqual(['length', 'width']);
+      req.flush(savedDetail());
+      httpMock.expectOne(SAVE_URL).flush([savedRow('est-1')]);
+      fixture.detectChanges();
+
+      const panel = savePanel(el);
+      expect(panel?.textContent).toContain('est-1');
+      expect(panel?.textContent).toContain(`₹${(360000).toLocaleString('en-IN')}`);
+      expect(panel?.textContent).toContain(`₹${(2000).toLocaleString('en-IN')} / sq ft`);
+      expect(app.savedEstimate()?.id).toBe('est-1');
+      httpMock.verify();
+    });
+
+    it('duplicate save clicks produce only one POST', () => {
+      const { app, httpMock } = openEstimatesAuthed();
+      app.saveEstimate();
+      app.saveEstimate();
+      app.saveEstimate();
+      httpMock.expectOne(SAVE_URL).flush(savedDetail());
+      httpMock.expectOne(SAVE_URL).flush([]);
+    });
+
+    it('failed save keeps the calculation and allows retry', () => {
+      const { fixture, app, httpMock, el } = openEstimatesAuthed();
+      app.saveEstimate();
+      httpMock
+        .expectOne(SAVE_URL)
+        .flush({ title: 'Width must be greater than 0.' }, { status: 400, statusText: 'Bad Request' });
+      fixture.detectChanges();
+
+      expect(app.savedEstimate()).toBeNull();
+      expect(app.area()).toBe(180);
+      expect(savePanel(el)?.textContent).toContain('Width must be greater than 0.');
+
+      app.saveEstimate();
+      httpMock.expectOne(SAVE_URL).flush(savedDetail());
+      httpMock.expectOne(SAVE_URL).flush([]);
+      fixture.detectChanges();
+      expect(savePanel(el)?.textContent).toContain('est-1');
+      httpMock.verify();
+    });
+
+    it('401 on save logs out and resets, consistently with cart behavior', async () => {
+      const { fixture, app, httpMock, el } = openEstimatesAuthed();
+      app.saveEstimate();
+      httpMock.expectOne(SAVE_URL).flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(app.auth.isAuthenticated()).toBe(false);
+      expect(app.savedEstimate()).toBeNull();
+      expect(savePanel(el)?.textContent).toContain('Log in to save this estimate');
+      httpMock.verify();
+    });
+
+    it('changing dimensions does not mutate the saved record', () => {
+      const { app, fixture, httpMock, el } = openEstimatesAuthed();
+      app.saveEstimate();
+      httpMock.expectOne(SAVE_URL).flush(savedDetail());
+      httpMock.expectOne(SAVE_URL).flush([]);
+      fixture.detectChanges();
+
+      app.appliedWidth.set(99);
+      fixture.detectChanges();
+      // Current calculation moved on; the saved snapshot did not.
+      expect(el.textContent).toContain('99 ft');
+      expect(savePanel(el)?.textContent).toContain('180 sq ft');
+      expect(savePanel(el)?.textContent).toContain(`₹${(360000).toLocaleString('en-IN')}`);
+      httpMock.verify();
+    });
+
+    it('logout clears the save state so the next user starts clean', async () => {
+      const { app, fixture, httpMock, el } = openEstimatesAuthed();
+      app.saveEstimate();
+      httpMock.expectOne(SAVE_URL).flush(savedDetail());
+      httpMock.expectOne(SAVE_URL).flush([]);
+      fixture.detectChanges();
+      expect(savePanel(el)?.textContent).toContain('est-1');
+
+      app.auth.logout();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(app.savedEstimate()).toBeNull();
+      expect(savePanel(el)?.textContent).toContain('Log in to save this estimate');
+      httpMock.verify();
+    });
+
+    it('login while on Estimates loads the saved list', async () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      const app = fixture.componentInstance;
+      const httpMock = TestBed.inject(HttpTestingController);
+      app.activeView.set('estimates');
+      fixture.detectChanges();
+
+      const auth = TestBed.inject(AuthService);
+      auth.login('a@test.local', 'secret123').subscribe();
+      httpMock.expectOne(LOGIN_URL).flush({ Token: TOKEN });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      httpMock.expectOne(SAVE_URL).flush([savedRow('est-7')]);
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('est-7');
+      httpMock.verify();
+    });
+
+    it('saved list renders server rows in the estimates view', () => {
+      const { fixture, httpMock, el } = openEstimatesAuthed();
+      expect(el.textContent).toContain('No saved estimates yet');
+
+      fixture.componentInstance.savedEstimates!.loadEstimates();
+      httpMock
+        .expectOne(SAVE_URL)
+        .flush([
+          { ...savedRow('est-2'), estimatedAmount: 100500 },
+          savedRow('est-1'),
+        ]);
+      fixture.detectChanges();
+
+      expect(el.textContent).toContain('est-2');
+      expect(el.textContent).toContain('est-1');
+      expect(el.textContent).toContain(`₹${(100500).toLocaleString('en-IN')}`);
+      httpMock.verify();
     });
   });
 });

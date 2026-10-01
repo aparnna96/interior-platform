@@ -570,6 +570,38 @@
               <div class="total"><dt>Estimated amount</dt><dd>₹{{ money(estimateTotal()) }}</dd></div>
             </dl>
             <p class="sub small">Illustrative estimate — final pricing may vary. Frontend calculation, no backend call.</p>
+            @if (!auth.isAuthenticated()) {
+              <p class="sub small" role="status">Log in to save this estimate to your account.</p>
+            } @else {
+              <div class="row-gap">
+                <button class="btn btn-primary btn-sm" (click)="saveEstimate()" [disabled]="savingEstimate()">
+                  {{ savingEstimate() ? 'Saving…' : 'Save Estimate' }}
+                </button>
+              </div>
+              @if (saveEstimateError()) {
+                <p class="err" role="alert">
+                  {{ saveEstimateError() }}
+                  <button class="link" (click)="saveEstimate()">Try again</button>
+                </p>
+              }
+              @if (savedEstimate(); as saved) {
+                <dl class="est-rows" role="status" aria-label="Saved estimate">
+                  <div><dt>Saved ID</dt><dd class="code">{{ saved.id }}</dd></div>
+                  <div><dt>Area</dt><dd>{{ saved.area }} sq ft</dd></div>
+                  <div><dt>Rate</dt><dd>₹{{ money(saved.ratePerSquareFoot) }} / sq ft</dd></div>
+                  <div class="total"><dt>Saved amount</dt><dd>₹{{ money(saved.estimatedAmount) }}</dd></div>
+                  <div><dt>Saved at</dt><dd>{{ saved.createdAt | date:'medium' }}</dd></div>
+                </dl>
+              }
+            }
+          </section>
+
+          <section class="panel" aria-label="Saved estimates">
+            <div class="row-between">
+              <h2>Saved estimates</h2>
+              <span class="sub small">Server records</span>
+            </div>
+            <app-saved-estimates />
           </section>
         </div>
 

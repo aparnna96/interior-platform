@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
+import { Component, HostListener, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RoomVisualizerComponent } from './room-visualizer/room-visualizer.component';
 import { FloorPlanComponent } from './floor-plan/floor-plan.component';
@@ -9,6 +9,8 @@ import { CartComponent } from './catalogue/cart.component';
 import { CartService } from './catalogue/cart.service';
 import { AuthService } from './auth.service';
 import { OrdersComponent } from './orders/orders.component';
+import { EstimateService, type EstimateDto } from './estimate/estimate.service';
+import { SavedEstimatesComponent } from './estimate/saved-estimates.component';
 import { HomeComponent } from './home/home.component';
 import { InteriorsComponent } from './home/interiors.component';
 import {
@@ -58,7 +60,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginComponent, RegisterComponent, CatalogueComponent, CartComponent, OrdersComponent, HomeComponent, InteriorsComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginComponent, RegisterComponent, CatalogueComponent, CartComponent, OrdersComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -96,6 +98,70 @@ export class AppComponent {
         window.scrollTo(0, 0);
       }
     });
+    effect(() => {
+      if (!this.auth.isAuthenticated()) {
+        // Never carry one user's save state into another session.
+        this.savingEstimate.set(false);
+        this.saveEstimateError.set(null);
+        this.savedEstimate.set(null);
+      }
+    });
+  }
+
+  /**
+   * POSTs the current visualizer dimensions (width + length only) and shows
+   * the server-created estimate. The local calculation is untouched: saved
+   * records are snapshots and never follow later dimension edits.
+   */
+  saveEstimate(): void {
+    if (this.savingEstimate()) return;
+    if (!this.auth.isAuthenticated()) {
+      this.saveEstimateError.set('Please log in to save this estimate.');
+      return;
+    }
+    this.savingEstimate.set(true);
+    this.saveEstimateError.set(null);
+    this.estimates
+      .createEstimate(this.appliedWidth(), this.appliedLength())
+      .subscribe({
+        next: (estimate) => {
+          this.savingEstimate.set(false);
+          this.savedEstimate.set(estimate);
+          this.savedEstimates?.loadEstimates();
+        },
+        error: (err: unknown) => {
+          this.savingEstimate.set(false);
+          const status = (err as { status?: number })?.status;
+          if (status === 401) {
+            // Consistent with cart/order 401s: the session is over and the
+            // logout effect below clears the save state; the view falls
+            // back to the login-required prompt.
+            this.auth.logout();
+            return;
+          }
+          this.saveEstimateError.set(this.describeEstimateError(err, status));
+        },
+      });
+  }
+
+  private describeEstimateError(err: unknown, status?: number): string {
+    const body = (err as { error?: unknown })?.error;
+    if (body && typeof body === 'object') {
+      const record = body as Record<string, unknown>;
+      const title = record['title'];
+      if (typeof title === 'string' && title) return title;
+      const errors = record['errors'];
+      if (errors && typeof errors === 'object') {
+        const first = Object.values(errors as Record<string, unknown>)
+          .flat()
+          .map(String)
+          .find((m) => m);
+        if (first) return first;
+      }
+    }
+    if (typeof body === 'string' && body) return body;
+    if (status === 400) return 'Those dimensions cannot be saved (width and length must be within range).';
+    return 'Something went wrong. Please try again.';
   }
 
   // ── sidebar shell state (local only, not persisted) ──
@@ -230,6 +296,18 @@ export class AppComponent {
   planAspect = computed(() => `${this.appliedWidth()} / ${this.appliedLength()}`);
   estimateTotal = computed(() => calculateEstimateTotal(this.area(), DEMO_RATE));
   demoRate = DEMO_RATE;
+
+  // ── estimate persistence (server is authoritative for saved records) ──
+  private readonly estimates = inject(EstimateService);
+
+  @ViewChild(SavedEstimatesComponent) savedEstimates?: SavedEstimatesComponent;
+
+  /** True while POST /api/estimates is in flight — blocks duplicate saves. */
+  savingEstimate = signal(false);
+  /** Last save failure message, or null. */
+  saveEstimateError = signal<string | null>(null);
+  /** Last server-created estimate shown in the success state, or null. */
+  savedEstimate = signal<EstimateDto | null>(null);
 
   rooms = ['Living Room', 'Bedroom', 'Home Office'];
   selectedRoom = signal('Living Room');
