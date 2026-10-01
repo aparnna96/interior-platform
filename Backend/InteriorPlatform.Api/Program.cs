@@ -1,3 +1,4 @@
+using InteriorPlatform.Api.Configuration;
 using InteriorPlatform.Api.Controllers;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.Models;
@@ -79,6 +80,17 @@ foreach (var origin in normalizedOrigins)
     {
         throw new InvalidOperationException($"Cors:AllowedOrigins contains an invalid origin: '{origin}'. Each origin must be an absolute HTTP/HTTPS origin without wildcards (e.g. 'https://example.com').");
     }
+}
+
+// Illustrative estimate rate (Estimates:DemoRatePerSquareFoot). This is a
+// DEMO rate for the frontend prototype, not a permanent pricing rule.
+// Fail fast when it is missing or not positive.
+builder.Services.Configure<EstimateOptions>(
+    builder.Configuration.GetSection(EstimateOptions.SectionName));
+var estimateRate = builder.Configuration.GetValue<decimal?>("Estimates:DemoRatePerSquareFoot");
+if (estimateRate is null || estimateRate <= 0)
+{
+    throw new InvalidOperationException("Estimates:DemoRatePerSquareFoot must be a positive value. Set it via appsettings.{Environment}.json or environment configuration.");
 }
 
 builder.Services.AddCors(options =>
