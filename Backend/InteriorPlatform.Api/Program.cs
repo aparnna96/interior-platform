@@ -1,3 +1,4 @@
+using InteriorPlatform.Api.Controllers;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -46,7 +47,17 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddControllers();
+// VerifyController exposes JWT/role diagnostics for development use only.
+// Outside Development its actions are removed from routing, so /api/verify/*
+// is unavailable (404) in Production. Real authorization behavior elsewhere
+// is unchanged.
+builder.Services.AddControllers(options =>
+{
+    if (!builder.Environment.IsDevelopment())
+    {
+        options.Conventions.Add(new HideVerifyControllerOutsideDevelopmentConvention());
+    }
+});
 
 // CORS origins are configuration-driven (Cors:AllowedOrigins) so each
 // environment declares its own frontend origin(s) explicitly — no wildcard,
@@ -120,28 +131,4 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
