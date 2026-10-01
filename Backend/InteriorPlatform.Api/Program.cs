@@ -48,14 +48,33 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 
-// CORS for the local Angular development frontend. Restricted to exactly
-// http://localhost:4200 (no wildcard). JWT travels in the Authorization
-// header, so no credentials are required.
+// CORS origins are configuration-driven (Cors:AllowedOrigins) so each
+// environment declares its own frontend origin(s) explicitly — no wildcard,
+// no AllowAnyOrigin. JWT travels in the Authorization header, so no
+// credentials are required.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if (allowedOrigins is null || allowedOrigins.Length == 0)
+{
+    throw new InvalidOperationException("Cors:AllowedOrigins is not configured. Set it via appsettings.{Environment}.json or environment configuration.");
+}
+
+var normalizedOrigins = allowedOrigins.Select(o => (o ?? string.Empty).Trim().TrimEnd('/')).ToArray();
+foreach (var origin in normalizedOrigins)
+{
+    if (string.IsNullOrWhiteSpace(origin)
+        || origin.Contains('*')
+        || !Uri.TryCreate(origin, UriKind.Absolute, out var uri)
+        || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+    {
+        throw new InvalidOperationException($"Cors:AllowedOrigins contains an invalid origin: '{origin}'. Each origin must be an absolute HTTP/HTTPS origin without wildcards (e.g. 'https://example.com').");
+    }
+}
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AngularDev", policy =>
+    options.AddPolicy("Frontend", policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
+        policy.WithOrigins(normalizedOrigins)
             .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
             .WithHeaders("Content-Type", "Authorization");
     });
@@ -85,7 +104,7 @@ app.UseHttpsRedirection();
 
 // CORS must run before authentication/authorization so controller
 // endpoints and preflight (OPTIONS) requests are handled correctly.
-app.UseCors("AngularDev");
+app.UseCors("Frontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
