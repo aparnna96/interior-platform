@@ -7,6 +7,8 @@ import { RegisterComponent } from './register/register.component';
 import { CatalogueComponent } from './catalogue/catalogue.component';
 import { CartComponent } from './catalogue/cart.component';
 import { CartService } from './catalogue/cart.service';
+import { AuthService } from './auth.service';
+import { OrdersComponent } from './orders/orders.component';
 import { HomeComponent } from './home/home.component';
 import { InteriorsComponent } from './home/interiors.component';
 import { DEMO_RATE, calculateEstimateTotal } from './estimate/estimate-calculator';
@@ -51,7 +53,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginComponent, RegisterComponent, CatalogueComponent, CartComponent, HomeComponent, InteriorsComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginComponent, RegisterComponent, CatalogueComponent, CartComponent, OrdersComponent, HomeComponent, InteriorsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -59,11 +61,14 @@ export class AppComponent {
   title = 'interior-platform';
 
   // ── views ──────────────────────────────────
-  activeView = signal<'home' | 'interiors' | 'visualizer' | 'catalogue' | 'cart' | 'estimates' | 'projects'>('home');
+  activeView = signal<'home' | 'interiors' | 'visualizer' | 'catalogue' | 'cart' | 'orders' | 'estimates' | 'projects'>('home');
   showAccount = signal(false);
 
   /** Shared frontend cart store (Pillar 2) — badge count in the navbar. */
   readonly cart = inject(CartService);
+
+  /** Session state — gates customer-only nav entries such as Orders. */
+  readonly auth = inject(AuthService);
 
   /** Public website views use the top navbar; workspace views keep the sidebar. */
   isPublicView = computed(
@@ -71,7 +76,8 @@ export class AppComponent {
       this.activeView() === 'home' ||
       this.activeView() === 'interiors' ||
       this.activeView() === 'catalogue' ||
-      this.activeView() === 'cart'
+      this.activeView() === 'cart' ||
+      this.activeView() === 'orders'
   );
 
   constructor() {

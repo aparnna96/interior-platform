@@ -1,0 +1,107 @@
+<section class="orders" aria-label="Orders">
+  <header class="orders-head">
+    <div>
+      <p class="kicker">Account · Orders</p>
+      <h1>Your Orders</h1>
+    </div>
+    @if (isAuthenticated() && selectedId() !== null) {
+      <button class="linklike" (click)="backToOrders()">Back to orders</button>
+    }
+  </header>
+
+  @if (!isAuthenticated()) {
+    <div class="orders-empty">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </span>
+      <p>Log in to view your orders</p>
+      <span>Orders are stored against your account. Use the Account panel to log in.</span>
+      <button class="btn-primary" (click)="goBrowse()">Browse Furniture</button>
+    </div>
+  } @else {
+    @if (selectedId() === null) {
+      @if (listLoading() && list() === null) {
+        <div class="orders-empty" aria-live="polite">
+          <p>Loading your orders…</p>
+          <span>Fetching your order history.</span>
+        </div>
+      } @else if (listError()) {
+        <p class="orders-error" role="alert">
+          {{ listError() }}
+          <button class="linklike" (click)="loadOrders()">Try again</button>
+        </p>
+      } @else if (list() !== null && list()!.length === 0) {
+        <div class="orders-empty">
+          <span class="empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
+          </span>
+          <p>No orders yet</p>
+          <span>When you place an order it will appear here.</span>
+          <button class="btn-primary" (click)="goBrowse()">Browse Furniture</button>
+        </div>
+      } @else {
+        <div class="order-rows" aria-live="polite">
+          @for (o of list()!; track o.id) {
+            <article class="order-row" [attr.aria-label]="'Order ' + o.id">
+              <div class="order-main">
+                <p class="mono">{{ o.id }}</p>
+                <p class="order-meta">
+                  <span class="status-pill">{{ statusLabel(o.status) }}</span>
+                  <span>{{ o.createdAt | date:'medium' }}</span>
+                  <span>{{ o.itemCount }} item{{ o.itemCount === 1 ? '' : 's' }}</span>
+                </p>
+              </div>
+              <div class="order-side">
+                <p class="order-sub">₹{{ inr(o.subtotal) }}</p>
+                <button class="linklike" (click)="viewDetails(o.id)" [attr.aria-label]="'View details for order ' + o.id">View details</button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    } @else {
+      @if (detailLoading()) {
+        <div class="orders-empty" aria-live="polite">
+          <p>Loading order…</p>
+          <span>Fetching the order detail.</span>
+        </div>
+      } @else if (detailNotFound()) {
+        <div class="orders-empty" role="alert">
+          <p>Order not found</p>
+          <span>It may belong to another account or no longer exist.</span>
+          <button class="btn-primary" (click)="backToOrders()">Back to orders</button>
+        </div>
+      } @else if (detailError()) {
+        <p class="orders-error" role="alert">
+          {{ detailError() }}
+          <button class="linklike" (click)="retryDetail()">Try again</button>
+        </p>
+      } @else {
+        @if (selected(); as order) {
+        <div class="order-detail" role="status">
+          <dl class="sum-rows">
+            <div><dt>Order ID</dt><dd class="mono">{{ order.id }}</dd></div>
+            <div><dt>Status</dt><dd>{{ statusLabel(order.status) }}</dd></div>
+            <div><dt>Placed</dt><dd>{{ order.createdAt | date:'medium' }}</dd></div>
+            @if (order.updatedAt) {
+              <div><dt>Updated</dt><dd>{{ order.updatedAt | date:'medium' }}</dd></div>
+            }
+            <div class="total"><dt>Subtotal</dt><dd>₹{{ inr(order.subtotal) }}</dd></div>
+          </dl>
+          <h2>Items ({{ orderItemCount(order) }})</h2>
+          <ul class="order-lines">
+            @for (i of order.items; track i.id) {
+              <li>
+                <span class="item-name">{{ i.productName }}</span>
+                <span class="item-qty">× {{ i.quantity }}</span>
+                <span class="item-price">₹{{ inr(i.unitPrice) }} each</span>
+                <span class="item-total">₹{{ inr(i.lineTotal) }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+        }
+      }
+    }
+  }
+</section>

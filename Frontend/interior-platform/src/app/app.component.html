@@ -132,6 +132,9 @@
           <button [class.active]="activeView() === 'estimates' && !showAccount()" (click)="activeView.set('estimates'); showAccount.set(false); closeDrawer()">Estimates</button>
           <button [class.active]="activeView() === 'projects' && !showAccount()" (click)="activeView.set('projects'); showAccount.set(false); closeDrawer()">Projects</button>
           <button [class.active]="activeView() === 'cart' && !showAccount()" (click)="activeView.set('cart'); showAccount.set(false); closeDrawer()" aria-label="Open cart">Cart@if (cart.totalQty() > 0) { <span class="cart-badge">{{ cart.totalQty() }}</span> }</button>
+          @if (auth.isAuthenticated()) {
+            <button [class.active]="activeView() === 'orders' && !showAccount()" (click)="activeView.set('orders'); showAccount.set(false); closeDrawer()">Orders</button>
+          }
           <button [class.active]="showAccount()" (click)="toggleAccount(); closeDrawer()">Account</button>
         </nav>
         <button
@@ -163,6 +166,9 @@
         <button [class.active]="activeView() === 'estimates' && !showAccount()" (click)="activeView.set('estimates'); showAccount.set(false); closeDrawer()">Estimates</button>
         <button [class.active]="activeView() === 'projects' && !showAccount()" (click)="activeView.set('projects'); showAccount.set(false); closeDrawer()">Projects</button>
         <button [class.active]="activeView() === 'cart' && !showAccount()" (click)="activeView.set('cart'); showAccount.set(false); closeDrawer()" aria-label="Open cart">Cart@if (cart.totalQty() > 0) { <span class="cart-badge">{{ cart.totalQty() }}</span> }</button>
+        @if (auth.isAuthenticated()) {
+          <button [class.active]="activeView() === 'orders' && !showAccount()" (click)="activeView.set('orders'); showAccount.set(false); closeDrawer()">Orders</button>
+        }
         <button [class.active]="showAccount()" (click)="toggleAccount(); closeDrawer()">Account</button>
       </nav>
       }
@@ -204,7 +210,7 @@
     }
 
     <!-- Workspace header — Visualizer controls only; hidden in Home, Interiors, Furniture and Cart views -->
-    @if (activeView() !== 'catalogue' && activeView() !== 'cart' && activeView() !== 'home' && activeView() !== 'interiors') {
+    @if (activeView() !== 'catalogue' && activeView() !== 'cart' && activeView() !== 'orders' && activeView() !== 'home' && activeView() !== 'interiors') {
     <header class="ws-head">
       <div class="ws-title">
         <div>
@@ -520,6 +526,12 @@
     @if (activeView() === 'cart') {
       <main class="content cat-main">
         <app-cart (browse)="activeView.set('catalogue'); showAccount.set(false); closeDrawer()" />
+      </main>
+    }
+
+    @if (activeView() === 'orders') {
+      <main class="content cat-main">
+        <app-orders (browse)="activeView.set('catalogue'); showAccount.set(false); closeDrawer()" />
       </main>
     }
 
