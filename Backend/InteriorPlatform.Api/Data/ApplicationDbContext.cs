@@ -22,10 +22,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Lead> Leads => Set<Lead>();
 
+    public DbSet<Cart> Carts => Set<Cart>();
+
+    public DbSet<CartItem> CartItems => Set<CartItem>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
         builder.ApplyConfiguration(new ProductConfiguration());
         builder.ApplyConfiguration(new LeadConfiguration());
+        builder.ApplyConfiguration(new CartConfiguration());
+        builder.ApplyConfiguration(new CartItemConfiguration());
     }
 }

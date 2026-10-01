@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="InteriorPlatform.Api/InteriorPlatform.Api.csproj" />
+  <Project Path="InteriorPlatform.Api.Tests/InteriorPlatform.Api.Tests.csproj" />
 </Solution>
