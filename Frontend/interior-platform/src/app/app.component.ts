@@ -11,7 +11,12 @@ import { AuthService } from './auth.service';
 import { OrdersComponent } from './orders/orders.component';
 import { HomeComponent } from './home/home.component';
 import { InteriorsComponent } from './home/interiors.component';
-import { DEMO_RATE, calculateEstimateTotal } from './estimate/estimate-calculator';
+import {
+  DEMO_RATE,
+  calculateEstimateTotal,
+  calculateRoomArea,
+  sanitizeRoomDimension,
+} from './estimate/estimate-calculator';
 
 interface Swatch {
   name: string;
@@ -217,7 +222,11 @@ export class AppComponent {
   appliedLength = signal(15);
   roomError = signal('');
 
-  area = computed(() => this.appliedWidth() * this.appliedLength());
+  area = computed(() => calculateRoomArea(this.appliedWidth(), this.appliedLength()));
+
+  /** Display-safe dimensions for the estimate panel (never NaN/Infinity). */
+  displayWidth = computed(() => sanitizeRoomDimension(this.appliedWidth()));
+  displayLength = computed(() => sanitizeRoomDimension(this.appliedLength()));
   planAspect = computed(() => `${this.appliedWidth()} / ${this.appliedLength()}`);
   estimateTotal = computed(() => calculateEstimateTotal(this.area(), DEMO_RATE));
   demoRate = DEMO_RATE;

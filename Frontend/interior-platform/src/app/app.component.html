@@ -87,7 +87,7 @@
     <div class="side-foot">
       <div class="side-room">
         <span class="side-label">Current room</span>
-        <strong>{{ appliedWidth() }} × {{ appliedLength() }} ft · {{ area() }} sq ft</strong>
+        <strong>{{ displayWidth() }} × {{ displayLength() }} ft · {{ area() }} sq ft</strong>
         <span class="side-sub">{{ selectedRoom() }}</span>
       </div>
       <span class="demo-tag">Demo pricing</span>
@@ -215,7 +215,7 @@
       <div class="ws-title">
         <div>
           <h1>Untitled project</h1>
-          <p class="ws-meta">{{ selectedRoom() }} · {{ appliedWidth() }} ft × {{ appliedLength() }} ft · {{ area() }} sq ft</p>
+          <p class="ws-meta">{{ selectedRoom() }} · {{ displayWidth() }} ft × {{ displayLength() }} ft · {{ area() }} sq ft</p>
         </div>
       </div>
       <div class="ws-controls">
@@ -493,7 +493,7 @@
               <span class="demo-tag">DEMO · Not final pricing</span>
             </div>
             <dl class="est-rows">
-              <div><dt>Room</dt><dd>{{ appliedWidth() }} × {{ appliedLength() }} ft</dd></div>
+              <div><dt>Room</dt><dd>{{ displayWidth() }} × {{ displayLength() }} ft</dd></div>
               <div><dt>Area</dt><dd>{{ area() }} sq ft</dd></div>
               <div><dt>Demo rate</dt><dd>₹{{ money(demoRate) }} / sq ft</dd></div>
               <div class="total"><dt>Estimated total</dt><dd>₹{{ money(estimateTotal()) }}</dd></div>
@@ -550,7 +550,7 @@
             <h2>Project summary</h2>
             <dl class="est-rows">
               <div><dt>Room</dt><dd>{{ selectedRoom() }}</dd></div>
-              <div><dt>Dimensions</dt><dd>{{ appliedWidth() }} × {{ appliedLength() }} ft</dd></div>
+              <div><dt>Dimensions</dt><dd>{{ displayWidth() }} × {{ displayLength() }} ft</dd></div>
               <div><dt>Area</dt><dd>{{ area() }} sq ft</dd></div>
               <div><dt>Walls</dt><dd>{{ selectedWall().name }} · {{ selectedWall().code }}</dd></div>
               <div><dt>Floor</dt><dd>{{ selectedFloor().name }} · {{ selectedFloor().code }}</dd></div>
@@ -560,14 +560,16 @@
             </dl>
           </section>
 
-          <section class="panel" aria-label="Estimate summary">
-            <h2>Estimate summary</h2>
+          <section class="panel" aria-label="Room estimate">
+            <h2>Room estimate</h2>
             <dl class="est-rows">
+              <div><dt>Width</dt><dd>{{ displayWidth() }} ft</dd></div>
+              <div><dt>Length</dt><dd>{{ displayLength() }} ft</dd></div>
               <div><dt>Area</dt><dd>{{ area() }} sq ft</dd></div>
               <div><dt>Demo rate</dt><dd>₹{{ money(demoRate) }} / sq ft</dd></div>
-              <div class="total"><dt>Estimated total</dt><dd>₹{{ money(estimateTotal()) }}</dd></div>
+              <div class="total"><dt>Estimated amount</dt><dd>₹{{ money(estimateTotal()) }}</dd></div>
             </dl>
-            <p class="sub small">Pricing shown here is placeholder data for the frontend prototype. Frontend calculation, no backend call.</p>
+            <p class="sub small">Illustrative estimate — final pricing may vary. Frontend calculation, no backend call.</p>
           </section>
         </div>
 
