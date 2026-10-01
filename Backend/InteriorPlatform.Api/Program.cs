@@ -82,6 +82,15 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Apply pending EF Core migrations before seeding so a fresh production
+// database has the required schema. If migration fails, startup fails
+// explicitly instead of continuing with seeding.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await db.Database.MigrateAsync();
+}
+
 // Seed application roles (Customer, FieldStaff, Admin). Idempotent.
 using (var scope = app.Services.CreateScope())
 {
