@@ -21,7 +21,26 @@
       <span>Your cart is stored against your account. Use the Account panel to log in.</span>
       <button class="btn-primary" (click)="goBrowse()">Browse Furniture</button>
     </div>
-  } @else if (cart.loading() && cart.lines().length === 0) {
+  } @else {
+    @if (placedOrder(); as order) {
+    <div class="order-confirm" role="status">
+      <p class="kicker">Order confirmation</p>
+      <h2>Order placed</h2>
+      <p class="standfirst">Thank you — your order is <strong>{{ statusLabel(order.status) }}</strong>. No payment was taken.</p>
+      <dl class="sum-rows">
+        <div><dt>Order ID</dt><dd class="mono">{{ order.id }}</dd></div>
+        <div><dt>Placed</dt><dd>{{ order.createdAt | date:'medium' }}</dd></div>
+        <div><dt>Items</dt><dd>{{ orderItemCount(order) }}</dd></div>
+        <div class="total"><dt>Subtotal</dt><dd>₹{{ inr(order.subtotal) }}</dd></div>
+      </dl>
+      <ul class="order-lines">
+        @for (i of order.items; track i.id) {
+          <li>{{ i.productName }} × {{ i.quantity }} — ₹{{ inr(i.lineTotal) }}</li>
+        }
+      </ul>
+      <button class="btn-primary" (click)="goBrowse()">Continue browsing</button>
+    </div>
+    } @else if (cart.loading() && cart.lines().length === 0) {
     <div class="cart-empty" aria-live="polite">
       <p>Loading your cart…</p>
       <span>Fetching your saved pieces.</span>
@@ -40,6 +59,12 @@
       <p class="cart-error" role="alert">
         {{ cart.error() }}
         <button class="linklike" (click)="cart.load()">Try again</button>
+      </p>
+    }
+    @if (orderError()) {
+      <p class="cart-error" role="alert">
+        {{ orderError() }}
+        <button class="linklike" (click)="placeOrder()">Try again</button>
       </p>
     }
     <div class="cart-grid">
@@ -86,9 +111,16 @@
           <div><dt>Subtotal</dt><dd>₹{{ inr(cart.subtotal()) }}</dd></div>
           <div class="total"><dt>Total</dt><dd>₹{{ inr(cart.subtotal()) }}</dd></div>
         </dl>
-        <button class="btn-primary btn-block" disabled>Proceed to Checkout</button>
-        <p class="sum-hint">Checkout arrives in a later stage.</p>
+        <button class="btn-primary btn-block" (click)="placeOrder()" [disabled]="!canPlaceOrder()">
+          {{ placingOrder() ? 'Placing order…' : 'Place Order' }}
+        </button>
+        @if (hasUnavailable()) {
+          <p class="sum-hint">Remove unavailable items to place your order.</p>
+        } @else {
+          <p class="sum-hint">No payment is taken yet.</p>
+        }
       </aside>
     </div>
+    }
   }
 </section>

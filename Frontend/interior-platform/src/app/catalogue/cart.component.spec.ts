@@ -7,10 +7,12 @@ import {
 import { AuthService, AUTH_TOKEN_KEY } from '../auth.service';
 import { CartComponent } from './cart.component';
 import { CartService, type CartDto, type CartLine } from './cart.service';
+import type { OrderDetailDto } from '../orders/order.service';
 import { environment } from '../../environments/environment';
 
 const CART_URL = `${environment.apiBaseUrl}/api/cart`;
 const ITEMS_URL = `${CART_URL}/items`;
+const ORDERS_URL = `${environment.apiBaseUrl}/api/orders`;
 const TOKEN = 'test-jwt';
 
 function line(partial: Partial<CartLine> & { id: string }): CartLine {
@@ -176,5 +178,148 @@ describe('CartComponent (backend cart)', () => {
     fixture.componentInstance.browse.subscribe(() => (browsed = true));
     fixture.componentInstance.goBrowse();
     expect(browsed).toBeTrue();
+  });
+
+  function orderDetail(): OrderDetailDto {
+    return {
+      id: 'order-1',
+      status: 0,
+      createdAt: '2026-10-01T10:00:00Z',
+      updatedAt: '2026-10-01T10:00:00Z',
+      subtotal: 85998,
+      items: [
+        {
+          id: 'oi-1',
+          productId: 'aria-3s-sofa',
+          productName: 'Aria 3-Seater Fabric Sofa',
+          unitPrice: 42999,
+          quantity: 2,
+          lineTotal: 85998,
+        },
+      ],
+    };
+  }
+
+  function placeOrderButton(fixture: ReturnType<typeof setup>): HTMLButtonElement | null {
+    return fixture.nativeElement.querySelector('.summary .btn-block') as HTMLButtonElement | null;
+  }
+
+  it('offers Place Order for an available cart', () => {
+    setupAuthenticated(cartDto([line({ id: 'item-1' })]));
+    const fixture = setup();
+    const button = placeOrderButton(fixture);
+    expect(button?.textContent).toContain('Place Order');
+    expect(button?.disabled).toBe(false);
+  });
+
+  it('places the order, shows confirmation and clears the cart without per-item deletes', () => {
+    setupAuthenticated(cartDto([line({ id: 'item-1' })]));
+    const fixture = setup();
+    placeOrderButton(fixture)?.click();
+
+    const req = httpMock.expectOne(ORDERS_URL);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({});
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
+    req.flush(orderDetail());
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Order placed');
+    expect(el.textContent).toContain('order-1');
+    expect(el.textContent).toContain('Pending');
+    expect(el.textContent).toContain(`₹${(85998).toLocaleString('en-IN')}`);
+    expect(el.textContent).toContain('Aria 3-Seater Fabric Sofa');
+    expect(el.textContent).toContain('No payment was taken');
+    expect(el.textContent).not.toContain('Payment complete');
+    expect(cart.lines()).toEqual([]);
+    expect(cart.totalQty()).toBe(0);
+  });
+
+  it('does not issue duplicate POSTs on repeated clicks', () => {
+    setupAuthenticated(cartDto([line({ id: 'item-1' })]));
+    const fixture = setup();
+    const cmp = fixture.componentInstance;
+    cmp.placeOrder();
+    cmp.placeOrder();
+    cmp.placeOrder();
+    httpMock.expectOne(ORDERS_URL).flush(orderDetail());
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Order placed');
+  });
+
+  it('keeps the cart and shows an error when ordering fails, with retry', () => {
+    setupAuthenticated(cartDto([line({ id: 'item-1' })]));
+    const fixture = setup();
+    placeOrderButton(fixture)?.click();
+    httpMock.expectOne(ORDERS_URL).flush({ title: 'The cart is empty.' }, { status: 400, statusText: 'Bad Request' });
+    fixture.detectChanges();
+
+    let el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('The cart is empty.');
+    expect(cart.lines().length).toBe(1);
+
+    const retry = Array.from(el.querySelectorAll('.cart-error button')).find((b) =>
+      (b as HTMLElement).textContent?.includes('Try again')
+    ) as HTMLButtonElement;
+    retry.click();
+    httpMock.expectOne(ORDERS_URL).flush(orderDetail());
+    fixture.detectChanges();
+    el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Order placed');
+  });
+
+  it('logs out and clears the cart on 401, consistently with cart errors', () => {
+    setupAuthenticated(cartDto([line({ id: 'item-1' })]));
+    const fixture = setup();
+    const auth = TestBed.inject(AuthService);
+    placeOrderButton(fixture)?.click();
+    httpMock.expectOne(ORDERS_URL).flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+    fixture.detectChanges();
+
+    expect(auth.isAuthenticated()).toBe(false);
+    expect(cart.lines()).toEqual([]);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Log in to view your saved cart'
+    );
+  });
+
+  it('disables Place Order when a line is unavailable', () => {
+    setupAuthenticated(cartDto([line({ id: 'item-9', isAvailable: false })]));
+    const fixture = setup();
+    const button = placeOrderButton(fixture);
+    expect(button?.disabled).toBe(true);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('unavailable items');
+    fixture.componentInstance.placeOrder();
+  });
+
+  it('shows no Place Order for an empty cart', () => {
+    setupAuthenticated(cartDto([]));
+    const el = setup().nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Your cart is empty');
+    expect(el.querySelector('.summary .btn-block')).toBeFalsy();
+  });
+
+  it('shows no Place Order while logged out and issues no order request', () => {
+    setupAnonymous();
+    const fixture = setup();
+    fixture.componentInstance.placeOrder();
+    expect(placeOrderButton(fixture)).toBeFalsy();
+  });
+
+  it('clears order state on logout so the next user starts clean', () => {
+    setupAuthenticated(cartDto([line({ id: 'item-1' })]));
+    const fixture = setup();
+    placeOrderButton(fixture)?.click();
+    httpMock.expectOne(ORDERS_URL).flush(orderDetail());
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Order placed');
+
+    TestBed.inject(AuthService).logout();
+    cart.clear();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Log in to view your saved cart'
+    );
   });
 });
