@@ -8,8 +8,9 @@ import { CartComponent } from './cart.component';
 import { CartService } from './cart.service';
 import { ProductService, type ProductDto } from './product.service';
 import type { CatalogueProduct } from './catalogue-products';
+import { environment } from '../../environments/environment';
 
-const PRODUCTS_URL = 'http://localhost:5175/api/products';
+const PRODUCTS_URL = `${environment.apiBaseUrl}/api/products`;
 
 const API_PRODUCTS: ProductDto[] = [
   {

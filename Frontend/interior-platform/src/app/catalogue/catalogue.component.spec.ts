@@ -7,6 +7,7 @@ import {
 import { ROOMS, filterProducts, type CatalogueProduct } from './catalogue-products';
 import { CatalogueComponent } from './catalogue.component';
 import type { ProductDto } from './product.service';
+import { environment } from '../../environments/environment';
 
 function fixtureProduct(partial: Partial<CatalogueProduct> & { id: string }): CatalogueProduct {
   return {
@@ -104,7 +105,7 @@ describe('filterProducts', () => {
 });
 
 describe('CatalogueComponent ProductService integration', () => {
-  const PRODUCTS_URL = 'http://localhost:5175/api/products';
+  const PRODUCTS_URL = `${environment.apiBaseUrl}/api/products`;
   const apiProducts: ProductDto[] = [
     {
       id: 'aria-3s-sofa',

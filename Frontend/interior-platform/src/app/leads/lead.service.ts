@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 import type { Observable } from 'rxjs';
 
 /** Payload for POST /api/leads. Optional fields are omitted when empty. */
@@ -26,7 +27,7 @@ export interface LeadResponse {
   createdAt: string;
 }
 
-const LEADS_URL = 'http://localhost:5175/api/leads';
+const LEADS_URL = `${environment.apiBaseUrl}/api/leads`;
 
 /**
  * Public lead/enquiry submission client.

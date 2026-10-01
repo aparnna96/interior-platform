@@ -8,6 +8,7 @@ import { ProductDetailsComponent } from './product-details.component';
 import { CatalogueComponent } from './catalogue.component';
 import type { CatalogueProduct } from './catalogue-products';
 import type { ProductDto } from './product.service';
+import { environment } from '../../environments/environment';
 
 describe('ProductDetailsComponent', () => {
   const product: CatalogueProduct = {
@@ -182,7 +183,7 @@ describe('CatalogueComponent product-details wiring', () => {
     fixture.detectChanges();
     const httpMock = TestBed.inject(HttpTestingController);
     httpMock
-      .expectOne('http://localhost:5175/api/products')
+      .expectOne(`${environment.apiBaseUrl}/api/products`)
       .flush(apiProducts);
     fixture.detectChanges();
     return { fixture, cmp: fixture.componentInstance, httpMock };

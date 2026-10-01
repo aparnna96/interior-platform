@@ -7,8 +7,9 @@ import {
 import { HomeComponent } from './home.component';
 import { FEATURED_PRODUCT_IDS } from './home-data';
 import { ProductService, type ProductDto } from '../catalogue/product.service';
+import { environment } from '../../environments/environment';
 
-const PRODUCTS_URL = 'http://localhost:5175/api/products';
+const PRODUCTS_URL = `${environment.apiBaseUrl}/api/products`;
 
 function dto(
   id: string,

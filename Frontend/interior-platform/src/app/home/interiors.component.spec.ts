@@ -7,8 +7,9 @@ import {
 import { By } from '@angular/platform-browser';
 import { InteriorsComponent } from './interiors.component';
 import { LeadFormComponent } from '../leads/lead-form.component';
+import { environment } from '../../environments/environment';
 
-const LEADS_URL = 'http://localhost:5175/api/leads';
+const LEADS_URL = `${environment.apiBaseUrl}/api/leads`;
 
 describe('InteriorsComponent enquiry entry', () => {
   let httpMock: HttpTestingController;

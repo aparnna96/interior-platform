@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 import type { CatalogueCategory, CatalogueProduct } from './catalogue-products';
 
 /**
@@ -24,7 +25,7 @@ export interface ProductDto {
   details: string[];
 }
 
-const PRODUCTS_URL = 'http://localhost:5175/api/products';
+const PRODUCTS_URL = `${environment.apiBaseUrl}/api/products`;
 
 /** Frontend-only field with no backend column: safe default until Task 2. */
 export const PRODUCT_SWATCH_DEFAULT = '';

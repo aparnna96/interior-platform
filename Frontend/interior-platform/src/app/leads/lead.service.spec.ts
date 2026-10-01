@@ -9,8 +9,9 @@ import {
   type LeadCreateRequest,
   type LeadResponse,
 } from './lead.service';
+import { environment } from '../../environments/environment';
 
-const LEADS_URL = 'http://localhost:5175/api/leads';
+const LEADS_URL = `${environment.apiBaseUrl}/api/leads`;
 
 const API_RESPONSE: LeadResponse = {
   id: 'lead-id-1',
