@@ -6,6 +6,8 @@ import {
 } from '@angular/common/http/testing';
 import { ROOMS, filterProducts, type CatalogueProduct } from './catalogue-products';
 import { CatalogueComponent } from './catalogue.component';
+import { AUTH_TOKEN_KEY } from '../auth.service';
+import type { CartDto } from './cart.service';
 import type { ProductDto } from './product.service';
 import { environment } from '../../environments/environment';
 
@@ -162,8 +164,13 @@ describe('CatalogueComponent ProductService integration', () => {
     return { fixture, cmp: fixture.componentInstance, httpMock };
   }
 
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   afterEach(() => {
     TestBed.inject(HttpTestingController, null)?.verify();
+    localStorage.clear();
   });
 
   it('loads products through ProductService on init', async () => {
@@ -250,12 +257,54 @@ describe('CatalogueComponent ProductService integration', () => {
   });
 
   it('keeps add-to-cart working with loaded products', async () => {
+    localStorage.setItem(AUTH_TOKEN_KEY, 'test-jwt');
     const { cmp, httpMock } = await setup();
+    // Authenticated session: the cart loads first, then the catalogue.
+    httpMock.expectOne(CART_URL).flush(emptyCart());
     httpMock.expectOne(PRODUCTS_URL).flush(apiProducts);
     expect(cmp.cartCount()).toBe(0);
     cmp.addToCart('aria-3s-sofa');
+    httpMock.expectOne(ITEMS_URL).flush(cartWith('aria-3s-sofa', 1));
     expect(cmp.qtyOf('aria-3s-sofa')).toBe(1);
     cmp.addToCartQty({ id: 'aria-3s-sofa', qty: 2 });
+    httpMock.expectOne(ITEMS_URL).flush(cartWith('aria-3s-sofa', 3));
     expect(cmp.qtyOf('aria-3s-sofa')).toBe(3);
+    expect(cmp.cartCount()).toBe(3);
+  });
+
+  it('asks logged-out visitors to log in instead of calling the cart API', async () => {
+    const { cmp, httpMock } = await setup();
+    httpMock.expectOne(PRODUCTS_URL).flush(apiProducts);
+    cmp.addToCart('aria-3s-sofa');
+    expect(cmp.cartNotice()).toContain('log in');
+    expect(cmp.qtyOf('aria-3s-sofa')).toBe(0);
   });
 });
+
+const CART_URL = `${environment.apiBaseUrl}/api/cart`;
+const ITEMS_URL = `${CART_URL}/items`;
+
+function emptyCart(): CartDto {
+  return { items: [], itemCount: 0, subtotal: 0 };
+}
+
+function cartWith(productId: string, quantity: number): CartDto {
+  const price = 42999;
+  return {
+    items: [
+      {
+        id: 'item-1',
+        productId,
+        slug: productId,
+        name: 'Aria 3-Seater Fabric Sofa',
+        price,
+        quantity,
+        lineTotal: price * quantity,
+        imageUrl: 'https://example.com/aria.jpg',
+        isAvailable: true,
+      },
+    ],
+    itemCount: quantity,
+    subtotal: price * quantity,
+  };
+}

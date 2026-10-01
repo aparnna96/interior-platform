@@ -12,7 +12,21 @@
     }
   </header>
 
-  @if (cart.lines().length === 0) {
+  @if (!cart.isAuthenticated()) {
+    <div class="cart-empty">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </span>
+      <p>Log in to view your saved cart</p>
+      <span>Your cart is stored against your account. Use the Account panel to log in.</span>
+      <button class="btn-primary" (click)="goBrowse()">Browse Furniture</button>
+    </div>
+  } @else if (cart.loading() && cart.lines().length === 0) {
+    <div class="cart-empty" aria-live="polite">
+      <p>Loading your cart…</p>
+      <span>Fetching your saved pieces.</span>
+    </div>
+  } @else if (cart.lines().length === 0) {
     <div class="cart-empty">
       <span class="empty-icon" aria-hidden="true">
         <svg viewBox="0 0 16 16"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
@@ -22,37 +36,45 @@
       <button class="btn-primary" (click)="goBrowse()">Browse Furniture</button>
     </div>
   } @else {
+    @if (cart.error()) {
+      <p class="cart-error" role="alert">
+        {{ cart.error() }}
+        <button class="linklike" (click)="cart.load()">Try again</button>
+      </p>
+    }
     <div class="cart-grid">
       <div class="lines" aria-live="polite">
-        @for (l of cart.lines(); track l.product.id) {
-          <article class="line" [attr.aria-label]="l.product.name">
+        @for (l of cart.lines(); track l.id) {
+          <article class="line" [attr.aria-label]="l.name">
             <figure class="line-media">
-              <span class="line-tint" [style.background]="l.product.swatch" aria-hidden="true"></span>
-              <img [src]="l.product.image" [alt]="l.product.name" loading="lazy" />
+              <img [src]="l.imageUrl" [alt]="l.name" loading="lazy" />
             </figure>
             <div class="line-info">
-              <p class="line-cat">{{ l.product.category }} · {{ l.product.room }}</p>
-              <h2 class="line-name">{{ l.product.name }}</h2>
-              <p class="line-unit">₹{{ inr(l.product.price) }} each</p>
+              <h2 class="line-name">{{ l.name }}</h2>
+              @if (!l.isAvailable) {
+                <p class="line-unavailable" role="status">Unavailable — kept for reference</p>
+              }
+              <p class="line-unit">₹{{ inr(l.price) }} each</p>
               <div class="qty-row">
-                <div class="qty-ctrl" role="group" [attr.aria-label]="'Quantity for ' + l.product.name">
+                <div class="qty-ctrl" role="group" [attr.aria-label]="'Quantity for ' + l.name">
                   <button
                     class="qty-btn"
-                    (click)="cart.decrement(l.product.id)"
-                    [disabled]="l.qty <= 1"
-                    [attr.aria-label]="'Decrease quantity (current ' + l.qty + ')'"
+                    (click)="cart.decrement(l.id)"
+                    [disabled]="l.quantity <= 1 || !l.isAvailable"
+                    [attr.aria-label]="'Decrease quantity (current ' + l.quantity + ')'"
                   >−</button>
-                  <span class="qty-val" aria-live="polite">{{ l.qty }}</span>
+                  <span class="qty-val" aria-live="polite">{{ l.quantity }}</span>
                   <button
                     class="qty-btn"
-                    (click)="cart.increment(l.product.id)"
-                    [attr.aria-label]="'Increase quantity (current ' + l.qty + ')'"
+                    (click)="cart.increment(l.id)"
+                    [disabled]="l.quantity >= 99 || !l.isAvailable"
+                    [attr.aria-label]="'Increase quantity (current ' + l.quantity + ')'"
                   >+</button>
                 </div>
-                <button class="linklike danger" (click)="cart.remove(l.product.id)" [attr.aria-label]="'Remove ' + l.product.name">Remove</button>
+                <button class="linklike danger" (click)="cart.remove(l.id)" [attr.aria-label]="'Remove ' + l.name">Remove</button>
               </div>
             </div>
-            <p class="line-sub">₹{{ inr(l.subtotal) }}</p>
+            <p class="line-sub">₹{{ inr(l.lineTotal) }}</p>
           </article>
         }
       </div>

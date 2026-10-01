@@ -2,6 +2,7 @@ import { Component, HostListener, computed, effect, inject, signal } from '@angu
 import { CommonModule } from '@angular/common';
 import { RoomVisualizerComponent } from './room-visualizer/room-visualizer.component';
 import { FloorPlanComponent } from './floor-plan/floor-plan.component';
+import { LoginComponent } from './auth/login.component';
 import { RegisterComponent } from './register/register.component';
 import { CatalogueComponent } from './catalogue/catalogue.component';
 import { CartComponent } from './catalogue/cart.component';
@@ -50,7 +51,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, RegisterComponent, CatalogueComponent, CartComponent, HomeComponent, InteriorsComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginComponent, RegisterComponent, CatalogueComponent, CartComponent, HomeComponent, InteriorsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })

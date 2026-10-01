@@ -6,7 +6,7 @@ describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
-      // AppComponent injects CartService → ProductService → HttpClient.
+      // AppComponent injects CartService → HttpClient (+ AuthService).
       providers: [provideHttpClient()],
     }).compileComponents();
   });

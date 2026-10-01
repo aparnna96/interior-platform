@@ -8,6 +8,7 @@ import { ProductDetailsComponent } from './product-details.component';
 import { CatalogueComponent } from './catalogue.component';
 import type { CatalogueProduct } from './catalogue-products';
 import type { ProductDto } from './product.service';
+import { AUTH_TOKEN_KEY } from '../auth.service';
 import { environment } from '../../environments/environment';
 
 describe('ProductDetailsComponent', () => {
@@ -212,12 +213,48 @@ describe('CatalogueComponent product-details wiring', () => {
   });
 
   it('adds the details quantity to the existing cart count', async () => {
-    const { cmp } = await setupCatalogue();
-    expect(cmp.cartCount()).toBe(0);
-    cmp.addToCartQty({ id: 'aria-3s-sofa', qty: 3 });
-    expect(cmp.qtyOf('aria-3s-sofa')).toBe(3);
-    expect(cmp.cartCount()).toBe(3);
-    cmp.addToCart('aria-3s-sofa');
-    expect(cmp.cartCount()).toBe(4);
+    localStorage.setItem(AUTH_TOKEN_KEY, 'test-jwt');
+    const { cmp, httpMock } = await setupCatalogue();
+    // Authenticated session: the cart loads alongside the catalogue.
+    httpMock
+      .expectOne(`${environment.apiBaseUrl}/api/cart`)
+      .flush({ items: [], itemCount: 0, subtotal: 0 });
+    try {
+      expect(cmp.cartCount()).toBe(0);
+      cmp.addToCartQty({ id: 'aria-3s-sofa', qty: 3 });
+      httpMock
+        .expectOne(`${environment.apiBaseUrl}/api/cart/items`)
+        .flush(cartWithQty(3));
+      expect(cmp.qtyOf('aria-3s-sofa')).toBe(3);
+      expect(cmp.cartCount()).toBe(3);
+      cmp.addToCart('aria-3s-sofa');
+      httpMock
+        .expectOne(`${environment.apiBaseUrl}/api/cart/items`)
+        .flush(cartWithQty(4));
+      expect(cmp.cartCount()).toBe(4);
+    } finally {
+      localStorage.clear();
+    }
   });
 });
+
+function cartWithQty(quantity: number) {
+  const price = 42999;
+  return {
+    items: [
+      {
+        id: 'item-1',
+        productId: 'aria-3s-sofa',
+        slug: 'aria-3s-sofa',
+        name: 'Aria 3-Seater Fabric Sofa',
+        price,
+        quantity,
+        lineTotal: price * quantity,
+        imageUrl: 'https://example.com/aria.jpg',
+        isAvailable: true,
+      },
+    ],
+    itemCount: quantity,
+    subtotal: price * quantity,
+  };
+}

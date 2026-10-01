@@ -44,6 +44,9 @@ export class CatalogueComponent implements OnInit {
 
   cartCount = computed(() => this.cart.totalQty());
 
+  /** Login hint set when a logged-out visitor tries a cart action. */
+  cartNotice = computed(() => this.cart.notice());
+
   selected = computed<CatalogueProduct | null>(
     () =>
       this.productService.products().find((p) => p.id === this.selectedId()) ??

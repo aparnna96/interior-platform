@@ -1,0 +1,54 @@
+@if (isAuthenticated) {
+  <div class="login">
+    <p class="msg ok">You are logged in. Your cart is saved to your account.</p>
+    <button class="btn btn-secondary btn-sm" type="button" (click)="onLogout()">Log out</button>
+  </div>
+} @else {
+  <div class="login">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+      <div class="login-grid">
+        <div>
+          <label for="login-email">Email</label>
+          <input
+            id="login-email"
+            type="email"
+            formControlName="email"
+            placeholder="you@studio.com"
+            autocomplete="email"
+          />
+          @if (form.get('email')?.touched && form.get('email')?.invalid) {
+            <p class="msg err">Enter a valid email address.</p>
+          }
+        </div>
+        <div>
+          <label for="login-password">Password</label>
+          <input
+            id="login-password"
+            type="password"
+            formControlName="password"
+            placeholder="Your password"
+            autocomplete="current-password"
+          />
+          @if (form.get('password')?.touched && form.get('password')?.invalid) {
+            <p class="msg err">Password is required.</p>
+          }
+        </div>
+      </div>
+
+      <div class="login-actions">
+        <button class="btn btn-primary btn-sm" type="submit" [disabled]="isSubmitting">
+          {{ isSubmitting ? 'Logging in…' : 'Log in' }}
+        </button>
+        <span class="sub small">Saved cart needs login</span>
+      </div>
+
+      @if (successMessage) {
+        <p class="msg ok">{{ successMessage }}</p>
+      }
+
+      @if (errorMessage) {
+        <p class="msg err">{{ errorMessage }}</p>
+      }
+    </form>
+  </div>
+}
