@@ -1,6 +1,7 @@
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
+using InteriorPlatform.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -81,6 +82,32 @@ public class ProposalsController : ControllerBase
         }
 
         return Ok(ToDetail(proposal));
+    }
+
+    // GET /api/proposals/{id}/pdf — download the client-ready proposal PDF
+    // rendered from the persisted snapshot. Draft proposals may download;
+    // payment gating arrives in a later milestone. The proposal is never
+    // modified and no payment records are created.
+    [HttpGet("{id:guid}/pdf")]
+    public async Task<IActionResult> DownloadProposalPdf(Guid id)
+    {
+        var userId = ResolveUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var proposal = await _db.Proposals
+            .AsNoTracking()
+            .Include(p => p.Items)
+            .FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+        if (proposal is null)
+        {
+            return NotFound();
+        }
+
+        var pdf = ProposalPdfGenerator.Generate(proposal);
+        return File(pdf, "application/pdf", $"proposal-{proposal.Id}.pdf");
     }
 
     // POST /api/proposals — snapshot one of the current user's estimates into

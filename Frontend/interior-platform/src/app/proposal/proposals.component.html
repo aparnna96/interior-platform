@@ -107,7 +107,21 @@
               }
             </ul>
           }
-          <p class="sub small">Payment and PDF generation will be available in a later step.</p>
+          <p class="sub small">Payment will be available in a later step.</p>
+          <div class="proposal-actions">
+            <button
+              class="btn-primary btn-sm"
+              (click)="downloadPdf()"
+              [disabled]="pdfDownloading()"
+              [attr.aria-label]="'Download proposal PDF for ' + proposal.id"
+            >{{ pdfDownloading() ? 'Generating PDF…' : 'Download PDF' }}</button>
+          </div>
+          @if (pdfError()) {
+            <p class="proposals-error" role="alert">
+              {{ pdfError() }}
+              <button class="linklike" (click)="retryPdf()">Try again</button>
+            </p>
+          }
         </div>
         }
       }

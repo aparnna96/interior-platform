@@ -53,6 +53,10 @@ export class ProposalsComponent {
   /** Transient confirmation shown after a creation flow opens its detail. */
   readonly notice = signal<string | null>(null);
 
+  /** True while GET /api/proposals/{id}/pdf is in flight — blocks duplicates. */
+  readonly pdfDownloading = signal(false);
+  readonly pdfError = signal<string | null>(null);
+
   /** Id of the last applied `createdDetail`, so each snapshot opens once. */
   private appliedCreatedId: string | null = null;
 
@@ -169,6 +173,8 @@ export class ProposalsComponent {
     this.detailError.set(null);
     this.detailLoading.set(false);
     this.notice.set(null);
+    this.pdfDownloading.set(false);
+    this.pdfError.set(null);
   }
 
   retryDetail(): void {
@@ -176,6 +182,52 @@ export class ProposalsComponent {
     if (id) {
       this.viewDetails(id);
     }
+  }
+
+  /** Sensible download name for the rendered proposal document. */
+  pdfFileName(id: string): string {
+    return `proposal-${id}.pdf`;
+  }
+
+  /**
+   * GET /api/proposals/{id}/pdf for the open proposal and save the returned
+   * blob — no-op while logged out or while a download is already in flight.
+   * The document bytes come from the server snapshot; no ProductService
+   * data is involved.
+   */
+  downloadPdf(): void {
+    const proposal = this.selected();
+    if (this.pdfDownloading() || proposal === null) return;
+    if (!this.auth.isAuthenticated()) return;
+    this.pdfDownloading.set(true);
+    this.pdfError.set(null);
+    this.proposals.downloadProposalPdf(proposal.id).subscribe({
+      next: (blob) => {
+        this.pdfDownloading.set(false);
+        this.saveBlob(blob, this.pdfFileName(proposal.id));
+      },
+      error: (err: unknown) => {
+        this.pdfDownloading.set(false);
+        this.handlePdfError(err);
+      },
+    });
+  }
+
+  retryPdf(): void {
+    if (this.selected() !== null) {
+      this.downloadPdf();
+    }
+  }
+
+  private saveBlob(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
   }
 
   private resetAll(): void {
@@ -188,6 +240,8 @@ export class ProposalsComponent {
     this.detailNotFound.set(false);
     this.detailError.set(null);
     this.notice.set(null);
+    this.pdfDownloading.set(false);
+    this.pdfError.set(null);
     this.appliedCreatedId = null;
   }
 
@@ -214,6 +268,21 @@ export class ProposalsComponent {
       return;
     }
     this.detailError.set(this.describeError(err));
+  }
+
+  private handlePdfError(err: unknown): void {
+    const status = (err as { status?: number })?.status;
+    if (status === 401) {
+      this.auth.logout();
+      this.resetAll();
+      this.listError.set('Your session has expired. Please log in again.');
+      return;
+    }
+    if (status === 404) {
+      this.pdfError.set('That proposal could not be found.');
+      return;
+    }
+    this.pdfError.set(this.describeError(err));
   }
 
   private describeError(err: unknown): string {

@@ -75,6 +75,15 @@ export class ProposalService {
     return this.http.get<ProposalDetailDto>(`${PROPOSALS_URL}/${id}`, { headers: this.authHeaders() });
   }
 
+  /**
+   * GET /api/proposals/{id}/pdf — the server-rendered proposal document as a
+   * PDF blob. The bytes come entirely from the persisted proposal snapshot;
+   * no product, estimate or profile data is consulted client-side.
+   */
+  downloadProposalPdf(id: string): Observable<Blob> {
+    return this.http.get(`${PROPOSALS_URL}/${id}/pdf`, { headers: this.authHeaders(), responseType: 'blob' });
+  }
+
   private authHeaders(): HttpHeaders {
     const token = this.auth.token();
     return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : new HttpHeaders();

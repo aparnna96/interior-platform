@@ -188,7 +188,7 @@ describe('ProposalsComponent', () => {
     expect(el.textContent).toContain('× 2');
     expect(el.textContent).toContain(`₹${(42999).toLocaleString('en-IN')} each`);
     expect(el.textContent).toContain(`₹${(85998).toLocaleString('en-IN')}`);
-    expect(el.textContent).toContain('Payment and PDF generation will be available in a later step.');
+    expect(el.textContent).toContain('Payment will be available in a later step.');
     httpMock.expectNone(PRODUCTS_URL);
   });
 
