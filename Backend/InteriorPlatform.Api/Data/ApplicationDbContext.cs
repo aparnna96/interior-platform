@@ -32,6 +32,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Estimate> Estimates => Set<Estimate>();
 
+    public DbSet<Proposal> Proposals => Set<Proposal>();
+
+    public DbSet<ProposalItem> ProposalItems => Set<ProposalItem>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -42,5 +46,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new OrderConfiguration());
         builder.ApplyConfiguration(new OrderItemConfiguration());
         builder.ApplyConfiguration(new EstimateConfiguration());
+        builder.ApplyConfiguration(new ProposalConfiguration());
+        builder.ApplyConfiguration(new ProposalItemConfiguration());
     }
 }
