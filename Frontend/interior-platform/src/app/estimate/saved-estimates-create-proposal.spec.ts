@@ -39,6 +39,7 @@ function createdProposal(): ProposalDetailDto {
     area: 180,
     ratePerSquareFoot: 1500,
     estimatedAmount: 270000,
+    isPaymentVerified: false,
     items: [
       {
         id: 'pi-1',

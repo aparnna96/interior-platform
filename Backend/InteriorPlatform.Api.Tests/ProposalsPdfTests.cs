@@ -13,12 +13,16 @@ using Xunit;
 namespace InteriorPlatform.Api.Tests;
 
 /// <summary>
-/// Proposal PDF rules (Task 13C). SQLite in-memory is used for relational
-/// fidelity. These tests never touch the real SQL Server database.
+/// Proposal PDF rules (Tasks 13C + 14C). SQLite in-memory is used for
+/// relational fidelity. These tests never touch the real SQL Server
+/// database.
 /// The PDF is rendered only from the persisted proposal snapshot: later
 /// product or estimate edits must not change the generated document, which
 /// is verified by byte-equality of the generated PDFs (QuestPDF output is
 /// deterministic for identical input on the same host).
+/// Since Task 14C the PDF endpoint additionally requires a verified token
+/// payment owned by the same user on the same proposal; the endpoint itself
+/// is the security boundary and is tested directly here.
 /// </summary>
 public sealed class ProposalsPdfTests
 {
@@ -144,6 +148,39 @@ public sealed class ProposalsPdfTests
         return Assert.IsType<ProposalDetailResponse>(created.Value);
     }
 
+    private static async Task<Payment> SeedPaymentAsync(
+        ApplicationDbContext db, Guid proposalId, string userId, PaymentStatus status, string orderId)
+    {
+        var payment = new Payment
+        {
+            Id = Guid.NewGuid(),
+            ProposalId = proposalId,
+            UserId = userId,
+            Amount = 500m,
+            Currency = "INR",
+            Status = status,
+            Provider = "Razorpay",
+            ProviderOrderId = orderId,
+            CreatedAt = DateTime.UtcNow,
+            VerifiedAt = status == PaymentStatus.Verified ? DateTime.UtcNow : null,
+        };
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+        return payment;
+    }
+
+    private static async Task<Payment> SeedVerifiedPaymentAsync(
+        ApplicationDbContext db, Guid proposalId, string userId, string orderId = "order-test-verified") =>
+        await SeedPaymentAsync(db, proposalId, userId, PaymentStatus.Verified, orderId);
+
+    private static void AssertPaymentRequired(ObjectResult result)
+    {
+        Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
+        var problem = Assert.IsType<ProblemDetails>(result.Value);
+        Assert.Contains("Payment verification is required", problem.Title);
+        Assert.DoesNotContain("secret", problem.Title ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static FileContentResult DownloadedPdf(IActionResult result)
     {
         var file = Assert.IsType<FileContentResult>(result);
@@ -154,19 +191,80 @@ public sealed class ProposalsPdfTests
     }
 
     [Fact]
-    public async Task Owner_CanDownloadProposalPdf()
+    public async Task Owner_WithVerifiedPayment_CanDownloadProposalPdf()
     {
         using var test = new TestDb();
         var estimate = await SeedEstimateAsync(test.Db, UserA);
         await AddToCartAsync(test.Db, UserA, SofaId, 2);
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        await SeedVerifiedPaymentAsync(test.Db, proposal.Id, UserA);
 
         var file = DownloadedPdf(await ProposalsFor(test.Db, UserA).DownloadProposalPdf(proposal.Id));
 
         Assert.Equal($"proposal-{proposal.Id}.pdf", file.FileDownloadName);
         // PDF magic header: the payload is a real PDF document.
         Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(file.FileContents, 0, 4));
+    }
+
+    [Fact]
+    public async Task DownloadPdf_OwnerWithoutPayment_Returns403()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+
+        var result = Assert.IsType<ObjectResult>(
+            await ProposalsFor(test.Db, UserA).DownloadProposalPdf(proposal.Id));
+        AssertPaymentRequired(result);
+    }
+
+    [Fact]
+    public async Task DownloadPdf_OwnerWithCreatedPayment_Returns403()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        await AddToCartAsync(test.Db, UserA, SofaId, 1);
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        await SeedPaymentAsync(test.Db, proposal.Id, UserA, PaymentStatus.Created, "order-test-created");
+
+        var result = Assert.IsType<ObjectResult>(
+            await ProposalsFor(test.Db, UserA).DownloadProposalPdf(proposal.Id));
+        AssertPaymentRequired(result);
+    }
+
+    [Fact]
+    public async Task DownloadPdf_OwnerWithFailedPayment_Returns403()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        await SeedPaymentAsync(test.Db, proposal.Id, UserA, PaymentStatus.Failed, "order-test-failed");
+
+        var result = Assert.IsType<ObjectResult>(
+            await ProposalsFor(test.Db, UserA).DownloadProposalPdf(proposal.Id));
+        AssertPaymentRequired(result);
+    }
+
+    [Fact]
+    public async Task DownloadPdf_VerifiedPaymentOnAnotherProposal_Returns403()
+    {
+        using var test = new TestDb();
+        var estimateA = await SeedEstimateAsync(test.Db, UserA);
+        var proposalA = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimateA.Id }));
+        var estimateB = await SeedEstimateAsync(test.Db, UserA);
+        var proposalB = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimateB.Id }));
+        await SeedVerifiedPaymentAsync(test.Db, proposalB.Id, UserA, "order-test-other");
+
+        // The verified payment belongs to proposal B, not proposal A.
+        var result = Assert.IsType<ObjectResult>(
+            await ProposalsFor(test.Db, UserA).DownloadProposalPdf(proposalA.Id));
+        AssertPaymentRequired(result);
     }
 
     [Fact]
@@ -177,6 +275,7 @@ public sealed class ProposalsPdfTests
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
         Assert.Empty(proposal.Items);
+        await SeedVerifiedPaymentAsync(test.Db, proposal.Id, UserA);
 
         DownloadedPdf(await ProposalsFor(test.Db, UserA).DownloadProposalPdf(proposal.Id));
     }
@@ -200,9 +299,39 @@ public sealed class ProposalsPdfTests
         var estimate = await SeedEstimateAsync(test.Db, UserA);
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        await SeedVerifiedPaymentAsync(test.Db, proposal.Id, UserA);
 
+        // Even with a verified payment on the target, another user probes 404.
         Assert.IsType<NotFoundResult>(
             await ProposalsFor(test.Db, UserB).DownloadProposalPdf(proposal.Id));
+    }
+
+    [Fact]
+    public async Task DownloadPdf_VerifiedPaymentOfAnotherUser_Returns403()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        test.Db.Payments.Add(new Payment
+        {
+            Id = Guid.NewGuid(),
+            ProposalId = proposal.Id,
+            UserId = UserB,
+            Amount = 500m,
+            Currency = "INR",
+            Status = PaymentStatus.Verified,
+            Provider = "Razorpay",
+            ProviderOrderId = "order-test-cross-user",
+            CreatedAt = DateTime.UtcNow,
+            VerifiedAt = DateTime.UtcNow,
+        });
+        await test.Db.SaveChangesAsync();
+
+        // A verified payment owned by someone else must not unlock the PDF.
+        var result = Assert.IsType<ObjectResult>(
+            await ProposalsFor(test.Db, UserA).DownloadProposalPdf(proposal.Id));
+        AssertPaymentRequired(result);
     }
 
     [Fact]
@@ -213,6 +342,7 @@ public sealed class ProposalsPdfTests
         await AddToCartAsync(test.Db, UserA, SofaId, 1);
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        await SeedVerifiedPaymentAsync(test.Db, proposal.Id, UserA);
 
         var single = DownloadedPdf(
             await ProposalsFor(test.Db, UserA).DownloadProposalPdf(proposal.Id)).FileContents;
@@ -256,6 +386,7 @@ public sealed class ProposalsPdfTests
         await AddToCartAsync(test.Db, UserA, SofaId, 1);
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        await SeedVerifiedPaymentAsync(test.Db, proposal.Id, UserA);
 
         var before = DownloadedPdf(
             await ProposalsFor(test.Db, UserA).DownloadProposalPdf(proposal.Id)).FileContents;
@@ -280,6 +411,7 @@ public sealed class ProposalsPdfTests
         var estimate = await SeedEstimateAsync(test.Db, UserA, width: 10m, length: 10m, rate: 2000m);
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        await SeedVerifiedPaymentAsync(test.Db, proposal.Id, UserA);
 
         var before = DownloadedPdf(
             await ProposalsFor(test.Db, UserA).DownloadProposalPdf(proposal.Id)).FileContents;

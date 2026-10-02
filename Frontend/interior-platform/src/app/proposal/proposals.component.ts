@@ -57,7 +57,9 @@ function toCheckoutPaise(amountMajorUnits: number): number {
  * Token payments run per open proposal through Razorpay Checkout (TEST
  * mode): Pay Token → backend order → Checkout → backend verification.
  * Checkout success alone never counts — only a Verified backend response
- * shows success.
+ * shows success. The PDF download is likewise backend-gated: the detail
+ * response carries a read-only `isPaymentVerified` flag that unlocks the
+ * button, and the PDF endpoint re-checks payment on every request.
  */
 @Component({
   selector: 'app-proposals',
@@ -384,6 +386,10 @@ export class ProposalsComponent {
             this.verifiedPayment.set(outcome);
             this.paymentState.set('verified');
             this.paymentError.set(null);
+            // The payment box reflects the authoritative verify response;
+            // the PDF gate additionally needs the backend detail flag, so
+            // refresh the detail without touching payment flow state.
+            this.refreshPaymentAvailability();
           } else {
             this.paymentState.set('failed');
             this.paymentError.set('Payment verification failed. You can try again.');
@@ -413,6 +419,33 @@ export class ProposalsComponent {
     this.paymentState.set('failed');
     this.paymentError.set('The payment did not go through. You can try again.');
     this.paymentRetryAllowed.set(true);
+  }
+
+  /**
+   * Re-reads the open proposal so the PDF gate follows backend truth. Only
+   * the `selected` snapshot is replaced for the same open proposal — the
+   * payment flow state (already set from the verify response) is untouched,
+   * and no loading spinner hides the confirmation. A 401 still logs out;
+   * any other failure is left to the PDF download itself, which enforces
+   * the same rule authoritatively.
+   */
+  private refreshPaymentAvailability(): void {
+    const id = this.selectedId();
+    if (id === null || !this.auth.isAuthenticated()) return;
+    this.proposals.getProposal(id).subscribe({
+      next: (proposal) => {
+        if (this.selectedId() === proposal.id) {
+          this.selected.set(proposal);
+        }
+      },
+      error: (err: unknown) => {
+        if ((err as { status?: number })?.status === 401) {
+          this.auth.logout();
+          this.resetAll();
+          this.listError.set('Your session has expired. Please log in again.');
+        }
+      },
+    });
   }
 
   private saveBlob(blob: Blob, fileName: string): void {
@@ -486,6 +519,10 @@ export class ProposalsComponent {
     }
     if (status === 404) {
       this.pdfError.set('That proposal could not be found.');
+      return;
+    }
+    if (status === 403) {
+      this.pdfError.set('Complete and verify the token payment before downloading the proposal PDF.');
       return;
     }
     this.pdfError.set(this.describeError(err));

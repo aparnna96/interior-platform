@@ -26,6 +26,7 @@ function detail(): ProposalDetailDto {
     area: 180,
     ratePerSquareFoot: 1500,
     estimatedAmount: 270000,
+    isPaymentVerified: false,
     items: [
       {
         id: 'pi-1',
@@ -77,6 +78,7 @@ describe('ProposalService', () => {
     expect(received!.id).toBe('prop-1');
     expect(received!.estimateId).toBe('est-1');
     expect(received!.status).toBe(0);
+    expect(received!.isPaymentVerified).toBeFalse();
   });
 
   it('createProposal attaches the Bearer header', () => {

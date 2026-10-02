@@ -1,8 +1,14 @@
-# Payments — Razorpay TEST mode (Task 14A foundation)
+# Payments — Razorpay TEST mode (Tasks 14A–14C)
 
 Backend-only token-payment foundation for proposals. TEST mode only.
-No live payments. No Angular payment UI yet. PDF access is intentionally
-NOT gated by payment yet (follow-up task).
+No live payments.
+
+Proposal PDFs require a backend-verified token payment:
+`Payment.Status == Verified` (owned by the same user on the same
+proposal) is the authoritative condition. `GET /api/proposals/{id}/pdf`
+re-checks the database on every request and returns `403` without one;
+`GET /api/proposals/{id}` exposes a read-only `isPaymentVerified` display
+hint computed the same way. No frontend state can unlock the PDF.
 
 ## Configuration keys
 
@@ -52,8 +58,4 @@ or returned by any API.
 
 ## Deferred to follow-ups
 
-- Angular Checkout UI (Task 14B+).
-- Payment-gated PDF access (`GET /api/proposals/{id}/pdf` is unchanged).
-- Proposal status changes beyond `Draft` (persisted truth is
-  `Payment.Status == Verified`).
 - Live/production payments, webhooks, refunds.

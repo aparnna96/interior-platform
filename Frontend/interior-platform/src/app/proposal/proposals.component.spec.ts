@@ -35,6 +35,7 @@ function detail(partial: Partial<ProposalDetailDto> & { id: string }): ProposalD
     area: 180,
     ratePerSquareFoot: 1500,
     estimatedAmount: 270000,
+    isPaymentVerified: true,
     items: [
       {
         id: 'pi-1',
@@ -190,6 +191,20 @@ describe('ProposalsComponent', () => {
     expect(el.textContent).toContain(`₹${(85998).toLocaleString('en-IN')}`);
     expect(el.textContent).toContain('Token payments are processed securely via Razorpay.');
     httpMock.expectNone(PRODUCTS_URL);
+  });
+
+  it('locks PDF download until the backend reports a verified payment', () => {
+    const fixture = setupAuthenticated([summary({ id: 'prop-1' })]);
+    const cmp = fixture.componentInstance;
+
+    cmp.viewDetails('prop-1');
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1`).flush(detail({ id: 'prop-1', isPaymentVerified: false }));
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('PDF available after token payment');
+    expect(el.querySelector('[aria-label="Download proposal PDF for prop-1"]')).toBeNull();
+    expect(cmp.selected()?.isPaymentVerified).toBeFalse();
   });
 
   it('clears stale detail while loading another proposal', () => {

@@ -35,6 +35,7 @@ function detail(partial: Partial<ProposalDetailDto> & { id: string }): ProposalD
     area: 180,
     ratePerSquareFoot: 1500,
     estimatedAmount: 270000,
+    isPaymentVerified: true,
     items: [
       {
         id: 'pi-1',
@@ -90,7 +91,7 @@ describe('ProposalService downloadProposalPdf', () => {
 describe('ProposalsComponent proposal PDF download', () => {
   let httpMock: HttpTestingController;
 
-  function setupAuthenticatedWithDetail() {
+  function setupAuthenticatedWithDetail(verifiedPayment = true) {
     localStorage.setItem(AUTH_TOKEN_KEY, TOKEN);
     TestBed.configureTestingModule({
       imports: [ProposalsComponent],
@@ -103,7 +104,7 @@ describe('ProposalsComponent proposal PDF download', () => {
     httpMock.expectOne(PROPOSALS_URL).flush([summary({ id: 'prop-1' })]);
     const cmp = fixture.componentInstance;
     cmp.viewDetails('prop-1');
-    httpMock.expectOne(`${PROPOSALS_URL}/prop-1`).flush(detail({ id: 'prop-1' }));
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1`).flush(detail({ id: 'prop-1', isPaymentVerified: verifiedPayment }));
     fixture.detectChanges();
     return { fixture, cmp };
   }
@@ -265,5 +266,38 @@ describe('ProposalsComponent proposal PDF download', () => {
     expect(cmp.pdfDownloading()).toBeFalse();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('prop-1');
     httpMock.expectNone(PROPOSALS_URL);
+  });
+
+  it('unverified proposal locks PDF download without calling the endpoint', () => {
+    const { fixture } = setupAuthenticatedWithDetail(false);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('PDF available after token payment');
+    expect(el.querySelector('[aria-label="Download proposal PDF for prop-1"]')).toBeNull();
+    httpMock.expectNone(`${PROPOSALS_URL}/prop-1/pdf`);
+  });
+
+  it('403 keeps the detail, explains payment is required, and allows retry', () => {
+    const { fixture, cmp } = setupAuthenticatedWithDetail();
+    const saveSpy = spyOn(
+      cmp as unknown as { saveBlob(blob: Blob, name: string): void },
+      'saveBlob'
+    ).and.stub();
+
+    cmp.downloadPdf();
+    // A null body avoids blob conversion in the test backend; the handler only reads status.
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1/pdf`).flush(null, { status: 403, statusText: 'Forbidden' });
+    fixture.detectChanges();
+
+    expect(cmp.selected()?.id).toBe('prop-1');
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[role="alert"]')?.textContent).toContain(
+      'Complete and verify the token payment before downloading the proposal PDF.'
+    );
+
+    (el.querySelector('.proposals-error button') as HTMLButtonElement).click();
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1/pdf`).flush(pdfBlob());
+    fixture.detectChanges();
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+    expect(cmp.pdfError()).toBeNull();
   });
 });

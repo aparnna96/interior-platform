@@ -145,6 +145,35 @@ public sealed class ProposalsControllerTests
         return Assert.IsType<ProposalDetailResponse>(created.Value);
     }
 
+    private static async Task<Payment> SeedPaymentAsync(
+        ApplicationDbContext db, Guid proposalId, string userId, PaymentStatus status, string orderId)
+    {
+        var payment = new Payment
+        {
+            Id = Guid.NewGuid(),
+            ProposalId = proposalId,
+            UserId = userId,
+            Amount = 500m,
+            Currency = "INR",
+            Status = status,
+            Provider = "Razorpay",
+            ProviderOrderId = orderId,
+            CreatedAt = DateTime.UtcNow,
+            VerifiedAt = status == PaymentStatus.Verified ? DateTime.UtcNow : null,
+        };
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+        return payment;
+    }
+
+    private static async Task<ProposalDetailResponse> GetDetailAsync(
+        ApplicationDbContext db, string userId, Guid proposalId)
+    {
+        var result = await ProposalsFor(db, userId).GetProposal(proposalId);
+        return Assert.IsType<ProposalDetailResponse>(
+            Assert.IsType<OkObjectResult>(result.Result).Value);
+    }
+
     [Fact]
     public void ProposalsController_RequiresAuthorization()
     {
@@ -187,6 +216,7 @@ public sealed class ProposalsControllerTests
         Assert.Equal(estimate.Id, proposal.EstimateId);
         Assert.Equal(ProposalStatus.Draft, proposal.Status);
         Assert.NotEqual(default, proposal.CreatedAt);
+        Assert.False(proposal.IsPaymentVerified);
 
         var stored = await test.Db.Proposals.SingleAsync();
         Assert.Equal(UserA, stored.UserId);
@@ -422,6 +452,64 @@ public sealed class ProposalsControllerTests
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
 
         Assert.IsType<NotFoundResult>((await ProposalsFor(test.Db, UserB).GetProposal(proposal.Id)).Result);
+    }
+
+    [Fact]
+    public async Task GetProposal_WithoutPayment_ReportsPaymentUnverified()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+
+        var detail = await GetDetailAsync(test.Db, UserA, proposal.Id);
+
+        Assert.False(detail.IsPaymentVerified);
+    }
+
+    [Fact]
+    public async Task GetProposal_WithCreatedPayment_ReportsPaymentUnverified()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        await SeedPaymentAsync(test.Db, proposal.Id, UserA, PaymentStatus.Created, "order-test-created");
+
+        var detail = await GetDetailAsync(test.Db, UserA, proposal.Id);
+
+        Assert.False(detail.IsPaymentVerified);
+    }
+
+    [Fact]
+    public async Task GetProposal_WithVerifiedPayment_ReportsPaymentVerified()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        await SeedPaymentAsync(test.Db, proposal.Id, UserA, PaymentStatus.Verified, "order-test-verified");
+
+        var detail = await GetDetailAsync(test.Db, UserA, proposal.Id);
+
+        Assert.True(detail.IsPaymentVerified);
+    }
+
+    [Fact]
+    public async Task GetProposal_VerifiedPaymentOnAnotherProposal_ReportsPaymentUnverified()
+    {
+        using var test = new TestDb();
+        var estimateA = await SeedEstimateAsync(test.Db, UserA);
+        var proposalA = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimateA.Id }));
+        var estimateB = await SeedEstimateAsync(test.Db, UserA);
+        var proposalB = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimateB.Id }));
+        await SeedPaymentAsync(test.Db, proposalB.Id, UserA, PaymentStatus.Verified, "order-test-other");
+
+        var detail = await GetDetailAsync(test.Db, UserA, proposalA.Id);
+
+        Assert.False(detail.IsPaymentVerified);
     }
 
     [Fact]

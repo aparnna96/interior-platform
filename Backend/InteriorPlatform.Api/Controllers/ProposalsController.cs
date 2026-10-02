@@ -81,12 +81,14 @@ public class ProposalsController : ControllerBase
             return NotFound();
         }
 
-        return Ok(ToDetail(proposal));
+        return Ok(ToDetail(proposal, await HasVerifiedPaymentAsync(id, userId)));
     }
 
     // GET /api/proposals/{id}/pdf — download the client-ready proposal PDF
-    // rendered from the persisted snapshot. Draft proposals may download;
-    // payment gating arrives in a later milestone. The proposal is never
+    // rendered from the persisted snapshot. The PDF is downloadable if and
+    // only if the authenticated user owns the proposal and the proposal has
+    // a verified token payment. This endpoint re-checks the database on
+    // every request: no client state can unlock it. The proposal is never
     // modified and no payment records are created.
     [HttpGet("{id:guid}/pdf")]
     public async Task<IActionResult> DownloadProposalPdf(Guid id)
@@ -104,6 +106,13 @@ public class ProposalsController : ControllerBase
         if (proposal is null)
         {
             return NotFound();
+        }
+
+        if (!await HasVerifiedPaymentAsync(id, userId))
+        {
+            return Problem(
+                title: "Payment verification is required before the proposal PDF can be downloaded.",
+                statusCode: StatusCodes.Status403Forbidden);
         }
 
         var pdf = ProposalPdfGenerator.Generate(proposal);
@@ -218,7 +227,8 @@ public class ProposalsController : ControllerBase
         _db.Proposals.Add(proposal);
         await _db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetProposal), new { id = proposal.Id }, ToDetail(proposal));
+        // A just-created proposal cannot have payments yet.
+        return CreatedAtAction(nameof(GetProposal), new { id = proposal.Id }, ToDetail(proposal, isPaymentVerified: false));
     }
 
     /// <summary>
@@ -239,7 +249,7 @@ public class ProposalsController : ControllerBase
             ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
     }
 
-    private static ProposalDetailResponse ToDetail(Proposal proposal) => new()
+    private static ProposalDetailResponse ToDetail(Proposal proposal, bool isPaymentVerified) => new()
     {
         Id = proposal.Id,
         EstimateId = proposal.EstimateId,
@@ -250,6 +260,7 @@ public class ProposalsController : ControllerBase
         EstimatedAmount = proposal.EstimatedAmount,
         Status = proposal.Status,
         CreatedAt = proposal.CreatedAt,
+        IsPaymentVerified = isPaymentVerified,
         Items = proposal.Items
             .OrderBy(i => i.ProductId)
             .Select(i => new ProposalItemResponse
@@ -263,4 +274,15 @@ public class ProposalsController : ControllerBase
             })
             .ToList(),
     };
+
+    /// <summary>
+    /// Efficient existence check for the PDF/detail authorization rule: a
+    /// verified token payment owned by the same user on the same proposal.
+    /// No payment attempts are loaded.
+    /// </summary>
+    private async Task<bool> HasVerifiedPaymentAsync(Guid proposalId, string userId) =>
+        await _db.Payments.AnyAsync(p =>
+            p.ProposalId == proposalId &&
+            p.UserId == userId &&
+            p.Status == PaymentStatus.Verified);
 }

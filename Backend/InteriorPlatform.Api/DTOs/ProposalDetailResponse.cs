@@ -27,5 +27,13 @@ public class ProposalDetailResponse
 
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>
+    /// Read-only availability derived server-side: true only when the
+    /// proposal has a payment with <see cref="PaymentStatus.Verified"/>.
+    /// The PDF endpoint enforces the same rule independently on every
+    /// request — this flag is a display hint, never an authorization.
+    /// </summary>
+    public bool IsPaymentVerified { get; set; }
+
     public List<ProposalItemResponse> Items { get; set; } = [];
 }

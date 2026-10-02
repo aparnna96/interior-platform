@@ -225,6 +225,16 @@
 
 .proposal-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .proposal-actions .btn-primary { justify-self: start; }
+.proposal-locked {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-soft);
+  border: 1px dashed var(--border-soft);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
 
 /* ── Token payment ── */
 .payment-box {

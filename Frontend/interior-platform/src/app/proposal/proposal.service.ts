@@ -26,6 +26,12 @@ export interface ProposalDetailDto {
   area: number;
   ratePerSquareFoot: number;
   estimatedAmount: number;
+  /**
+   * Read-only availability derived server-side: true only when the proposal
+   * has a verified token payment. The PDF endpoint enforces the same rule
+   * independently — this flag is a display hint, never an authorization.
+   */
+  isPaymentVerified: boolean;
   items: ProposalItemDto[];
 }
 
