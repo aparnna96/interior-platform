@@ -1,7 +1,8 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth.service';
 import { EstimateService, type EstimateDto, type EstimateSummaryDto } from './estimate.service';
+import { ProposalService, type ProposalDetailDto } from '../proposal/proposal.service';
 
 /**
  * Saved-estimates list + detail over GET /api/estimates(+/{id}).
@@ -12,6 +13,12 @@ import { EstimateService, type EstimateDto, type EstimateSummaryDto } from './es
  * visualizer calculator and the Product API are never consulted.
  * Unauthenticated visitors issue no requests; a 401 drops the session
  * (existing logout behavior) and resets this view.
+ *
+ * Each saved estimate can spawn a customer proposal via POST
+ * /api/proposals with exactly `{ estimateId }`: ownership, dimensions,
+ * prices, totals, status and timestamps all derive server-side. Creation
+ * never mutates the saved estimate, the cart, or the visualizer state;
+ * success emits `proposalCreated` so the shell can open the new detail.
  */
 @Component({
   selector: 'app-saved-estimates',
@@ -23,6 +30,10 @@ import { EstimateService, type EstimateDto, type EstimateSummaryDto } from './es
 export class SavedEstimatesComponent {
   private readonly auth = inject(AuthService);
   private readonly estimates = inject(EstimateService);
+  private readonly proposals = inject(ProposalService);
+
+  /** Emits the server-created proposal so the shell can open its detail. */
+  readonly proposalCreated = output<ProposalDetailDto>();
 
   readonly list = signal<EstimateSummaryDto[] | null>(null);
   readonly listLoading = signal(false);
@@ -33,6 +44,12 @@ export class SavedEstimatesComponent {
   readonly detailLoading = signal(false);
   readonly detailNotFound = signal(false);
   readonly detailError = signal<string | null>(null);
+
+  /** Estimate id with a POST /api/proposals in flight, or null. */
+  readonly creatingProposalFor = signal<string | null>(null);
+  readonly createProposalError = signal<string | null>(null);
+  readonly createProposalErrorFor = signal<string | null>(null);
+  readonly createProposalSuccess = signal<string | null>(null);
 
   readonly isAuthenticated = computed(() => this.auth.isAuthenticated());
 
@@ -106,6 +123,44 @@ export class SavedEstimatesComponent {
     }
   }
 
+  /**
+   * POST /api/proposals with exactly `{ estimateId }` — no-op while logged
+   * out or while a creation is already in flight (duplicate clicks collapse
+   * into the single request). The saved estimate, the cart and the
+   * visualizer are never touched: success only announces the new snapshot
+   * via `proposalCreated`, and failure leaves everything intact for retry.
+   */
+  createProposal(estimateId: string): void {
+    if (this.creatingProposalFor() !== null) return;
+    if (!this.auth.isAuthenticated()) {
+      this.createProposalError.set('Please log in to create a proposal.');
+      this.createProposalErrorFor.set(estimateId);
+      return;
+    }
+    this.creatingProposalFor.set(estimateId);
+    this.createProposalError.set(null);
+    this.createProposalErrorFor.set(null);
+    this.createProposalSuccess.set(null);
+    this.proposals.createProposal(estimateId).subscribe({
+      next: (proposal) => {
+        this.creatingProposalFor.set(null);
+        this.createProposalSuccess.set('Proposal created successfully.');
+        this.proposalCreated.emit(proposal);
+      },
+      error: (err: unknown) => {
+        this.creatingProposalFor.set(null);
+        this.handleCreateProposalError(err, estimateId);
+      },
+    });
+  }
+
+  retryCreateProposal(): void {
+    const id = this.createProposalErrorFor();
+    if (id) {
+      this.createProposal(id);
+    }
+  }
+
   private resetAll(): void {
     this.list.set(null);
     this.listLoading.set(false);
@@ -115,6 +170,10 @@ export class SavedEstimatesComponent {
     this.detailLoading.set(false);
     this.detailNotFound.set(false);
     this.detailError.set(null);
+    this.creatingProposalFor.set(null);
+    this.createProposalError.set(null);
+    this.createProposalErrorFor.set(null);
+    this.createProposalSuccess.set(null);
   }
 
   private handleListError(err: unknown): void {
@@ -125,6 +184,19 @@ export class SavedEstimatesComponent {
       return;
     }
     this.listError.set(this.describeError(err));
+  }
+
+  private handleCreateProposalError(err: unknown, estimateId: string): void {
+    if ((err as { status?: number })?.status === 401) {
+      this.auth.logout();
+      this.resetAll();
+      this.listError.set('Your session has expired. Please log in again.');
+      return;
+    }
+    // The saved estimate stays intact: only the creation error is surfaced,
+    // with the source id retained so the user can retry.
+    this.createProposalError.set(this.describeError(err));
+    this.createProposalErrorFor.set(estimateId);
   }
 
   private handleDetailError(err: unknown): void {

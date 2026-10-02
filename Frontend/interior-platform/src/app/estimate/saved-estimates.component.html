@@ -2,6 +2,15 @@
   @if (!isAuthenticated()) {
     <p class="sub small login-hint" role="status">Log in to save estimates and see them here.</p>
   } @else {
+    @if (createProposalSuccess()) {
+      <p class="saved-notice" role="status">{{ createProposalSuccess() }}</p>
+    }
+    @if (createProposalError()) {
+      <p class="saved-error" role="alert">
+        {{ createProposalError() }}
+        <button class="linklike" (click)="retryCreateProposal()">Try again</button>
+      </p>
+    }
     @if (selectedId() === null) {
       @if (listLoading() && list() === null) {
         <div class="saved-loading" aria-live="polite">
@@ -32,6 +41,12 @@
               <div class="saved-side">
                 <p class="saved-sub">₹{{ inr(e.estimatedAmount) }}</p>
                 <button class="linklike" (click)="viewDetails(e.id)" [attr.aria-label]="'View details for estimate ' + e.id">View details</button>
+                <button
+                  class="linklike"
+                  (click)="createProposal(e.id)"
+                  [disabled]="creatingProposalFor() !== null"
+                  [attr.aria-label]="'Create proposal for estimate ' + e.id"
+                >{{ creatingProposalFor() === e.id ? 'Creating…' : 'Create Proposal' }}</button>
               </div>
             </article>
           }
@@ -65,7 +80,15 @@
             <div><dt>Rate</dt><dd>₹{{ inr(estimate.ratePerSquareFoot) }} / sq ft</dd></div>
             <div class="total"><dt>Estimated amount</dt><dd>₹{{ inr(estimate.estimatedAmount) }}</dd></div>
           </dl>
-          <button class="linklike" (click)="backToList()">Back to saved estimates</button>
+          <div class="row-gap">
+            <button class="linklike" (click)="backToList()">Back to saved estimates</button>
+            <button
+              class="linklike"
+              (click)="createProposal(estimate.id)"
+              [disabled]="creatingProposalFor() !== null"
+              [attr.aria-label]="'Create proposal for estimate ' + estimate.id"
+            >{{ creatingProposalFor() === estimate.id ? 'Creating…' : 'Create Proposal' }}</button>
+          </div>
         </div>
         }
       }

@@ -63,6 +63,16 @@
       </button>
       <button
         class="nav-item"
+        aria-label="Proposals"
+        [attr.title]="sidebarCollapsed() ? 'Proposals' : null"
+        [class.active]="activeView() === 'proposals' && !showAccount()"
+        (click)="activeView.set('proposals'); showAccount.set(false); closeDrawer()"
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="11.5" x2="8.5" y2="11.5" stroke="currentColor" stroke-width="1.4"/></svg>
+        <span>Proposals</span>
+      </button>
+      <button
+        class="nav-item"
         aria-label="Projects"
         [attr.title]="sidebarCollapsed() ? 'Projects' : null"
         [class.active]="activeView() === 'projects' && !showAccount()"
@@ -135,6 +145,7 @@
           @if (auth.isAuthenticated()) {
             <button [class.active]="activeView() === 'orders' && !showAccount()" (click)="activeView.set('orders'); showAccount.set(false); closeDrawer()">Orders</button>
           }
+          <button [class.active]="activeView() === 'proposals' && !showAccount()" (click)="activeView.set('proposals'); showAccount.set(false); closeDrawer()">Proposals</button>
           <button [class.active]="showAccount()" (click)="toggleAccount(); closeDrawer()">Account</button>
         </nav>
         <button
@@ -169,6 +180,7 @@
         @if (auth.isAuthenticated()) {
           <button [class.active]="activeView() === 'orders' && !showAccount()" (click)="activeView.set('orders'); showAccount.set(false); closeDrawer()">Orders</button>
         }
+        <button [class.active]="activeView() === 'proposals' && !showAccount()" (click)="activeView.set('proposals'); showAccount.set(false); closeDrawer()">Proposals</button>
         <button [class.active]="showAccount()" (click)="toggleAccount(); closeDrawer()">Account</button>
       </nav>
       }
@@ -201,6 +213,7 @@
         <button [class.active]="activeView() === 'catalogue' && !showAccount()" (click)="activeView.set('catalogue'); showAccount.set(false)">Furniture</button>
         <button [class.active]="activeView() === 'visualizer' && !showAccount()" (click)="activeView.set('visualizer'); showAccount.set(false)">Visualizer</button>
         <button [class.active]="activeView() === 'estimates' && !showAccount()" (click)="activeView.set('estimates'); showAccount.set(false)">Estimates</button>
+        <button [class.active]="activeView() === 'proposals' && !showAccount()" (click)="activeView.set('proposals'); showAccount.set(false)">Proposals</button>
         <button [class.active]="activeView() === 'projects' && !showAccount()" (click)="activeView.set('projects'); showAccount.set(false)">
           Projects@if (projects().length > 0) { <span class="nav-count">{{ projects().length }}</span> }
         </button>
@@ -210,7 +223,7 @@
     }
 
     <!-- Workspace header — Visualizer controls only; hidden in Home, Interiors, Furniture and Cart views -->
-    @if (activeView() !== 'catalogue' && activeView() !== 'cart' && activeView() !== 'orders' && activeView() !== 'home' && activeView() !== 'interiors') {
+    @if (activeView() !== 'catalogue' && activeView() !== 'cart' && activeView() !== 'orders' && activeView() !== 'proposals' && activeView() !== 'home' && activeView() !== 'interiors') {
     <header class="ws-head">
       <div class="ws-title">
         <div>
@@ -535,6 +548,14 @@
       </main>
     }
 
+    @if (activeView() === 'proposals') {
+      <main class="content cat-main">
+        <app-proposals
+          [createdDetail]="createdProposal()"
+          (browse)="activeView.set('catalogue'); showAccount.set(false); closeDrawer()" />
+      </main>
+    }
+
     @if (activeView() === 'estimates') {
       <main class="content est-page">
         <header class="page-head">
@@ -601,7 +622,7 @@
               <h2>Saved estimates</h2>
               <span class="sub small">Server records</span>
             </div>
-            <app-saved-estimates />
+            <app-saved-estimates (proposalCreated)="onProposalCreated($event)" />
           </section>
         </div>
 
@@ -639,10 +660,10 @@
 
         <section class="panel" aria-label="Proposal">
           <h2>Proposal</h2>
-          <p class="sub small">The proposal PDF will be available in a later stage. The estimate above is the current draft basis.</p>
+          <p class="sub small">Create a proposal from a saved estimate above — the proposal preview opens with snapshot room and furniture lines.</p>
           <div class="row-gap">
-            <button class="btn btn-secondary btn-sm" disabled>Generate Proposal</button>
-            <span class="sub small">Placeholder — PDF generation is not implemented yet.</span>
+            <button class="btn btn-secondary btn-sm" (click)="activeView.set('proposals')">Open Proposals</button>
+            <span class="sub small">Payment and PDF generation will be available in a later step.</span>
           </div>
         </section>
 

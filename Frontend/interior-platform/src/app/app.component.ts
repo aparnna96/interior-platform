@@ -9,6 +9,8 @@ import { CartComponent } from './catalogue/cart.component';
 import { CartService } from './catalogue/cart.service';
 import { AuthService } from './auth.service';
 import { OrdersComponent } from './orders/orders.component';
+import { ProposalsComponent } from './proposal/proposals.component';
+import type { ProposalDetailDto } from './proposal/proposal.service';
 import { EstimateService, type EstimateDto } from './estimate/estimate.service';
 import { SavedEstimatesComponent } from './estimate/saved-estimates.component';
 import { HomeComponent } from './home/home.component';
@@ -60,7 +62,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginComponent, RegisterComponent, CatalogueComponent, CartComponent, OrdersComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginComponent, RegisterComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -68,7 +70,7 @@ export class AppComponent {
   title = 'interior-platform';
 
   // ── views ──────────────────────────────────
-  activeView = signal<'home' | 'interiors' | 'visualizer' | 'catalogue' | 'cart' | 'orders' | 'estimates' | 'projects'>('home');
+  activeView = signal<'home' | 'interiors' | 'visualizer' | 'catalogue' | 'cart' | 'orders' | 'proposals' | 'estimates' | 'projects'>('home');
   showAccount = signal(false);
 
   /** Shared frontend cart store (Pillar 2) — badge count in the navbar. */
@@ -84,7 +86,8 @@ export class AppComponent {
       this.activeView() === 'interiors' ||
       this.activeView() === 'catalogue' ||
       this.activeView() === 'cart' ||
-      this.activeView() === 'orders'
+      this.activeView() === 'orders' ||
+      this.activeView() === 'proposals'
   );
 
   constructor() {
@@ -104,8 +107,29 @@ export class AppComponent {
         this.savingEstimate.set(false);
         this.saveEstimateError.set(null);
         this.savedEstimate.set(null);
+        this.createdProposal.set(null);
       }
     });
+    effect(() => {
+      if (this.activeView() !== 'proposals' && this.createdProposal() !== null) {
+        // The handoff snapshot served its purpose: drop it so the next
+        // visit to Proposals starts from the server-refreshed list.
+        this.createdProposal.set(null);
+      }
+    });
+  }
+
+  /**
+   * Opens the server-created proposal snapshot in the Proposals view. The
+   * saved estimate, the cart and the visualizer are untouched — only the
+   * new detail is shown (via the ProposalsComponent `createdDetail` input,
+   * which opens it without refetching).
+   */
+  onProposalCreated(proposal: ProposalDetailDto): void {
+    this.createdProposal.set(proposal);
+    this.activeView.set('proposals');
+    this.showAccount.set(false);
+    this.closeDrawer();
   }
 
   /**
@@ -308,6 +332,14 @@ export class AppComponent {
   saveEstimateError = signal<string | null>(null);
   /** Last server-created estimate shown in the success state, or null. */
   savedEstimate = signal<EstimateDto | null>(null);
+
+  /**
+   * Last server-created proposal snapshot, handed to the Proposals view so
+   * its detail opens without refetching. Cleared when leaving the Proposals
+   * view (and on logout), so returning later shows the refreshed list
+   * instead of a stale detail.
+   */
+  createdProposal = signal<ProposalDetailDto | null>(null);
 
   rooms = ['Living Room', 'Bedroom', 'Home Office'];
   selectedRoom = signal('Living Room');

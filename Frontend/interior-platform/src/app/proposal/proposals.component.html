@@ -1,0 +1,116 @@
+<section class="proposals" aria-label="Proposals">
+  <header class="proposals-head">
+    <div>
+      <p class="kicker">Account · Proposals</p>
+      <h1>Your Proposals</h1>
+    </div>
+    @if (isAuthenticated() && selectedId() !== null) {
+      <button class="linklike" (click)="backToProposals()">Back to proposals</button>
+    }
+  </header>
+
+  @if (!isAuthenticated()) {
+    <div class="proposals-empty">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
+      </span>
+      <p>Log in to view your proposals</p>
+      <span>Proposals are stored against your account. Use the Account panel to log in.</span>
+      <button class="btn-primary" (click)="goBrowse()">Browse Furniture</button>
+    </div>
+  } @else {
+    @if (selectedId() === null) {
+      @if (listLoading() && list() === null) {
+        <div class="proposals-empty" aria-live="polite">
+          <p>Loading your proposals…</p>
+          <span>Fetching your proposal history.</span>
+        </div>
+      } @else if (listError()) {
+        <p class="proposals-error" role="alert">
+          {{ listError() }}
+          <button class="linklike" (click)="loadProposals()">Try again</button>
+        </p>
+      } @else if (list() !== null && list()!.length === 0) {
+        <div class="proposals-empty">
+          <span class="empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
+          </span>
+          <p>No proposals yet</p>
+          <span>Create one from a saved estimate and it will appear here.</span>
+          <button class="btn-primary" (click)="goBrowse()">Browse Furniture</button>
+        </div>
+      } @else {
+        <div class="proposal-rows" aria-live="polite">
+          @for (p of list()!; track p.id) {
+            <article class="proposal-row" [attr.aria-label]="'Proposal ' + p.id">
+              <div class="proposal-main">
+                <p class="mono">{{ p.id }}</p>
+                <p class="proposal-meta">
+                  <span class="status-pill">{{ statusLabel(p.status) }}</span>
+                  <span>{{ p.createdAt | date:'medium' }}</span>
+                  <span>{{ p.area }} sq ft</span>
+                </p>
+              </div>
+              <div class="proposal-side">
+                <p class="proposal-sub">₹{{ inr(p.estimatedAmount) }}</p>
+                <button class="linklike" (click)="viewDetails(p.id)" [attr.aria-label]="'View details for proposal ' + p.id">View</button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    } @else {
+      @if (detailLoading()) {
+        <div class="proposals-empty" aria-live="polite">
+          <p>Loading proposal…</p>
+          <span>Fetching the proposal detail.</span>
+        </div>
+      } @else if (detailNotFound()) {
+        <div class="proposals-empty" role="alert">
+          <p>Proposal not found</p>
+          <span>It may belong to another account or no longer exist.</span>
+          <button class="btn-primary" (click)="backToProposals()">Back to proposals</button>
+        </div>
+      } @else if (detailError()) {
+        <p class="proposals-error" role="alert">
+          {{ detailError() }}
+          <button class="linklike" (click)="retryDetail()">Try again</button>
+        </p>
+      } @else {
+        @if (selected(); as proposal) {
+        <div class="proposal-detail" role="status" aria-label="Proposal preview">
+          <p class="kicker">Proposal preview</p>
+          @if (notice()) {
+            <p class="proposal-notice" role="status">{{ notice() }}</p>
+          }
+          <dl class="sum-rows">
+            <div><dt>Proposal ID</dt><dd class="mono">{{ proposal.id }}</dd></div>
+            <div><dt>Status</dt><dd>{{ statusLabel(proposal.status) }}</dd></div>
+            <div><dt>Created</dt><dd>{{ proposal.createdAt | date:'medium' }}</dd></div>
+            <div><dt>Room dimensions</dt><dd>{{ proposal.width }} × {{ proposal.length }} ft</dd></div>
+            <div><dt>Area</dt><dd>{{ proposal.area }} sq ft</dd></div>
+            <div><dt>Rate per square foot</dt><dd>₹{{ inr(proposal.ratePerSquareFoot) }} / sq ft</dd></div>
+            <div class="total"><dt>Estimated amount</dt><dd>₹{{ inr(proposal.estimatedAmount) }}</dd></div>
+          </dl>
+          <h2>Furniture ({{ proposalItemCount(proposal) }})</h2>
+          @if (proposal.items.length === 0) {
+            <p class="sub small">No furniture lines — this proposal covers the room estimate only.</p>
+          } @else {
+            <ul class="proposal-lines">
+              @for (i of proposal.items; track i.id) {
+                <li>
+                  <span class="item-name">{{ i.productName }}</span>
+                  <span class="item-qty">× {{ i.quantity }}</span>
+                  <span class="item-price">₹{{ inr(i.unitPrice) }} each</span>
+                  <span class="item-total">₹{{ inr(i.lineTotal) }}</span>
+                </li>
+              }
+            </ul>
+          }
+          <p class="sub small">Payment and PDF generation will be available in a later step.</p>
+        </div>
+        }
+      }
+    }
+  }
+</section>
