@@ -8,11 +8,14 @@ import { AuthService, AUTH_TOKEN_KEY } from '../auth.service';
 import {
   OrderService,
   orderStatusLabel,
+  type AdminOrderDetailDto,
+  type AdminOrderSummaryDto,
   type OrderDetailDto,
 } from './order.service';
 import { environment } from '../../environments/environment';
 
 const ORDERS_URL = `${environment.apiBaseUrl}/api/orders`;
+const ADMIN_ORDERS_URL = `${environment.apiBaseUrl}/api/admin/orders`;
 const TOKEN = 'test-jwt';
 
 function detail(): OrderDetailDto {
@@ -110,5 +113,64 @@ describe('OrderService', () => {
     expect(orderStatusLabel(1)).toBe('Confirmed');
     expect(orderStatusLabel(4)).toBe('Cancelled');
     expect(orderStatusLabel(99)).toBe('Unknown');
+  });
+
+  it('getAdminOrders lists every order with Bearer auth', () => {
+    setup(TOKEN);
+    let received: AdminOrderSummaryDto[] | null = null;
+    orders.getAdminOrders().subscribe((o) => (received = o));
+    const req = httpMock.expectOne(ADMIN_ORDERS_URL);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
+    req.flush([
+      {
+        id: 'order-2',
+        userId: 'user-b',
+        customerEmail: 'b@test.local',
+        status: 0,
+        createdAt: '2026-10-01T10:00:00Z',
+        subtotal: 100,
+        itemCount: 1,
+      },
+    ]);
+    expect(received!.length).toBe(1);
+    expect(received![0].userId).toBe('user-b');
+    expect(received![0].customerEmail).toBe('b@test.local');
+  });
+
+  it('getAdminOrder fetches one order by id with Bearer auth', () => {
+    setup(TOKEN);
+    let received: AdminOrderDetailDto | null = null;
+    orders.getAdminOrder('order-9').subscribe((o) => (received = o));
+    const req = httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-9`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
+    req.flush({
+      id: 'order-9',
+      userId: 'user-a',
+      customerEmail: 'a@test.local',
+      status: 0,
+      createdAt: '2026-10-01T10:00:00Z',
+      updatedAt: '2026-10-01T10:00:00Z',
+      subtotal: 200,
+      items: [],
+    });
+    expect(received!.id).toBe('order-9');
+    expect(received!.userId).toBe('user-a');
+  });
+
+  it('admin calls use the admin route, never the customer route', () => {
+    setup(TOKEN);
+    orders.getAdminOrders().subscribe();
+    orders.getAdminOrder('order-1').subscribe();
+    const listReq = httpMock.expectOne(ADMIN_ORDERS_URL);
+    const detailReq = httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1`);
+    expect(listReq.request.method).toBe('GET');
+    expect(detailReq.request.method).toBe('GET');
+    expect(listReq.request.urlWithParams).toBe(ADMIN_ORDERS_URL);
+    expect(detailReq.request.urlWithParams).toBe(`${ADMIN_ORDERS_URL}/order-1`);
+    listReq.flush([]);
+    detailReq.flush(null);
+    httpMock.expectNone(ORDERS_URL);
   });
 });

@@ -1,0 +1,128 @@
+<section class="admin-orders" aria-label="Admin orders workspace">
+  <header class="admin-orders-head">
+    <div>
+      <p class="kicker">Operations · Orders</p>
+      <h1>Orders</h1>
+    </div>
+    @if (isAuthenticated() && canAccess() && selectedId() !== null) {
+      <button class="linklike" (click)="backToList()">Back to orders</button>
+    }
+  </header>
+
+  @if (!isAuthenticated()) {
+    <div class="admin-orders-empty">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </span>
+      <p>Log in to access the Orders workspace</p>
+      <span>Order operations are handled by Admin accounts. Use the Account panel to log in.</span>
+    </div>
+  } @else if (!canAccess()) {
+    <div class="admin-orders-empty" role="alert">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </span>
+      <p>You don't have access to this workspace.</p>
+      <span>This workspace is for Admin accounts.</span>
+    </div>
+  } @else if (forbidden()) {
+    <div class="admin-orders-empty" role="alert">
+      <p>You don't have access to this workspace.</p>
+      <span>The server refused the orders request for this account.</span>
+      <button class="btn-primary" (click)="loadOrders()">Try again</button>
+    </div>
+  } @else {
+    @if (selectedId() === null) {
+      @if (listLoading() && list() === null) {
+        <div class="admin-orders-empty" aria-live="polite">
+          <p>Loading orders…</p>
+          <span>Fetching customer orders.</span>
+        </div>
+      } @else if (listError()) {
+        <p class="admin-orders-error" role="alert">
+          {{ listError() }}
+          <button class="linklike" (click)="loadOrders()">Try again</button>
+        </p>
+      } @else if (list() !== null && list()!.length === 0) {
+        <div class="admin-orders-empty">
+          <span class="empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+          </span>
+          <p>No orders yet</p>
+          <span>Customer checkouts will appear here.</span>
+        </div>
+      } @else {
+        <div class="order-rows" aria-live="polite">
+          @for (o of list()!; track o.id) {
+            <article class="order-row" [attr.aria-label]="'Order ' + shortId(o.id)">
+              <div class="order-main">
+                <p class="mono">{{ shortId(o.id) }}</p>
+                <p class="order-meta">
+                  <span class="status-pill">{{ statusLabel(o.status) }}</span>
+                  <span>{{ o.customerEmail ?? o.userId }}</span>
+                  <span>{{ o.createdAt | date:'medium' }}</span>
+                  <span>{{ o.itemCount }} item{{ o.itemCount === 1 ? '' : 's' }}</span>
+                </p>
+              </div>
+              <div class="order-side">
+                <p class="order-sub">₹{{ inr(o.subtotal) }}</p>
+                <button class="linklike" (click)="viewDetails(o.id)" [attr.aria-label]="'View details for order ' + shortId(o.id)">View details</button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    } @else {
+      @if (detailLoading()) {
+        <div class="admin-orders-empty" aria-live="polite">
+          <p>Loading order…</p>
+          <span>Fetching the order detail.</span>
+        </div>
+      } @else if (detailForbidden()) {
+        <div class="admin-orders-empty" role="alert">
+          <p>You don't have access to this workspace.</p>
+          <span>The server refused the order request for this account.</span>
+          <button class="btn-primary" (click)="backToList()">Back to orders</button>
+        </div>
+      } @else if (detailNotFound()) {
+        <div class="admin-orders-empty" role="alert">
+          <p>Order not found</p>
+          <span>It may have been removed or never existed.</span>
+          <button class="btn-primary" (click)="backToList()">Back to orders</button>
+        </div>
+      } @else if (detailError()) {
+        <p class="admin-orders-error" role="alert">
+          {{ detailError() }}
+          <button class="linklike" (click)="retryDetail()">Try again</button>
+        </p>
+      } @else {
+        @if (selected(); as order) {
+        <div class="order-detail" role="status">
+          <dl class="sum-rows">
+            <div><dt>Order ID</dt><dd class="mono">{{ order.id }}</dd></div>
+            <div><dt>Customer</dt><dd>{{ order.customerEmail ?? order.userId }}</dd></div>
+            <div><dt>Status</dt><dd>{{ statusLabel(order.status) }}</dd></div>
+            <div><dt>Placed</dt><dd>{{ order.createdAt | date:'medium' }}</dd></div>
+            <div><dt>Updated</dt><dd>{{ order.updatedAt | date:'medium' }}</dd></div>
+            <div class="total"><dt>Subtotal</dt><dd>₹{{ inr(order.subtotal) }}</dd></div>
+          </dl>
+          <h2>Items ({{ orderItemCount(order) }})</h2>
+          <ul class="order-lines">
+            @for (i of order.items; track i.id) {
+              <li>
+                <span class="item-name">{{ i.productName }}</span>
+                <span class="item-id mono">{{ i.productId }}</span>
+                <span class="item-qty">× {{ i.quantity }}</span>
+                <span class="item-price">₹{{ inr(i.unitPrice) }} each</span>
+                <span class="item-total">₹{{ inr(i.lineTotal) }}</span>
+              </li>
+            }
+          </ul>
+          <p class="sub small">Item names and prices are order-time snapshots, preserved even if the catalogue changes.</p>
+          <button class="linklike" (click)="backToList()">Back to orders</button>
+        </div>
+        }
+      }
+    }
+  }
+</section>

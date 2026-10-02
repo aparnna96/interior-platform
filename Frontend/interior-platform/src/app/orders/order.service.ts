@@ -34,7 +34,32 @@ export interface OrderSummaryDto {
   itemCount: number;
 }
 
+/** Backend admin order list row (GET /api/admin/orders). */
+export interface AdminOrderSummaryDto {
+  id: string;
+  userId: string;
+  customerEmail: string | null;
+  status: number;
+  createdAt: string;
+  subtotal: number;
+  itemCount: number;
+}
+
+/** Backend admin order detail (GET /api/admin/orders/{id}). */
+export interface AdminOrderDetailDto {
+  id: string;
+  userId: string;
+  customerEmail: string | null;
+  status: number;
+  createdAt: string;
+  updatedAt: string;
+  subtotal: number;
+  items: OrderItemDto[];
+}
+
 const ORDERS_URL = `${environment.apiBaseUrl}/api/orders`;
+
+const ADMIN_ORDERS_URL = `${environment.apiBaseUrl}/api/admin/orders`;
 
 const ORDER_STATUS_LABELS = ['Pending', 'Confirmed', 'Processing', 'Completed', 'Cancelled'];
 
@@ -68,6 +93,16 @@ export class OrderService {
   /** GET /api/orders/{id} — 404 unless it belongs to the current user. */
   getOrder(id: string): Observable<OrderDetailDto> {
     return this.http.get<OrderDetailDto>(`${ORDERS_URL}/${id}`, { headers: this.authHeaders() });
+  }
+
+  /** GET /api/admin/orders — Admin only, every order newest first. Bearer auth. */
+  getAdminOrders(): Observable<AdminOrderSummaryDto[]> {
+    return this.http.get<AdminOrderSummaryDto[]>(ADMIN_ORDERS_URL, { headers: this.authHeaders() });
+  }
+
+  /** GET /api/admin/orders/{id} — Admin only, any owner. Bearer auth. */
+  getAdminOrder(id: string): Observable<AdminOrderDetailDto> {
+    return this.http.get<AdminOrderDetailDto>(`${ADMIN_ORDERS_URL}/${id}`, { headers: this.authHeaders() });
   }
 
   private authHeaders(): HttpHeaders {

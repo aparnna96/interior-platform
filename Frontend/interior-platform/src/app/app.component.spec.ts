@@ -533,4 +533,124 @@ describe('AppComponent', () => {
       httpMock.verify();
     });
   });
+
+  describe('Admin Orders workspace navigation', () => {
+    const ADMIN_ORDERS_URL = `${environment.apiBaseUrl}/api/admin/orders`;
+    const CUSTOMER_ORDERS_URL = `${environment.apiBaseUrl}/api/orders`;
+    const PRODUCTS_URL = `${environment.apiBaseUrl}/api/products`;
+    const ESTIMATES_URL = `${environment.apiBaseUrl}/api/estimates`;
+    const DOTNET_ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+
+    function jwtWithRoles(roles: string[]): string {
+      const enc = (value: unknown) =>
+        btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      return `${enc({ alg: 'none', typ: 'JWT' })}.${enc({ [DOTNET_ROLE_CLAIM]: roles })}.sig`;
+    }
+
+    function createAuthedApp(roles: string[]) {
+      localStorage.setItem(AUTH_TOKEN_KEY, jwtWithRoles(roles));
+      const fixture = TestBed.createComponent(AppComponent);
+      const httpMock = TestBed.inject(HttpTestingController);
+      httpMock.expectOne(CART_URL).flush({ items: [], itemCount: 0, subtotal: 0 });
+      fixture.detectChanges();
+      // The default home view loads the public catalogue.
+      httpMock.expectOne(PRODUCTS_URL).flush([]);
+      return { fixture, httpMock };
+    }
+
+    function sidebarLabels(fixture: ReturnType<typeof TestBed.createComponent<AppComponent>>): (string | undefined)[] {
+      return Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('#app-sidebar .nav-item')
+      ).map((b) => (b as HTMLElement).textContent?.trim());
+    }
+
+    it('Admin sees Admin Orders navigation', () => {
+      const { fixture, httpMock } = createAuthedApp(['Admin']);
+      expect(sidebarLabels(fixture)).toContain('Orders');
+      // The mobile workspace nav renders on workspace views.
+      fixture.componentInstance.activeView.set('estimates');
+      fixture.detectChanges();
+      httpMock.expectOne(ESTIMATES_URL).flush([]);
+      fixture.detectChanges();
+      const mobile = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.mnav button')
+      ).map((b) => (b as HTMLElement).textContent?.trim());
+      expect(mobile).toContain('Orders');
+      httpMock.verify();
+    });
+
+    it('Field Staff does not see Admin Orders navigation', () => {
+      const { fixture, httpMock } = createAuthedApp(['FieldStaff']);
+      expect(sidebarLabels(fixture)).toContain('Leads');
+      expect(sidebarLabels(fixture)).not.toContain('Orders');
+      httpMock.verify();
+    });
+
+    it('customers do not see Admin Orders navigation', () => {
+      const { fixture, httpMock } = createAuthedApp(['Customer']);
+      expect(sidebarLabels(fixture)).not.toContain('Orders');
+      httpMock.verify();
+    });
+
+    it('anonymous visitors do not see Admin Orders navigation', () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.detectChanges();
+      expect(sidebarLabels(fixture)).not.toContain('Orders');
+    });
+
+    it('Admin opens the Orders workspace', () => {
+      const { fixture, httpMock } = createAuthedApp(['Admin']);
+      const ordersButton = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('#app-sidebar .nav-item')
+      ).find((b) => (b as HTMLElement).textContent?.trim() === 'Orders') as HTMLButtonElement;
+      ordersButton.click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.activeView()).toBe('admin-orders');
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-admin-orders')).toBeTruthy();
+      httpMock.expectOne(ADMIN_ORDERS_URL).flush([]);
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('No orders yet');
+      httpMock.verify();
+    });
+
+    it('Admin Orders stays out of the public customer-facing navigation', () => {
+      const { fixture, httpMock } = createAuthedApp(['Admin']);
+      const labels = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.pubnav-links button')
+      ).map((b) => (b as HTMLElement).textContent?.trim());
+      expect(labels).toContain('Orders');
+      expect(labels).toContain('Furniture');
+      httpMock.verify();
+    });
+
+    it('direct navigation by Field Staff shows access-denied and loads no admin data', () => {
+      const { fixture, httpMock } = createAuthedApp(['FieldStaff']);
+      fixture.componentInstance.activeView.set('admin-orders');
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+        "You don't have access to this workspace."
+      );
+      httpMock.expectNone(ADMIN_ORDERS_URL);
+      httpMock.verify();
+    });
+
+    it('customer Order History remains available', () => {
+      const { fixture, httpMock } = createAuthedApp(['Customer']);
+      const buttons = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.pubnav-links button')
+      ) as HTMLButtonElement[];
+      const ordersButton = buttons.find((b) => b.textContent?.trim() === 'Orders');
+      expect(ordersButton).toBeTruthy();
+
+      ordersButton!.click();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.activeView()).toBe('orders');
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-orders')).toBeTruthy();
+      // Customer history still loads through the customer endpoint.
+      httpMock.expectOne(CUSTOMER_ORDERS_URL).flush([]);
+      httpMock.verify();
+    });
+  });
 });
