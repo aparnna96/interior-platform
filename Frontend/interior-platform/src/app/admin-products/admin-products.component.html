@@ -1,0 +1,192 @@
+<section class="admin-products" aria-label="Admin products workspace">
+  <header class="admin-products-head">
+    <div>
+      <p class="kicker">Operations · Products</p>
+      <h1>Products</h1>
+    </div>
+    @if (isAuthenticated() && canAccess() && !formOpen()) {
+      <button class="btn-primary" (click)="openCreate()">Add Product</button>
+    }
+  </header>
+
+  @if (!isAuthenticated()) {
+    <div class="admin-products-empty">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
+      </span>
+      <p>Log in to access the Products workspace</p>
+      <span>Product management is handled by Admin accounts. Use the Account panel to log in.</span>
+    </div>
+  } @else if (!canAccess()) {
+    <div class="admin-products-empty" role="alert">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
+      </span>
+      <p>You don't have access to this workspace.</p>
+      <span>This workspace is for Admin accounts.</span>
+    </div>
+  } @else if (forbidden()) {
+    <div class="admin-products-empty" role="alert">
+      <p>You don't have access to this workspace.</p>
+      <span>The server refused the products request for this account.</span>
+      <button class="btn-primary" (click)="loadProducts()">Try again</button>
+    </div>
+  } @else {
+    @if (notice()) {
+      <p class="product-notice" role="status">{{ notice() }}</p>
+    }
+    @if (formOpen()) {
+      <form class="product-form" [formGroup]="form" (ngSubmit)="submitForm()" aria-label="Product form" novalidate>
+        <h2>{{ editingId() === null ? 'Add Product' : 'Edit Product' }}</h2>
+        @if (editingId() === null) {
+          <label>Slug (required)
+            <input type="text" formControlName="id" autocomplete="off"
+              placeholder="aria-3s-sofa" aria-label="Product slug" />
+            <span class="hint">Lowercase letters, numbers and hyphens only. Cannot be changed later.</span>
+          </label>
+        } @else {
+          <p class="sub small">Slug: <span class="mono">{{ editingId() }}</span> (immutable)</p>
+        }
+        <label>Name (required)
+          <input type="text" formControlName="name" aria-label="Product name" />
+        </label>
+        <div class="field-row">
+          <label>Category (required)
+            <select formControlName="category" aria-label="Product category">
+              @for (c of categories; track c) {
+                <option [value]="c">{{ c }}</option>
+              }
+            </select>
+          </label>
+          <label>Room (required)
+            <select formControlName="room" aria-label="Product room">
+              @for (r of rooms; track r) {
+                <option [value]="r">{{ r }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        <div class="field-row">
+          <label>Price in ₹ (required)
+            <input type="number" formControlName="price" min="1" step="1" aria-label="Product price" />
+            <span class="hint">Whole number greater than 0.</span>
+          </label>
+          <label class="check-row">Active
+            <input type="checkbox" formControlName="isActive" aria-label="Product active" />
+          </label>
+        </div>
+        <div class="field-row">
+          <label>Material (required)
+            <input type="text" formControlName="material" aria-label="Product material" />
+          </label>
+          <label>Finish (required)
+            <input type="text" formControlName="finish" aria-label="Product finish" />
+          </label>
+        </div>
+        <label>Blurb (required)
+          <input type="text" formControlName="blurb" aria-label="Product blurb" />
+        </label>
+        <label>Description (required)
+          <textarea formControlName="description" rows="3" aria-label="Product description"></textarea>
+        </label>
+        <label>Dimensions (required)
+          <input type="text" formControlName="dimensions" placeholder="220 × 92 × 82 cm" aria-label="Product dimensions" />
+        </label>
+        <label>Image URL (required)
+          <input type="url" formControlName="imageUrl" placeholder="https://…" aria-label="Product image URL" />
+          <span class="hint">Absolute HTTP/HTTPS URL.</span>
+        </label>
+        <label>Details (required)
+          <textarea formControlName="details" rows="3" aria-label="Product details"></textarea>
+          <span class="hint">One bullet per line, at least one.</span>
+        </label>
+        @if (formError()) {
+          <p class="admin-products-error" role="alert">
+            {{ formError() }}
+            <button type="button" class="linklike" (click)="submitForm()" [disabled]="saving()">Try again</button>
+          </p>
+        }
+        <div class="form-actions">
+          <button type="submit" class="btn-primary" [disabled]="saving()">
+            {{ saving() ? 'Saving…' : (editingId() === null ? 'Create Product' : 'Save Changes') }}
+          </button>
+          <button type="button" class="btn-secondary" (click)="closeForm()" [disabled]="saving()">Cancel</button>
+        </div>
+      </form>
+    }
+    @if (listLoading() && list() === null) {
+      <div class="admin-products-empty" aria-live="polite">
+        <p>Loading products…</p>
+        <span>Fetching the admin catalogue.</span>
+      </div>
+    } @else if (listError()) {
+      <p class="admin-products-error" role="alert">
+        {{ listError() }}
+        <button class="linklike" (click)="loadProducts()">Try again</button>
+      </p>
+    } @else if (list() !== null && list()!.length === 0) {
+      <div class="admin-products-empty">
+        <span class="empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 16 16"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+        </span>
+        <p>No products yet</p>
+        <span>Use Add Product to create the first catalogue entry.</span>
+      </div>
+    } @else if (list() !== null) {
+      <div class="product-rows" aria-live="polite">
+        @for (p of list()!; track p.id) {
+          <article class="product-row" [attr.aria-label]="'Product ' + p.name">
+            <div class="product-main">
+              <p class="product-name">{{ p.name }}</p>
+              <p class="product-meta">
+                <span class="status-pill">{{ p.isActive ? 'Active' : 'Inactive' }}</span>
+                <span>{{ p.category }}</span>
+                <span>{{ p.room }}</span>
+                <span class="mono">{{ p.id }}</span>
+              </p>
+              <p class="product-sub">
+                <span>₹{{ p.price.toLocaleString('en-IN') }}</span>
+                <span>{{ p.material }}</span>
+                <span>{{ p.finish }}</span>
+              </p>
+            </div>
+            <div class="product-side">
+              <button class="linklike" (click)="openEdit(p)" [attr.aria-label]="'Edit product ' + p.name">Edit</button>
+              @if (p.isActive) {
+                @if (confirmingDeactivateId() === p.id) {
+                  <span class="confirm-inline" role="group" aria-label="Confirm deactivation">
+                    <span>Deactivate this product?</span>
+                    <button
+                      class="btn-primary btn-sm"
+                      (click)="confirmDeactivate()"
+                      [disabled]="deactivatingId() !== null"
+                      [attr.aria-label]="'Confirm deactivate ' + p.name"
+                    >{{ deactivatingId() === p.id ? 'Deactivating…' : 'Confirm' }}</button>
+                    <button
+                      class="linklike"
+                      (click)="cancelDeactivate()"
+                      [disabled]="deactivatingId() !== null"
+                    >Cancel</button>
+                  </span>
+                } @else {
+                  <button
+                    class="linklike danger"
+                    (click)="requestDeactivate(p.id)"
+                    [disabled]="deactivatingId() !== null"
+                    [attr.aria-label]="'Deactivate product ' + p.name"
+                  >Deactivate</button>
+                }
+              }
+            </div>
+            @if (deactivateError() && confirmingDeactivateId() === p.id) {
+              <p class="admin-products-error" role="alert">
+                {{ deactivateError() }}
+                <button class="linklike" (click)="confirmDeactivate()" [disabled]="deactivatingId() !== null">Try again</button>
+              </p>
+            }
+          </article>
+        }
+      </div>
+    }
+  }
+</section>

@@ -137,4 +137,15 @@ describe('AuthService role handling', () => {
     expect(staff.roles()).toEqual([]);
     expect(staff.isStaff()).toBe(false);
   });
+
+  it('exposes admin sessions for the Admin role only', () => {
+    expect(authedWith({ role: 'Admin' }).isAdmin()).toBe(true);
+    expect(authedWith({ role: 'FieldStaff' }).isAdmin()).toBe(false);
+    expect(authedWith({ role: 'Customer' }).isAdmin()).toBe(false);
+    expect(authedWith({ [DOTNET_ROLE_CLAIM]: ['Admin'] }).isAdmin()).toBe(true);
+  });
+
+  it('reports no admin without authentication', () => {
+    expect(TestBed.inject(AuthService).isAdmin()).toBe(false);
+  });
 });

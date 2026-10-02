@@ -1,7 +1,9 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import type { CatalogueCategory, CatalogueProduct } from './catalogue-products';
+import { AuthService } from '../auth.service';
+import type { Observable } from 'rxjs';
 
 /**
  * Read-only product API client (catalogue integration, Task 1).
@@ -26,6 +28,39 @@ export interface ProductDto {
 }
 
 const PRODUCTS_URL = `${environment.apiBaseUrl}/api/products`;
+
+/** Admin product shape: public fields plus IsActive visibility. */
+export interface AdminProductDto extends ProductDto {
+  isActive: boolean;
+}
+
+/**
+ * Write payload for POST /api/products and PUT /api/products/{id}.
+ * Field names match the backend DTOs (binding is case-insensitive).
+ * `id` is the Admin-supplied slug for creation only — updates address the
+ * product through the route id, which stays authoritative.
+ */
+export interface ProductUpsertRequest {
+  id?: string;
+  name: string;
+  category: string;
+  room: string;
+  price: number;
+  material: string;
+  finish: string;
+  blurb: string;
+  description: string;
+  dimensions: string;
+  imageUrl: string;
+  details: string[];
+  isActive: boolean;
+}
+
+/** Backend category allowlist, mirrored for admin dropdowns (server owns validation). */
+export const PRODUCT_CATEGORIES = ['Sofas', 'Beds', 'Tables', 'Chairs', 'Wardrobes'];
+
+/** Backend room allowlist, mirrored for admin dropdowns (server owns validation). */
+export const PRODUCT_ROOMS = ['Living Room', 'Bedroom', 'Dining', 'Workspace'];
 
 /** Frontend-only field with no backend column: safe default until Task 2. */
 export const PRODUCT_SWATCH_DEFAULT = '';
@@ -52,6 +87,7 @@ export function toCatalogueProduct(dto: ProductDto): CatalogueProduct {
 @Injectable({ providedIn: 'root' })
 export class ProductService {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
 
   /** Mapped products. Left untouched when a load fails. */
   readonly products = signal<CatalogueProduct[]>([]);
@@ -75,5 +111,33 @@ export class ProductService {
         this.loading.set(false);
       },
     });
+  }
+
+  /** GET /api/products/admin — Admin only, active and inactive. Bearer auth. */
+  getAdminProducts(): Observable<AdminProductDto[]> {
+    return this.http.get<AdminProductDto[]>(`${PRODUCTS_URL}/admin`, { headers: this.authHeaders() });
+  }
+
+  /** POST /api/products — Admin only. `id` slug is part of the request. */
+  createProduct(request: ProductUpsertRequest): Observable<AdminProductDto> {
+    return this.http.post<AdminProductDto>(PRODUCTS_URL, request, { headers: this.authHeaders() });
+  }
+
+  /** PUT /api/products/{id} — Admin only. The route id stays authoritative. */
+  updateProduct(id: string, request: ProductUpsertRequest): Observable<AdminProductDto> {
+    return this.http.put<AdminProductDto>(`${PRODUCTS_URL}/${id}`, request, { headers: this.authHeaders() });
+  }
+
+  /**
+   * DELETE /api/products/{id} — Admin only. Soft-deactivation: the backend
+   * flips IsActive instead of deleting the row. Resolves on 204 No Content.
+   */
+  deactivateProduct(id: string): Observable<void> {
+    return this.http.delete<void>(`${PRODUCTS_URL}/${id}`, { headers: this.authHeaders() });
+  }
+
+  private authHeaders(): HttpHeaders {
+    const token = this.auth.token();
+    return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : new HttpHeaders();
   }
 }

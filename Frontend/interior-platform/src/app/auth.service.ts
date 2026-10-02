@@ -85,6 +85,9 @@ export class AuthService {
     () => this.roles().includes(ROLE_ADMIN) || this.roles().includes(ROLE_FIELD_STAFF)
   );
 
+  /** True for Admin sessions only: gates internal admin workspaces. */
+  readonly isAdmin = computed(() => this.roles().includes(ROLE_ADMIN));
+
   constructor(private http: HttpClient) {}
 
   register(email: string, password: string): Observable<unknown> {
