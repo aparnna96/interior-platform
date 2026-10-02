@@ -39,6 +39,43 @@ export interface ProposalSummaryDto {
   estimatedAmount: number;
 }
 
+/** Backend token-payment order (POST /api/proposals/{id}/payment). */
+export interface CreateProposalPaymentResponse {
+  paymentId: string;
+  proposalId: string;
+  provider: string;
+  providerOrderId: string;
+  /** Token amount in major currency units, determined by the backend. */
+  amount: number;
+  currency: string;
+  /** Public Key ID for Razorpay Checkout (never a secret). */
+  providerKeyId: string;
+}
+
+/** Backend verification request (POST /api/payments/verify). */
+export interface VerifyProposalPaymentRequest {
+  paymentId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}
+
+/** Backend verification outcome (POST /api/payments/verify). */
+export interface VerifyProposalPaymentResponse {
+  paymentId: string;
+  proposalId: string;
+  /** Enum number: 0 Created, 1 Verified, 2 Failed. */
+  status: number;
+  verifiedAt: string | null;
+}
+
+/** Backend payment statuses for token payments. */
+export const ProposalPaymentStatus = {
+  Created: 0,
+  Verified: 1,
+  Failed: 2,
+} as const;
+
 const PROPOSALS_URL = `${environment.apiBaseUrl}/api/proposals`;
 
 const PROPOSAL_STATUS_LABELS = ['Draft'];
@@ -82,6 +119,26 @@ export class ProposalService {
    */
   downloadProposalPdf(id: string): Observable<Blob> {
     return this.http.get(`${PROPOSALS_URL}/${id}/pdf`, { headers: this.authHeaders(), responseType: 'blob' });
+  }
+
+  /**
+   * POST /api/proposals/{id}/payment — create (or reuse) the backend token
+   * payment order. The body intentionally carries no amount: the backend
+   * determines the token amount from its own configuration.
+   */
+  createProposalPayment(proposalId: string): Observable<CreateProposalPaymentResponse> {
+    return this.http.post<CreateProposalPaymentResponse>(
+      `${PROPOSALS_URL}/${proposalId}/payment`, {}, { headers: this.authHeaders() });
+  }
+
+  /**
+   * POST /api/payments/verify — ask the backend to verify a Checkout result.
+   * Sends only the Razorpay values plus the local payment id; the backend
+   * response is the sole authority on whether payment succeeded.
+   */
+  verifyProposalPayment(request: VerifyProposalPaymentRequest): Observable<VerifyProposalPaymentResponse> {
+    return this.http.post<VerifyProposalPaymentResponse>(
+      `${environment.apiBaseUrl}/api/payments/verify`, request, { headers: this.authHeaders() });
   }
 
   private authHeaders(): HttpHeaders {

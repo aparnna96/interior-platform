@@ -107,7 +107,7 @@
               }
             </ul>
           }
-          <p class="sub small">Payment will be available in a later step.</p>
+          <p class="sub small">Token payments are processed securely via Razorpay.</p>
           <div class="proposal-actions">
             <button
               class="btn-primary btn-sm"
@@ -122,6 +122,49 @@
               <button class="linklike" (click)="retryPdf()">Try again</button>
             </p>
           }
+          <div class="payment-box" aria-label="Token payment">
+            <h2>Token payment</h2>
+            @if (paymentState() === 'verified' && verifiedPayment(); as verified) {
+              <p class="proposal-notice" role="status">Payment verified — Your token payment has been verified successfully.</p>
+              <dl class="sum-rows">
+                <div><dt>Payment ID</dt><dd class="mono">{{ verified.paymentId }}</dd></div>
+              </dl>
+            } @else {
+              <p class="sub small">A token payment is required for this proposal.</p>
+              @if (paymentOrder(); as order) {
+                <p class="payment-amount" role="status">Pay ₹{{ inr(order.amount) }} <span class="sub small">({{ order.currency }} token payment)</span></p>
+              }
+              @if (paymentState() === 'creating') {
+                <p aria-live="polite">Creating your payment order…</p>
+              }
+              @if (paymentState() === 'checkout-open') {
+                <p aria-live="polite">Checkout is open — complete the payment in the Razorpay window.</p>
+              }
+              @if (paymentState() === 'verifying') {
+                <p aria-live="polite">Confirming your payment…</p>
+              }
+              @if (paymentState() === 'cancelled') {
+                <p role="status">Payment was cancelled. You can try again when you're ready.</p>
+              }
+              @if (paymentError()) {
+                <p class="proposals-error" role="alert">
+                  {{ paymentError() }}
+                  @if (paymentRetryAllowed()) {
+                    <button class="linklike" (click)="retryPayment()">Try again</button>
+                  }
+                </p>
+              }
+              @if (!paymentBusy()) {
+                <div class="proposal-actions">
+                  <button
+                    class="btn-primary btn-sm"
+                    (click)="payToken()"
+                    [attr.aria-label]="'Pay token payment for proposal ' + proposal.id"
+                  >Pay Token</button>
+                </div>
+              }
+            }
+          </div>
         </div>
         }
       }

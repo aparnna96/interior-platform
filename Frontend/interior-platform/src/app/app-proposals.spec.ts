@@ -189,7 +189,7 @@ describe('AppComponent proposals integration', () => {
     expect(view.textContent).toContain('Proposal preview');
     expect(view.textContent).toContain('prop-9');
     expect(view.textContent).toContain('Aria 3-Seater Fabric Sofa');
-    expect(view.textContent).toContain('Payment will be available in a later step.');
+    expect(view.textContent).toContain('Token payments are processed securely via Razorpay.');
     // The snapshot opened without a detail fetch.
     httpMock.expectNone(`${PROPOSALS_URL}/prop-9`);
     // The saved estimate and the cart were never written to.

@@ -226,6 +226,17 @@
 .proposal-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .proposal-actions .btn-primary { justify-self: start; }
 
+/* ── Token payment ── */
+.payment-box {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 12px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.payment-amount { font-size: 16px; font-weight: 750; letter-spacing: -0.01em; margin: 0; }
+.payment-box p[aria-live] { margin: 0; font-size: 13px; }
+
 /* ── Responsive ── */
 @media (max-width: 480px) {
   .proposals-head h1 { font-size: 22px; }

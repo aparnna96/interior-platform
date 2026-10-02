@@ -3,10 +3,41 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth.service';
 import {
   ProposalService,
+  ProposalPaymentStatus,
   proposalStatusLabel,
+  type CreateProposalPaymentResponse,
   type ProposalDetailDto,
   type ProposalSummaryDto,
+  type VerifyProposalPaymentResponse,
 } from './proposal.service';
+import { RazorpayCheckoutService } from './razorpay-checkout.service';
+import type {
+  RazorpayCheckoutInstance,
+  RazorpayCheckoutResponse,
+} from './razorpay-checkout';
+
+/**
+ * Customer-facing token payment states for one open proposal. The backend
+ * verification response alone decides success: `verified` is entered only
+ * after POST /api/payments/verify reports Verified. Nothing is persisted to
+ * localStorage — reopening a proposal always restarts from `idle` because
+ * the open detail endpoint carries no payment state (a retry then safely
+ * reuses the backend's open order or reports the verified payment).
+ */
+export type ProposalPaymentState =
+  | 'idle'
+  | 'creating'
+  | 'checkout-open'
+  | 'verifying'
+  | 'verified'
+  | 'failed'
+  | 'cancelled'
+  | 'unavailable';
+
+/** Razorpay Checkout takes the smallest currency unit (paise for INR). */
+function toCheckoutPaise(amountMajorUnits: number): number {
+  return Math.round(amountMajorUnits * 100);
+}
 
 /**
  * Customer proposal history over GET /api/proposals + GET /api/proposals/{id}.
@@ -22,6 +53,11 @@ import {
  * snapshot with no extra fetch, and the list refresh still comes from the
  * server. Each snapshot is applied once (tracked by id); the parent clears
  * the input when leaving the view.
+ *
+ * Token payments run per open proposal through Razorpay Checkout (TEST
+ * mode): Pay Token → backend order → Checkout → backend verification.
+ * Checkout success alone never counts — only a Verified backend response
+ * shows success.
  */
 @Component({
   selector: 'app-proposals',
@@ -33,6 +69,7 @@ import {
 export class ProposalsComponent {
   private readonly auth = inject(AuthService);
   private readonly proposals = inject(ProposalService);
+  private readonly checkout = inject(RazorpayCheckoutService);
 
   /** Requests returning to the existing Furniture catalogue. */
   browse = output<void>();
@@ -56,6 +93,16 @@ export class ProposalsComponent {
   /** True while GET /api/proposals/{id}/pdf is in flight — blocks duplicates. */
   readonly pdfDownloading = signal(false);
   readonly pdfError = signal<string | null>(null);
+
+  /** Token payment flow state for the open proposal (runtime only). */
+  readonly paymentState = signal<ProposalPaymentState>('idle');
+  /** Last backend payment-order response (holds the authoritative amount). */
+  readonly paymentOrder = signal<CreateProposalPaymentResponse | null>(null);
+  /** Backend verification outcome, set only after a Verified response. */
+  readonly verifiedPayment = signal<VerifyProposalPaymentResponse | null>(null);
+  readonly paymentError = signal<string | null>(null);
+  /** False after a 409: retrying a verified payment is pointless. */
+  readonly paymentRetryAllowed = signal(true);
 
   /** Id of the last applied `createdDetail`, so each snapshot opens once. */
   private appliedCreatedId: string | null = null;
@@ -124,6 +171,7 @@ export class ProposalsComponent {
     this.detailNotFound.set(false);
     this.detailError.set(null);
     this.detailLoading.set(true);
+    this.resetPaymentState();
     this.proposals.getProposal(id).subscribe({
       next: (proposal) => {
         this.selected.set(proposal);
@@ -163,6 +211,7 @@ export class ProposalsComponent {
     this.detailNotFound.set(false);
     this.detailError.set(null);
     this.detailLoading.set(false);
+    this.resetPaymentState();
     this.notice.set('Proposal created successfully.');
   }
 
@@ -175,6 +224,7 @@ export class ProposalsComponent {
     this.notice.set(null);
     this.pdfDownloading.set(false);
     this.pdfError.set(null);
+    this.resetPaymentState();
   }
 
   retryDetail(): void {
@@ -219,6 +269,152 @@ export class ProposalsComponent {
     }
   }
 
+  /** True while a payment step is in flight — the Pay action stays parked. */
+  paymentBusy(): boolean {
+    const state = this.paymentState();
+    return state === 'creating' || state === 'checkout-open' || state === 'verifying';
+  }
+
+  /**
+   * Starts the token payment for the open proposal: POSTs the backend order
+   * (no amount leaves the client), then opens Razorpay Checkout with the
+   * backend-returned key, paise amount, currency and order id. Duplicate
+   * clicks collapse into the single in-flight attempt.
+   */
+  payToken(): void {
+    const proposal = this.selected();
+    if (proposal === null || !this.auth.isAuthenticated() || this.paymentBusy()) return;
+    this.paymentState.set('creating');
+    this.paymentError.set(null);
+    this.paymentRetryAllowed.set(true);
+    this.verifiedPayment.set(null);
+    this.proposals.createProposalPayment(proposal.id).subscribe({
+      next: (order) => {
+        this.paymentOrder.set(order);
+        void this.openCheckout(order);
+      },
+      error: (err: unknown) => {
+        this.handleCreatePaymentError(err);
+      },
+    });
+  }
+
+  /** Re-attempts the payment order after a retryable failure. */
+  retryPayment(): void {
+    if (this.selected() !== null && !this.paymentBusy()) {
+      this.payToken();
+    }
+  }
+
+  private async openCheckout(order: CreateProposalPaymentResponse): Promise<void> {
+    // The user may have navigated away while the order was created: never
+    // open Checkout for a stale detail.
+    if (this.selected()?.id !== order.proposalId) {
+      this.resetPaymentState();
+      return;
+    }
+    let loaded = false;
+    try {
+      loaded = await this.checkout.load();
+    } catch {
+      loaded = false;
+    }
+    if (this.selected()?.id !== order.proposalId) {
+      this.resetPaymentState();
+      return;
+    }
+    if (!loaded) {
+      this.paymentState.set('unavailable');
+      this.paymentError.set('Payments are currently unavailable. Please check your connection and try again.');
+      this.paymentRetryAllowed.set(true);
+      return;
+    }
+    let instance: RazorpayCheckoutInstance | null = null;
+    try {
+      instance = this.checkout.open({
+        key: order.providerKeyId,
+        amount: toCheckoutPaise(order.amount),
+        currency: order.currency,
+        order_id: order.providerOrderId,
+        name: 'Confident Group',
+        description: 'Interior proposal token payment',
+        theme: { color: '#1C1917' },
+        modal: { ondismiss: () => this.onCheckoutDismissed() },
+        handler: (response) => this.onCheckoutSuccess(order, response),
+      });
+      if (instance === null) {
+        this.paymentState.set('unavailable');
+        this.paymentError.set('Payments are currently unavailable. Please try again later.');
+        this.paymentRetryAllowed.set(true);
+        return;
+      }
+      instance.on('payment.failed', () => this.onCheckoutPaymentFailed());
+      this.paymentState.set('checkout-open');
+      instance.open();
+    } catch {
+      this.paymentState.set('failed');
+      this.paymentError.set('Could not start the payment. Please try again.');
+      this.paymentRetryAllowed.set(true);
+    }
+  }
+
+  /**
+   * Checkout returned a successful-looking result. This proves nothing yet:
+   * the result goes to POST /api/payments/verify and only a Verified
+   * backend response shows success.
+   */
+  private onCheckoutSuccess(
+    order: CreateProposalPaymentResponse,
+    response: RazorpayCheckoutResponse
+  ): void {
+    if (this.paymentState() === 'verifying') return;
+    if (this.selected()?.id !== order.proposalId) return;
+    this.paymentState.set('verifying');
+    this.paymentError.set(null);
+    this.proposals
+      .verifyProposalPayment({
+        paymentId: order.paymentId,
+        razorpayOrderId: response.razorpay_order_id,
+        razorpayPaymentId: response.razorpay_payment_id,
+        razorpaySignature: response.razorpay_signature,
+      })
+      .subscribe({
+        next: (outcome) => {
+          if (outcome.status === ProposalPaymentStatus.Verified) {
+            this.verifiedPayment.set(outcome);
+            this.paymentState.set('verified');
+            this.paymentError.set(null);
+          } else {
+            this.paymentState.set('failed');
+            this.paymentError.set('Payment verification failed. You can try again.');
+            this.paymentRetryAllowed.set(true);
+          }
+        },
+        error: (err: unknown) => {
+          this.handleVerifyError(err);
+        },
+      });
+  }
+
+  /**
+   * The user closed Checkout without paying: not a backend failure, so no
+   * verification call and no success claim. Late dismissals after a
+   * completed flow are ignored.
+   */
+  private onCheckoutDismissed(): void {
+    if (this.paymentState() !== 'checkout-open') return;
+    this.paymentState.set('cancelled');
+    this.paymentError.set(null);
+  }
+
+  /** Razorpay reported the charge itself as failed: no signature to verify. */
+  private onCheckoutPaymentFailed(): void {
+    if (this.paymentState() !== 'checkout-open') return;
+    this.paymentState.set('failed');
+    this.paymentError.set('The payment did not go through. You can try again.');
+    this.paymentRetryAllowed.set(true);
+  }
+
   private saveBlob(blob: Blob, fileName: string): void {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -242,7 +438,17 @@ export class ProposalsComponent {
     this.notice.set(null);
     this.pdfDownloading.set(false);
     this.pdfError.set(null);
+    this.resetPaymentState();
     this.appliedCreatedId = null;
+  }
+
+  /** Returns the payment flow to its initial state (never persisted). */
+  private resetPaymentState(): void {
+    this.paymentState.set('idle');
+    this.paymentOrder.set(null);
+    this.verifiedPayment.set(null);
+    this.paymentError.set(null);
+    this.paymentRetryAllowed.set(true);
   }
 
   private handleListError(err: unknown): void {
@@ -283,6 +489,40 @@ export class ProposalsComponent {
       return;
     }
     this.pdfError.set(this.describeError(err));
+  }
+
+  private handleCreatePaymentError(err: unknown): void {
+    const status = (err as { status?: number })?.status;
+    if (status === 401) {
+      this.auth.logout();
+      this.resetAll();
+      this.listError.set('Your session has expired. Please log in again.');
+      return;
+    }
+    if (status === 409) {
+      // The backend reports an existing verified payment: surface its
+      // message and withhold retry — re-paying is pointless.
+      this.paymentState.set('failed');
+      this.paymentError.set(this.describeError(err));
+      this.paymentRetryAllowed.set(false);
+      return;
+    }
+    this.paymentState.set('failed');
+    this.paymentError.set(this.describeError(err));
+    this.paymentRetryAllowed.set(true);
+  }
+
+  private handleVerifyError(err: unknown): void {
+    const status = (err as { status?: number })?.status;
+    if (status === 401) {
+      this.auth.logout();
+      this.resetAll();
+      this.listError.set('Your session has expired. Please log in again.');
+      return;
+    }
+    this.paymentState.set('failed');
+    this.paymentError.set(this.describeError(err));
+    this.paymentRetryAllowed.set(true);
   }
 
   private describeError(err: unknown): string {
