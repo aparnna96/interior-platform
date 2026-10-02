@@ -2,6 +2,7 @@ using InteriorPlatform.Api.Configuration;
 using InteriorPlatform.Api.Controllers;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.Models;
+using InteriorPlatform.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -92,6 +93,38 @@ if (estimateRate is null || estimateRate <= 0)
 {
     throw new InvalidOperationException("Estimates:DemoRatePerSquareFoot must be a positive value. Set it via appsettings.{Environment}.json or environment configuration.");
 }
+
+// Token payment settings (Payments:TokenAmount / Payments:Currency). The
+// amount is a development/test default only — not an official company
+// business rule — but the backend must own it, so startup fails explicitly
+// when it is missing or not positive. Currency falls back to INR only when
+// the key is absent; an explicitly empty value is a configuration error.
+builder.Services.Configure<PaymentsOptions>(
+    builder.Configuration.GetSection(PaymentsOptions.SectionName));
+var tokenAmount = builder.Configuration.GetValue<decimal?>("Payments:TokenAmount");
+if (tokenAmount is null || tokenAmount <= 0)
+{
+    throw new InvalidOperationException("Payments:TokenAmount must be a positive value. Set it via appsettings.{Environment}.json or environment configuration.");
+}
+var paymentsCurrency = builder.Configuration.GetValue<string>("Payments:Currency");
+if (paymentsCurrency is not null && string.IsNullOrWhiteSpace(paymentsCurrency))
+{
+    throw new InvalidOperationException("Payments:Currency must be a non-empty value (e.g. \"INR\") or be omitted to default to INR.");
+}
+
+// Razorpay TEST-mode credentials (Razorpay:KeyId / Razorpay:KeySecret) come
+// from User Secrets or environment variables — never from source control.
+// They are intentionally NOT validated at startup: a missing credential must
+// fail payment operations with a clear error, not prevent the whole
+// application (or tooling such as EF commands) from starting.
+builder.Services.Configure<RazorpayOptions>(
+    builder.Configuration.GetSection(RazorpayOptions.SectionName));
+
+// Direct HTTPS integration with the Razorpay TEST-mode orders API (no vendor
+// SDK). The typed client carries only the base address; credentials travel
+// per-request in the Authorization header inside the gateway.
+builder.Services.AddHttpClient<IRazorpayPaymentGateway, RazorpayHttpGateway>(
+    client => client.BaseAddress = new Uri("https://api.razorpay.com/v1/"));
 
 builder.Services.AddCors(options =>
 {
