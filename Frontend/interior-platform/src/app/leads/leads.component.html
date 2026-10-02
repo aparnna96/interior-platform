@@ -1,0 +1,173 @@
+<section class="leads" aria-label="Leads workspace">
+  <header class="leads-head">
+    <div>
+      <p class="kicker">Operations · Leads</p>
+      <h1>Leads</h1>
+    </div>
+    @if (isAuthenticated() && canAccess() && selectedId() !== null) {
+      <button class="linklike" (click)="backToList()">Back to leads</button>
+    }
+  </header>
+
+  @if (!isAuthenticated()) {
+    <div class="leads-empty">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
+      </span>
+      <p>Log in to access the Leads workspace</p>
+      <span>Lead enquiries are handled by Field Staff and Admin accounts. Use the Account panel to log in.</span>
+    </div>
+  } @else if (!canAccess()) {
+    <div class="leads-empty" role="alert">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
+      </span>
+      <p>You don't have access to this workspace.</p>
+      <span>This workspace is for Field Staff and Admin accounts.</span>
+    </div>
+  } @else if (forbidden()) {
+    <div class="leads-empty" role="alert">
+      <p>You don't have access to this workspace.</p>
+      <span>The server refused the leads request for this account.</span>
+      <button class="btn-primary" (click)="loadLeads()">Try again</button>
+    </div>
+  } @else {
+    @if (selectedId() === null) {
+      <div class="filter-row" role="group" aria-label="Filter leads by status">
+        <button
+          [class.active]="filter() === 'all'"
+          [attr.aria-pressed]="filter() === 'all'"
+          (click)="setFilter('all')"
+        >All</button>
+        @for (option of statusOptions; track option.value) {
+          <button
+            [class.active]="filter() === option.value"
+            [attr.aria-pressed]="filter() === option.value"
+            (click)="setFilter(option.value)"
+          >{{ option.label }}</button>
+        }
+      </div>
+      @if (listLoading() && list() === null) {
+        <div class="leads-empty" aria-live="polite">
+          <p>Loading leads…</p>
+          <span>Fetching submitted enquiries.</span>
+        </div>
+      } @else if (listError()) {
+        <p class="leads-error" role="alert">
+          {{ listError() }}
+          <button class="linklike" (click)="loadLeads()">Try again</button>
+        </p>
+      } @else if (list() !== null && list()!.length === 0) {
+        <div class="leads-empty">
+          <span class="empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
+          </span>
+          <p>No leads yet</p>
+          <span>Submitted enquiries will appear here.</span>
+        </div>
+      } @else if (filteredLeads().length === 0) {
+        <div class="leads-empty">
+          <p>No leads match this filter</p>
+          <span>Try a different status filter.</span>
+        </div>
+      } @else {
+        <div class="lead-rows" aria-live="polite">
+          @for (lead of filteredLeads(); track lead.id) {
+            <article class="lead-row" [attr.aria-label]="'Lead from ' + lead.name">
+              <div class="lead-main">
+                <p class="lead-name">{{ lead.name }}</p>
+                <p class="lead-meta">
+                  <span class="status-pill">{{ statusLabel(lead.status) }}</span>
+                  <span>{{ lead.createdAt | date:'medium' }}</span>
+                </p>
+                <p class="lead-contact">
+                  <span>{{ lead.phone }}</span>
+                  @if (lead.email) {
+                    <span>{{ lead.email }}</span>
+                  }
+                </p>
+                <p class="lead-sub">
+                  @if (lead.source) {
+                    <span>Via {{ lead.source }}</span>
+                  }
+                  @if (lead.interestedProductId) {
+                    <span>Interested in {{ lead.interestedProductId }}</span>
+                  }
+                </p>
+              </div>
+              <div class="lead-side">
+                <button class="linklike" (click)="viewDetails(lead.id)" [attr.aria-label]="'View details for lead from ' + lead.name">View details</button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    } @else {
+      @if (detailLoading()) {
+        <div class="leads-empty" aria-live="polite">
+          <p>Loading lead…</p>
+          <span>Fetching the enquiry detail.</span>
+        </div>
+      } @else if (detailForbidden()) {
+        <div class="leads-empty" role="alert">
+          <p>You don't have access to this workspace.</p>
+          <span>The server refused the lead request for this account.</span>
+          <button class="btn-primary" (click)="backToList()">Back to leads</button>
+        </div>
+      } @else if (detailNotFound()) {
+        <div class="leads-empty" role="alert">
+          <p>Lead not found</p>
+          <span>It may have been removed or never existed.</span>
+          <button class="btn-primary" (click)="backToList()">Back to leads</button>
+        </div>
+      } @else if (detailError()) {
+        <p class="leads-error" role="alert">
+          {{ detailError() }}
+          <button class="linklike" (click)="retryDetail()">Try again</button>
+        </p>
+      } @else {
+        @if (selected(); as lead) {
+        <div class="lead-detail" role="status">
+          <dl class="sum-rows">
+            <div><dt>Name</dt><dd>{{ lead.name }}</dd></div>
+            <div><dt>Phone</dt><dd>{{ lead.phone }}</dd></div>
+            @if (lead.email) {
+              <div><dt>Email</dt><dd>{{ lead.email }}</dd></div>
+            }
+            @if (lead.source) {
+              <div><dt>Source</dt><dd>{{ lead.source }}</dd></div>
+            }
+            <div><dt>Interested product</dt><dd>{{ detailProductName() ?? '—' }}</dd></div>
+            <div><dt>Submitted</dt><dd>{{ lead.createdAt | date:'medium' }}</dd></div>
+            <div><dt>Status</dt><dd><span class="status-pill">{{ statusLabel(lead.status) }}</span></dd></div>
+          </dl>
+          <h2>Enquiry</h2>
+          <p class="lead-message">{{ lead.message }}</p>
+          <h2>Update status</h2>
+          <div class="status-row" role="group" aria-label="Update lead status">
+            @for (option of statusOptions; track option.value) {
+              <button
+                class="status-btn"
+                [class.active]="lead.status === option.value"
+                [attr.aria-pressed]="lead.status === option.value"
+                [disabled]="savingStatus()"
+                (click)="updateStatus(option.value)"
+              >{{ savingTo() === option.value ? 'Saving…' : option.label }}</button>
+            }
+          </div>
+          @if (saveNotice()) {
+            <p class="lead-notice" role="status">{{ saveNotice() }}</p>
+          }
+          @if (saveError()) {
+            <p class="leads-error" role="alert">
+              {{ saveError() }}
+              <button class="linklike" (click)="retryStatusUpdate()">Try again</button>
+            </p>
+          }
+          <button class="linklike" (click)="backToList()">Back to leads</button>
+        </div>
+        }
+      }
+    }
+  }
+</section>

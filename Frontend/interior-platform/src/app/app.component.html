@@ -84,6 +84,18 @@
           <span class="nav-count">{{ projects().length }}</span>
         }
       </button>
+      @if (auth.isStaff()) {
+        <button
+          class="nav-item"
+          aria-label="Leads"
+          [attr.title]="sidebarCollapsed() ? 'Leads' : null"
+          [class.active]="activeView() === 'leads' && !showAccount()"
+          (click)="activeView.set('leads'); showAccount.set(false); closeDrawer()"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 5.5h13" stroke="currentColor" stroke-width="1.4"/><circle cx="4" cy="4" r="0.9" fill="currentColor"/></svg>
+          <span>Leads</span>
+        </button>
+      }
     </nav>
 
     <nav class="nav" aria-label="General">
@@ -217,13 +229,16 @@
         <button [class.active]="activeView() === 'projects' && !showAccount()" (click)="activeView.set('projects'); showAccount.set(false)">
           Projects@if (projects().length > 0) { <span class="nav-count">{{ projects().length }}</span> }
         </button>
+        @if (auth.isStaff()) {
+          <button [class.active]="activeView() === 'leads' && !showAccount()" (click)="activeView.set('leads'); showAccount.set(false)">Leads</button>
+        }
         <button [class.active]="showAccount()" (click)="toggleAccount()">Account</button>
       </nav>
     </header>
     }
 
     <!-- Workspace header — Visualizer controls only; hidden in Home, Interiors, Furniture and Cart views -->
-    @if (activeView() !== 'catalogue' && activeView() !== 'cart' && activeView() !== 'orders' && activeView() !== 'proposals' && activeView() !== 'home' && activeView() !== 'interiors') {
+    @if (activeView() !== 'catalogue' && activeView() !== 'cart' && activeView() !== 'orders' && activeView() !== 'proposals' && activeView() !== 'home' && activeView() !== 'interiors' && activeView() !== 'leads') {
     <header class="ws-head">
       <div class="ws-title">
         <div>
@@ -708,6 +723,12 @@
             </div>
           }
         </section>
+      </main>
+    }
+
+    @if (activeView() === 'leads') {
+      <main class="content cat-main">
+        <app-leads />
       </main>
     }
 

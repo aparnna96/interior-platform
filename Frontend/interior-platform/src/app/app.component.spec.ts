@@ -341,4 +341,94 @@ describe('AppComponent', () => {
       httpMock.verify();
     });
   });
+
+  describe('Leads workspace navigation', () => {
+    const LEADS_URL = `${environment.apiBaseUrl}/api/leads`;
+    const PRODUCTS_URL = `${environment.apiBaseUrl}/api/products`;
+    const DOTNET_ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+
+    function jwtWithRoles(roles: string[]): string {
+      const enc = (value: unknown) =>
+        btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      return `${enc({ alg: 'none', typ: 'JWT' })}.${enc({ [DOTNET_ROLE_CLAIM]: roles })}.sig`;
+    }
+
+    function createAuthedApp(roles: string[]) {
+      localStorage.setItem(AUTH_TOKEN_KEY, jwtWithRoles(roles));
+      const fixture = TestBed.createComponent(AppComponent);
+      const httpMock = TestBed.inject(HttpTestingController);
+      httpMock.expectOne(CART_URL).flush({ items: [], itemCount: 0, subtotal: 0 });
+      fixture.detectChanges();
+      // The default home view loads the public catalogue.
+      httpMock.expectOne(PRODUCTS_URL).flush([]);
+      return { fixture, httpMock };
+    }
+
+    function sidebarLabels(fixture: ReturnType<typeof TestBed.createComponent<AppComponent>>): (string | undefined)[] {
+      return Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('#app-sidebar .nav-item')
+      ).map((b) => (b as HTMLElement).textContent?.trim());
+    }
+
+    it('customers do not see Leads navigation', () => {
+      const { fixture, httpMock } = createAuthedApp(['Customer']);
+      expect(sidebarLabels(fixture)).not.toContain('Leads');
+      const mobile = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.mnav button')
+      ).map((b) => (b as HTMLElement).textContent?.trim());
+      expect(mobile).not.toContain('Leads');
+      httpMock.verify();
+    });
+
+    it('anonymous visitors do not see Leads navigation', () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.detectChanges();
+      expect(sidebarLabels(fixture)).not.toContain('Leads');
+    });
+
+    it('FieldStaff sees Leads navigation and opens the workspace', () => {
+      const { fixture, httpMock } = createAuthedApp(['FieldStaff']);
+      expect(sidebarLabels(fixture)).toContain('Leads');
+
+      const leadsButton = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('#app-sidebar .nav-item')
+      ).find((b) => (b as HTMLElement).textContent?.trim() === 'Leads') as HTMLButtonElement;
+      leadsButton.click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.activeView()).toBe('leads');
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-leads')).toBeTruthy();
+      httpMock.expectOne(LEADS_URL).flush([]);
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('No leads yet');
+      httpMock.verify();
+    });
+
+    it('Admin sees Leads navigation', () => {
+      const { fixture, httpMock } = createAuthedApp(['Admin']);
+      expect(sidebarLabels(fixture)).toContain('Leads');
+      httpMock.verify();
+    });
+
+    it('Leads stays out of the public customer-facing navigation', () => {
+      const { fixture, httpMock } = createAuthedApp(['FieldStaff']);
+      const labels = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.pubnav-links button')
+      ).map((b) => (b as HTMLElement).textContent?.trim());
+      expect(labels).not.toContain('Leads');
+      httpMock.verify();
+    });
+
+    it('direct navigation by a customer shows access-denied and loads no lead data', () => {
+      const { fixture, httpMock } = createAuthedApp(['Customer']);
+      fixture.componentInstance.activeView.set('leads');
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+        "You don't have access to this workspace."
+      );
+      httpMock.expectNone(LEADS_URL);
+      httpMock.verify();
+    });
+  });
 });

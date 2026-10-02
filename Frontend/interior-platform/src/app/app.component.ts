@@ -15,6 +15,7 @@ import { EstimateService, type EstimateDto } from './estimate/estimate.service';
 import { SavedEstimatesComponent } from './estimate/saved-estimates.component';
 import { HomeComponent } from './home/home.component';
 import { InteriorsComponent } from './home/interiors.component';
+import { LeadsComponent } from './leads/leads.component';
 import {
   DEMO_RATE,
   calculateEstimateTotal,
@@ -62,7 +63,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginComponent, RegisterComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginComponent, RegisterComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -70,7 +71,7 @@ export class AppComponent {
   title = 'interior-platform';
 
   // ── views ──────────────────────────────────
-  activeView = signal<'home' | 'interiors' | 'visualizer' | 'catalogue' | 'cart' | 'orders' | 'proposals' | 'estimates' | 'projects'>('home');
+  activeView = signal<'home' | 'interiors' | 'visualizer' | 'catalogue' | 'cart' | 'orders' | 'proposals' | 'estimates' | 'projects' | 'leads'>('home');
   showAccount = signal(false);
 
   /** Shared frontend cart store (Pillar 2) — badge count in the navbar. */
