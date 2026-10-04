@@ -120,6 +120,18 @@
           <span>Orders</span>
         </button>
       }
+      @if (auth.isAdmin()) {
+        <button
+          class="nav-item"
+          aria-label="Admin proposals"
+          [attr.title]="sidebarCollapsed() ? 'Proposals' : null"
+          [class.active]="activeView() === 'admin-proposals' && !showAccount()"
+          (click)="activeView.set('admin-proposals'); showAccount.set(false); closeDrawer()"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="11.5" x2="8.5" y2="11.5" stroke="currentColor" stroke-width="1.4"/></svg>
+          <span>Proposals</span>
+        </button>
+      }
     </nav>
 
     <nav class="nav" aria-label="General">
@@ -262,13 +274,16 @@
         @if (auth.isAdmin()) {
           <button [class.active]="activeView() === 'admin-orders' && !showAccount()" (click)="activeView.set('admin-orders'); showAccount.set(false)">Orders</button>
         }
+        @if (auth.isAdmin()) {
+          <button [class.active]="activeView() === 'admin-proposals' && !showAccount()" (click)="activeView.set('admin-proposals'); showAccount.set(false)" aria-label="Admin proposals">Proposals</button>
+        }
         <button [class.active]="showAccount()" (click)="toggleAccount()">Account</button>
       </nav>
     </header>
     }
 
     <!-- Workspace header — Visualizer controls only; hidden in Home, Interiors, Furniture and Cart views -->
-    @if (activeView() !== 'catalogue' && activeView() !== 'cart' && activeView() !== 'orders' && activeView() !== 'proposals' && activeView() !== 'home' && activeView() !== 'interiors' && activeView() !== 'leads' && activeView() !== 'admin-products' && activeView() !== 'admin-orders') {
+    @if (activeView() !== 'catalogue' && activeView() !== 'cart' && activeView() !== 'orders' && activeView() !== 'proposals' && activeView() !== 'home' && activeView() !== 'interiors' && activeView() !== 'leads' && activeView() !== 'admin-products' && activeView() !== 'admin-orders' && activeView() !== 'admin-proposals') {
     <header class="ws-head">
       <div class="ws-title">
         <div>
@@ -771,6 +786,12 @@
     @if (activeView() === 'admin-orders') {
       <main class="content cat-main">
         <app-admin-orders />
+      </main>
+    }
+
+    @if (activeView() === 'admin-proposals') {
+      <main class="content cat-main">
+        <app-admin-proposals />
       </main>
     }
 

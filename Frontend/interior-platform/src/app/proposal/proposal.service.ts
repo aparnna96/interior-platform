@@ -82,7 +82,62 @@ export const ProposalPaymentStatus = {
   Failed: 2,
 } as const;
 
+const PROPOSAL_PAYMENT_STATUS_LABELS = ['Payment Pending', 'Token Payment Verified', 'Payment Failed'];
+
+/** Human label for a backend token-payment status number. */
+export function proposalPaymentStatusLabel(status: number): string {
+  return PROPOSAL_PAYMENT_STATUS_LABELS[status] ?? 'Unknown';
+}
+
+/** One persisted token payment attempt (GET /api/admin/proposals/{id}). */
+export interface AdminProposalPaymentDto {
+  id: string;
+  status: number;
+  provider: string;
+  providerOrderId: string | null;
+  providerPaymentId: string | null;
+  amount: number;
+  currency: string;
+  createdAt: string;
+  verifiedAt: string | null;
+}
+
+/** Backend admin proposal list row (GET /api/admin/proposals). */
+export interface AdminProposalSummaryDto {
+  id: string;
+  userId: string;
+  customerEmail: string | null;
+  estimateId: string;
+  area: number;
+  ratePerSquareFoot: number;
+  estimatedAmount: number;
+  status: number;
+  createdAt: string;
+  isPaymentVerified: boolean;
+  paymentAttemptCount: number;
+}
+
+/** Backend admin proposal detail (GET /api/admin/proposals/{id}). */
+export interface AdminProposalDetailDto {
+  id: string;
+  userId: string;
+  customerEmail: string | null;
+  estimateId: string;
+  width: number;
+  length: number;
+  area: number;
+  ratePerSquareFoot: number;
+  estimatedAmount: number;
+  status: number;
+  createdAt: string;
+  isPaymentVerified: boolean;
+  items: ProposalItemDto[];
+  payments: AdminProposalPaymentDto[];
+}
+
 const PROPOSALS_URL = `${environment.apiBaseUrl}/api/proposals`;
+
+const ADMIN_PROPOSALS_URL = `${environment.apiBaseUrl}/api/admin/proposals`;
 
 const PROPOSAL_STATUS_LABELS = ['Draft'];
 
@@ -145,6 +200,16 @@ export class ProposalService {
   verifyProposalPayment(request: VerifyProposalPaymentRequest): Observable<VerifyProposalPaymentResponse> {
     return this.http.post<VerifyProposalPaymentResponse>(
       `${environment.apiBaseUrl}/api/payments/verify`, request, { headers: this.authHeaders() });
+  }
+
+  /** GET /api/admin/proposals — Admin only, every proposal newest first. Bearer auth. */
+  getAdminProposals(): Observable<AdminProposalSummaryDto[]> {
+    return this.http.get<AdminProposalSummaryDto[]>(ADMIN_PROPOSALS_URL, { headers: this.authHeaders() });
+  }
+
+  /** GET /api/admin/proposals/{id} — Admin only, any owner. Bearer auth. */
+  getAdminProposal(id: string): Observable<AdminProposalDetailDto> {
+    return this.http.get<AdminProposalDetailDto>(`${ADMIN_PROPOSALS_URL}/${id}`, { headers: this.authHeaders() });
   }
 
   private authHeaders(): HttpHeaders {

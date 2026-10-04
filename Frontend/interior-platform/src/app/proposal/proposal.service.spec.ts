@@ -7,7 +7,10 @@ import {
 import { AuthService, AUTH_TOKEN_KEY } from '../auth.service';
 import {
   ProposalService,
+  proposalPaymentStatusLabel,
   proposalStatusLabel,
+  type AdminProposalDetailDto,
+  type AdminProposalSummaryDto,
   type ProposalDetailDto,
 } from './proposal.service';
 import { environment } from '../../environments/environment';
@@ -122,5 +125,66 @@ describe('ProposalService', () => {
   it('labels proposal statuses', () => {
     expect(proposalStatusLabel(0)).toBe('Draft');
     expect(proposalStatusLabel(99)).toBe('Unknown');
+  });
+
+  it('labels token payment statuses', () => {
+    expect(proposalPaymentStatusLabel(0)).toBe('Payment Pending');
+    expect(proposalPaymentStatusLabel(1)).toBe('Token Payment Verified');
+    expect(proposalPaymentStatusLabel(2)).toBe('Payment Failed');
+    expect(proposalPaymentStatusLabel(99)).toBe('Unknown');
+  });
+
+  it('getAdminProposals lists every proposal with Bearer auth', () => {
+    setup(TOKEN);
+    let received: AdminProposalSummaryDto[] | null = null;
+    proposals.getAdminProposals().subscribe((p) => (received = p));
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/admin/proposals`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
+    req.flush([
+      {
+        id: 'prop-1',
+        userId: 'user-a',
+        customerEmail: 'a@test.local',
+        estimateId: 'est-1',
+        area: 180,
+        ratePerSquareFoot: 1500,
+        estimatedAmount: 270000,
+        status: 0,
+        createdAt: '2026-10-02T10:00:00Z',
+        isPaymentVerified: true,
+        paymentAttemptCount: 1,
+      },
+    ]);
+    expect(received!.length).toBe(1);
+    expect(received![0].customerEmail).toBe('a@test.local');
+    expect(received![0].isPaymentVerified).toBeTrue();
+  });
+
+  it('getAdminProposal fetches one proposal by id with Bearer auth', () => {
+    setup(TOKEN);
+    let received: AdminProposalDetailDto | null = null;
+    proposals.getAdminProposal('prop-9').subscribe((p) => (received = p));
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/admin/proposals/prop-9`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
+    req.flush({ ...detail(), userId: 'user-a', customerEmail: 'a@test.local', payments: [] });
+    expect(received!.id).toBe('prop-1');
+    expect(received!.userId).toBe('user-a');
+  });
+
+  it('admin calls use the admin route, never the customer route', () => {
+    setup(TOKEN);
+    proposals.getAdminProposals().subscribe();
+    proposals.getAdminProposal('prop-1').subscribe();
+    const listReq = httpMock.expectOne(`${environment.apiBaseUrl}/api/admin/proposals`);
+    const detailReq = httpMock.expectOne(`${environment.apiBaseUrl}/api/admin/proposals/prop-1`);
+    expect(listReq.request.method).toBe('GET');
+    expect(detailReq.request.method).toBe('GET');
+    expect(listReq.request.urlWithParams).toBe(`${environment.apiBaseUrl}/api/admin/proposals`);
+    expect(detailReq.request.urlWithParams).toBe(`${environment.apiBaseUrl}/api/admin/proposals/prop-1`);
+    listReq.flush([]);
+    detailReq.flush(null);
+    httpMock.expectNone(PROPOSALS_URL);
   });
 });

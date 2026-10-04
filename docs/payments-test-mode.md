@@ -9,6 +9,8 @@ proposal) is the authoritative condition. `GET /api/proposals/{id}/pdf`
 re-checks the database on every request and returns `403` without one;
 `GET /api/proposals/{id}` exposes a read-only `isPaymentVerified` display
 hint computed the same way. No frontend state can unlock the PDF.
+Admin users may download any verified proposal PDF by role; customer
+access additionally requires ownership, and FieldStaff gains no access.
 
 ## Configuration keys
 

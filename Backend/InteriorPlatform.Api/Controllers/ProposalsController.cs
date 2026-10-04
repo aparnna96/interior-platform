@@ -86,10 +86,12 @@ public class ProposalsController : ControllerBase
 
     // GET /api/proposals/{id}/pdf — download the client-ready proposal PDF
     // rendered from the persisted snapshot. The PDF is downloadable if and
-    // only if the authenticated user owns the proposal and the proposal has
-    // a verified token payment. This endpoint re-checks the database on
-    // every request: no client state can unlock it. The proposal is never
-    // modified and no payment records are created.
+    // only if the proposal has a verified token payment: customers must
+    // additionally own the proposal, while Admin users access any proposal
+    // by role. FieldStaff gains nothing — ownership still fails for them.
+    // This endpoint re-checks the database on every request: no client
+    // state can unlock it. The proposal is never modified and no payment
+    // records are created.
     [HttpGet("{id:guid}/pdf")]
     public async Task<IActionResult> DownloadProposalPdf(Guid id)
     {
@@ -99,16 +101,17 @@ public class ProposalsController : ControllerBase
             return Unauthorized();
         }
 
+        var isAdmin = User.IsInRole("Admin");
         var proposal = await _db.Proposals
             .AsNoTracking()
             .Include(p => p.Items)
-            .FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+            .FirstOrDefaultAsync(p => p.Id == id && (isAdmin || p.UserId == userId));
         if (proposal is null)
         {
             return NotFound();
         }
 
-        if (!await HasVerifiedPaymentAsync(id, userId))
+        if (!await HasVerifiedPaymentAsync(id, proposal.UserId))
         {
             return Problem(
                 title: "Payment verification is required before the proposal PDF can be downloaded.",

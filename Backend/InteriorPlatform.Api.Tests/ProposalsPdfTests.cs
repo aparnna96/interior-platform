@@ -99,6 +99,21 @@ public sealed class ProposalsPdfTests
         return controller;
     }
 
+    private static ProposalsController ProposalsAs(ApplicationDbContext db, string userId, params string[] roles)
+    {
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId) };
+        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+        var controller = new ProposalsController(db);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test")),
+            },
+        };
+        return controller;
+    }
+
     private static CartController CartFor(ApplicationDbContext db, string? userId)
     {
         var controller = new CartController(db);
@@ -376,6 +391,59 @@ public sealed class ProposalsPdfTests
 
         Assert.IsType<NotFoundResult>(
             await ProposalsFor(test.Db, UserA).DownloadProposalPdf(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task DownloadPdf_AdminWithVerifiedPayment_CanDownloadProposalPdf()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        await SeedVerifiedPaymentAsync(test.Db, proposal.Id, UserA);
+
+        // Admin access is role-based, not ownership-based.
+        var file = DownloadedPdf(
+            await ProposalsAs(test.Db, "admin-user", "Admin").DownloadProposalPdf(proposal.Id));
+
+        Assert.Equal($"proposal-{proposal.Id}.pdf", file.FileDownloadName);
+        Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(file.FileContents, 0, 4));
+    }
+
+    [Fact]
+    public async Task DownloadPdf_AdminWithoutVerifiedPayment_Returns403()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+
+        var result = Assert.IsType<ObjectResult>(
+            await ProposalsAs(test.Db, "admin-user", "Admin").DownloadProposalPdf(proposal.Id));
+        AssertPaymentRequired(result);
+    }
+
+    [Fact]
+    public async Task DownloadPdf_AdminMissingProposal_Returns404()
+    {
+        using var test = new TestDb();
+
+        Assert.IsType<NotFoundResult>(
+            await ProposalsAs(test.Db, "admin-user", "Admin").DownloadProposalPdf(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task DownloadPdf_FieldStaffWithoutOwnership_Returns404()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        await SeedVerifiedPaymentAsync(test.Db, proposal.Id, UserA);
+
+        // The Admin role is the only role that bypasses ownership.
+        Assert.IsType<NotFoundResult>(
+            await ProposalsAs(test.Db, UserB, "FieldStaff").DownloadProposalPdf(proposal.Id));
     }
 
     [Fact]
