@@ -7,7 +7,8 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { LeadService } from './lead.service';
+import { LeadService, type LeadResponse } from './lead.service';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 /** Rejects whitespace-only values that Validators.required would accept. */
 export function nonBlank(control: AbstractControl): ValidationErrors | null {
@@ -43,9 +44,15 @@ export class LeadFormComponent implements OnChanges {
   submitted = false;
   errorMessage = '';
 
+  /** Server-persisted lead from the last successful submit (drives WhatsApp). */
+  submittedLead: LeadResponse | null = null;
+  /** Product name for the submitted lead; null for non-product enquiries. */
+  private submittedProductName: string | null = null;
+
   constructor(
     private fb: FormBuilder,
     private leadService: LeadService,
+    private whatsapp: WhatsappService,
   ) {
     this.form = this.fb.group({
       name: ['', [Validators.required, nonBlank, Validators.maxLength(100)]],
@@ -73,6 +80,9 @@ export class LeadFormComponent implements OnChanges {
     this.isSubmitting = true;
 
     const value = this.form.value;
+    // contextLabel is a product name only when a product is being enquired
+    // about; for interior enquiries it is just a heading, never a product.
+    const productName = this.interestedProductId && this.contextLabel ? this.contextLabel : null;
     this.leadService
       .submitLead({
         name: String(value.name).trim(),
@@ -83,9 +93,11 @@ export class LeadFormComponent implements OnChanges {
         source: this.source,
       })
       .subscribe({
-        next: () => {
+        next: (lead) => {
           this.isSubmitting = false;
           this.submitted = true;
+          this.submittedLead = lead;
+          this.submittedProductName = productName;
           this.form.reset();
         },
         error: () => {
@@ -99,11 +111,26 @@ export class LeadFormComponent implements OnChanges {
   /** Clears the success state so another enquiry can be sent. */
   sendAnother(): void {
     this.submitted = false;
+    this.submittedLead = null;
+    this.submittedProductName = null;
     this.errorMessage = '';
+  }
+
+  /** True only after a persisted lead exists and a WhatsApp number is configured. */
+  get canContinueOnWhatsapp(): boolean {
+    return this.submitted && !this.isSubmitting && this.submittedLead !== null && this.whatsapp.isConfigured();
+  }
+
+  /** Opens WhatsApp with the persisted lead's details; never bypasses lead creation. */
+  continueOnWhatsapp(): void {
+    if (!this.canContinueOnWhatsapp || this.submittedLead === null) return;
+    this.whatsapp.openChat(this.submittedLead, this.submittedProductName);
   }
 
   private resetState(): void {
     this.submitted = false;
+    this.submittedLead = null;
+    this.submittedProductName = null;
     this.errorMessage = '';
     this.isSubmitting = false;
   }

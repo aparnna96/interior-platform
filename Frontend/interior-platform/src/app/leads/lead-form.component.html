@@ -12,6 +12,10 @@
     <div class="msg ok" role="status">
       <p><strong>Thank you! Your enquiry was submitted successfully.</strong></p>
       <p>Our design team will contact you shortly.</p>
+      @if (canContinueOnWhatsapp) {
+        <p>Want to continue the conversation?</p>
+        <button class="btn-primary" type="button" (click)="continueOnWhatsapp()">Continue on WhatsApp</button>
+      }
       <button class="btn-outline" type="button" (click)="sendAnother()">Make another enquiry</button>
     </div>
   } @else {
