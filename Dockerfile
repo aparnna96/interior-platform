@@ -44,8 +44,33 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 # (no recommended packages) that provides a system fallback face covering the
 # rupee sign (U+20B9) used for every amount in the PDF.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Trust the AWS RDS root CAs so SqlClient can validate the RDS server
+# certificate with Encrypt=True;TrustServerCertificate=False.
+# - Source: AWS's official regional bundle for ap-southeast-1 (three root CAs:
+#   RSA4096 G1, RSA2048 G1, ECC384 G1), the region planned for the database.
+#   AWS documents these as the trust anchors for RDS server certificates.
+# - Pinned: ADD --checksum fails the build if the downloaded bytes differ, so
+#   nothing unverified is ever trusted. When AWS publishes a new bundle (or the
+#   database moves to another region), update the URL, the hash AND the
+#   expected certificate count below (the build fails if the count differs):
+#     https://truststore.pki.rds.amazonaws.com/<region>/<region>-bundle.pem
+# - Installed into the normal OS trust store (update-ca-certificates), which is
+#   what .NET on Linux reads via OpenSSL. Only root CAs are installed, as AWS
+#   advises; server certificates are not pinned because RDS rotates them.
+# - Build-time only: no credentials, endpoint or connection string involved.
+ADD --checksum=sha256:3c696020a3b7c6721085d182211c28024ab01873ade35dcc7eeebb89c20ee979 \
+    https://truststore.pki.rds.amazonaws.com/ap-southeast-1/ap-southeast-1-bundle.pem \
+    /tmp/rds-ca-bundle.pem
+RUN set -eu \
+    && csplit -s -z -f /usr/local/share/ca-certificates/aws-rds-ca- -b '%02d.crt' \
+        /tmp/rds-ca-bundle.pem '/-----BEGIN CERTIFICATE-----/' '{*}' \
+    && rm -f /tmp/rds-ca-bundle.pem \
+    && n=$(find /usr/local/share/ca-certificates -name 'aws-rds-ca-*.crt' | wc -l) \
+    && [ "$n" -eq 3 ] \
+    && update-ca-certificates
 
 WORKDIR /app
 COPY --from=build /app/publish .
