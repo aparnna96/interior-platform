@@ -8,7 +8,7 @@
   gap: 30px;
   align-content: start;
   min-width: 0;
-  max-width: 1120px;
+  max-width: 1152px;
   width: 100%;
   margin: 0 auto;
   overflow-x: clip;
@@ -326,7 +326,10 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 8px;
+  /* auto pushes the price/actions row to the card bottom so it lines up
+     across a grid row even when a description wraps to two lines. */
+  margin-top: auto;
+  padding-top: 8px;
   min-width: 0;
 }
 .tile-price { font-size: 17.5px; font-weight: 750; letter-spacing: -0.01em; white-space: nowrap; color: #1f2c47; }

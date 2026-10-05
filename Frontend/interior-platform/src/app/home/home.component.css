@@ -251,9 +251,8 @@
 
 /* ── 3 · Featured furniture ── */
 .feat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; min-width: 0; }
-/* Editorial lead: first piece spans two columns instead of a uniform grid. */
-.feat-grid .feat:first-child { grid-column: span 2; }
-.feat-grid .feat:first-child .feat-media { aspect-ratio: 16 / 10; }
+/* Four equal cards: 4 across on desktop, 2 x 2 on tablet/mobile. A spanning
+   "lead" card left the fourth piece alone on its own row. */
 .feat {
   background: #fff;
   border: 1px solid var(--border-soft);
