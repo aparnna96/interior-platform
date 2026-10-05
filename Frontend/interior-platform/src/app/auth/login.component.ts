@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, output } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../auth.service';
 import { CartService } from '../catalogue/cart.service';
@@ -19,6 +19,9 @@ import { CartService } from '../catalogue/cart.service';
   styleUrl: './login.component.css',
 })
 export class LoginComponent {
+  /** Emitted after a successful login so the shell can close the Account panel. */
+  loggedIn = output<void>();
+
   form: FormGroup;
   isSubmitting = false;
   successMessage = '';
@@ -57,6 +60,7 @@ export class LoginComponent {
         this.successMessage = 'Logged in. Loading your saved cart…';
         this.form.reset();
         this.cart.load();
+        this.loggedIn.emit();
       },
       error: (err) => {
         this.isSubmitting = false;

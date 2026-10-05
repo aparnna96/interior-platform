@@ -137,3 +137,8 @@ div.shell .sidebar{background:#fffdf9;border-right:1px solid var(--border);color
 .pubnav-links button,.pubmenu button{transition:none}
 .pubmenu{animation:none}
 }
+/* Account panel: Log in and Create account cards (used by app.component.html). */
+.account-cols { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; align-items: start; }
+.account-card { border: 1px solid var(--border-soft); border-radius: 8px; padding: 14px; background: #fff; min-width: 0; display: grid; gap: 10px; }
+.account-card h3 { font-size: 14px; font-weight: 700; letter-spacing: -0.005em; }
+@media (max-width: 719px) { .account-cols { grid-template-columns: minmax(0, 1fr); } }

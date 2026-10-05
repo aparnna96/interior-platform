@@ -1,6 +1,5 @@
 .reg form { display: grid; gap: 10px; }
 .reg-grid { display: grid; gap: 10px; }
-@media (min-width: 720px) { .reg-grid { grid-template-columns: 1fr 1fr; } }
 .reg label { display: block; margin: 0 0 5px; font-size: 12px; font-weight: 600; color: #57534e; }
 .reg input {
   width: 100%; padding: 8px 10px;

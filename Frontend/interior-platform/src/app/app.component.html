@@ -320,12 +320,24 @@
           <div class="account-head">
             <div>
               <h2>Account</h2>
-              <p class="sub">Registration is preserved. No login is required to use the workspace.</p>
+              <p class="sub">Log in to save your cart, estimates and orders. You can browse without an account.</p>
             </div>
             <button class="btn btn-secondary btn-sm" (click)="toggleAccount()">Close</button>
           </div>
-          <app-login />
-          <app-register />
+          @if (auth.isAuthenticated()) {
+            <app-login />
+          } @else {
+            <div class="account-cols">
+              <div class="account-card">
+                <h3>Log in</h3>
+                <app-login (loggedIn)="showAccount.set(false)" />
+              </div>
+              <div class="account-card">
+                <h3>Create account</h3>
+                <app-register />
+              </div>
+            </div>
+          }
         </section>
       </div>
     }
@@ -592,13 +604,17 @@
 
     @if (activeView() === 'catalogue') {
       <main class="content cat-main">
-        <app-catalogue (openCart)="activeView.set('cart'); showAccount.set(false); closeDrawer()" />
+        <app-catalogue
+          (openCart)="activeView.set('cart'); showAccount.set(false); closeDrawer()"
+          (loginRequested)="openLogin()" />
       </main>
     }
 
     @if (activeView() === 'cart') {
       <main class="content cat-main">
-        <app-cart (browse)="activeView.set('catalogue'); showAccount.set(false); closeDrawer()" />
+        <app-cart
+          (browse)="activeView.set('catalogue'); showAccount.set(false); closeDrawer()"
+          (loginRequested)="openLogin()" />
       </main>
     }
 

@@ -171,6 +171,19 @@ describe('CartComponent (backend cart)', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Log in to view your saved cart');
   });
 
+  it('offers a Log in button to logged-out visitors that asks the shell to open the login', () => {
+    setupAnonymous();
+    const fixture = setup();
+    let requested = 0;
+    fixture.componentInstance.loginRequested.subscribe(() => requested++);
+    const buttons = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.cart-empty button')
+    ) as HTMLButtonElement[];
+    expect(buttons.map((b) => b.textContent?.trim())).toEqual(['Log in', 'Browse Furniture']);
+    buttons[0].click();
+    expect(requested).toBe(1);
+  });
+
   it('emits browse to return to the Furniture catalogue', () => {
     setupAnonymous();
     const fixture = setup();

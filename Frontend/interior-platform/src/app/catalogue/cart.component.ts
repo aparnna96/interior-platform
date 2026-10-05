@@ -28,6 +28,9 @@ export class CartComponent {
   /** Requests returning to the existing Furniture catalogue. */
   browse = output<void>();
 
+  /** Asks the shell to open the login panel (logged-out visitor on the Cart page). */
+  loginRequested = output<void>();
+
   /** True while POST /api/orders is in flight — blocks duplicate submits. */
   readonly placingOrder = signal(false);
   /** Last order failure message, or null. */
@@ -49,6 +52,10 @@ export class CartComponent {
 
   goBrowse(): void {
     this.browse.emit();
+  }
+
+  requestLogin(): void {
+    this.loginRequested.emit();
   }
 
   statusLabel(status: number): string {

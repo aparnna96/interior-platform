@@ -18,8 +18,11 @@
         <svg viewBox="0 0 16 16"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
       </span>
       <p>Log in to view your saved cart</p>
-      <span>Your cart is stored against your account. Use the Account panel to log in.</span>
-      <button class="btn-primary" (click)="goBrowse()">Browse Furniture</button>
+      <span>Your cart is stored against your account.</span>
+      <div class="cart-empty-actions">
+        <button class="btn-primary" (click)="requestLogin()">Log in</button>
+        <button class="btn-secondary" (click)="goBrowse()">Browse Furniture</button>
+      </div>
     </div>
   } @else {
     @if (placedOrder(); as order) {

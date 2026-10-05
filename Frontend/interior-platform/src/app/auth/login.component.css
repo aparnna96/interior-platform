@@ -1,6 +1,5 @@
 .login form { display: grid; gap: 10px; }
 .login-grid { display: grid; gap: 10px; }
-@media (min-width: 720px) { .login-grid { grid-template-columns: 1fr 1fr; } }
 .login label { display: block; margin: 0 0 5px; font-size: 12px; font-weight: 600; color: #57534e; }
 .login input {
   width: 100%; padding: 8px 10px;

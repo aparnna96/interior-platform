@@ -26,9 +26,11 @@
           id="password"
           type="password"
           formControlName="password"
-          placeholder="Minimum 8 characters"
+          placeholder="Create a password"
           autocomplete="new-password"
+          aria-describedby="reg-password-hint"
         />
+        <p id="reg-password-hint" class="sub small">At least 6 characters, with an uppercase letter, a digit and a symbol.</p>
         @if (form.get('password')?.touched && form.get('password')?.invalid) {
           <p class="msg err">Password is required.</p>
         }
@@ -39,7 +41,6 @@
       <button class="btn btn-primary btn-sm" type="submit" [disabled]="isSubmitting">
         {{ isSubmitting ? 'Saving…' : 'Create account' }}
       </button>
-      <span class="sub small">Optional · workspace works without login</span>
     </div>
 
     @if (successMessage) {

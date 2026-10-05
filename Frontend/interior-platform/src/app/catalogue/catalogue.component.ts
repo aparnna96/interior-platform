@@ -29,6 +29,9 @@ export class CatalogueComponent implements OnInit {
   /** Requests the shell to open the Cart view. No routing. */
   openCart = output<void>();
 
+  /** Asks the shell to open the login panel (logged-out visitor tried to use the cart). */
+  loginRequested = output<void>();
+
   search = signal('');
   room = signal<RoomFilter>('All');
   /** Dedicated details view selection. Null = listing; set = details replaces listing. */
@@ -82,6 +85,15 @@ export class CatalogueComponent implements OnInit {
 
   goToCart(): void {
     this.openCart.emit();
+  }
+
+  requestLogin(): void {
+    this.dismissNotice();
+    this.loginRequested.emit();
+  }
+
+  dismissNotice(): void {
+    this.cart.notice.set(null);
   }
 
   viewDetails(id: string): void {

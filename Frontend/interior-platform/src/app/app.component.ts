@@ -650,6 +650,16 @@ export class AppComponent {
     this.showAccount.update((v) => !v);
   }
 
+  /** Opens the login panel from a "Log in" prompt elsewhere (cart, catalogue). */
+  openLogin(): void {
+    this.showAccount.set(true);
+    this.closeDrawer();
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0 });
+      setTimeout(() => document.getElementById('login-email')?.focus(), 0);
+    }
+  }
+
   money(n: number): string {
     return n.toLocaleString('en-IN');
   }

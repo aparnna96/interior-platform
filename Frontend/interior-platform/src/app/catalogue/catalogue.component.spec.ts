@@ -279,6 +279,52 @@ describe('CatalogueComponent ProductService integration', () => {
     expect(cmp.cartNotice()).toContain('log in');
     expect(cmp.qtyOf('aria-3s-sofa')).toBe(0);
   });
+
+  it('shows a Log in action with the notice and opens the login, clearing the notice', async () => {
+    const { fixture, cmp, httpMock } = await setup();
+    httpMock.expectOne(PRODUCTS_URL).flush(apiProducts);
+    let requested = 0;
+    cmp.loginRequested.subscribe(() => requested++);
+    cmp.addToCart('aria-3s-sofa');
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const toast = el.querySelector('.login-toast');
+    expect(toast?.textContent).toContain('log in');
+    (el.querySelector('.login-toast .toast-login') as HTMLButtonElement).click();
+
+    expect(requested).toBe(1);
+    expect(cmp.cartNotice()).toBeNull();
+    fixture.detectChanges();
+    expect(el.querySelector('.login-toast')).toBeFalsy();
+  });
+
+  it('dismisses the login notice without opening the login', async () => {
+    const { fixture, cmp, httpMock } = await setup();
+    httpMock.expectOne(PRODUCTS_URL).flush(apiProducts);
+    let requested = 0;
+    cmp.loginRequested.subscribe(() => requested++);
+    cmp.addToCart('aria-3s-sofa');
+    fixture.detectChanges();
+
+    ((fixture.nativeElement as HTMLElement).querySelector('.login-toast .toast-close') as HTMLButtonElement).click();
+    expect(cmp.cartNotice()).toBeNull();
+    expect(requested).toBe(0);
+  });
+
+  it('hides the featured banner while a search is active', async () => {
+    const { fixture, cmp, httpMock } = await setup();
+    httpMock.expectOne(PRODUCTS_URL).flush(apiProducts);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.spotlight')).toBeTruthy();
+    cmp.setSearch('sofa');
+    fixture.detectChanges();
+    expect(el.querySelector('.spotlight')).toBeFalsy();
+    cmp.setSearch('');
+    fixture.detectChanges();
+    expect(el.querySelector('.spotlight')).toBeTruthy();
+  });
 });
 
 const CART_URL = `${environment.apiBaseUrl}/api/cart`;
