@@ -1,11 +1,11 @@
+using InteriorPlatform.Api.Configuration;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.RateLimiting;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 
 namespace InteriorPlatform.Api.Controllers;
 
@@ -14,16 +14,17 @@ namespace InteriorPlatform.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IConfiguration _configuration;
+    private readonly JwtSettings _jwt;
 
-    public AuthController(UserManager<ApplicationUser> userManager, IConfiguration configuration)
+    public AuthController(UserManager<ApplicationUser> userManager, JwtSettings jwt)
     {
         _userManager = userManager;
-        _configuration = configuration;
+        _jwt = jwt;
     }
 
     // POST /api/auth/register
     [HttpPost("register")]
+    [EnableRateLimiting(RateLimitPolicies.AuthRegister)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         if (!ModelState.IsValid)
@@ -63,6 +64,7 @@ public class AuthController : ControllerBase
 
     // POST /api/auth/login
     [HttpPost("login")]
+    [EnableRateLimiting(RateLimitPolicies.AuthLogin)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         if (!ModelState.IsValid)
@@ -90,15 +92,6 @@ public class AuthController : ControllerBase
 
     private string GenerateJwtToken(ApplicationUser user, IList<string>? roles = null)
     {
-        var jwtSecret = _configuration["Jwt:Secret"];
-        if (string.IsNullOrWhiteSpace(jwtSecret))
-        {
-            throw new InvalidOperationException("Jwt:Secret is not configured.");
-        }
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id),
@@ -116,11 +109,7 @@ public class AuthController : ControllerBase
             }
         }
 
-        var token = new JwtSecurityToken(
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(60),
-            signingCredentials: credentials);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        // Issuer, audience and signing key come from the shared JwtSettings.
+        return _jwt.WriteToken(claims, DateTime.UtcNow.Add(JwtSettings.TokenLifetime));
     }
 }

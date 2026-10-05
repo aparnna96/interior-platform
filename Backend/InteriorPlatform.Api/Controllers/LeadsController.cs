@@ -1,8 +1,10 @@
+using InteriorPlatform.Api.Configuration;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -28,6 +30,7 @@ public class LeadsController : ControllerBase
     // POST /api/leads — public, anonymous or authenticated.
     [HttpPost]
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.LeadsSubmit)]
     public async Task<ActionResult<LeadResponse>> CreateLead(
         [FromBody] LeadCreateRequest request)
     {

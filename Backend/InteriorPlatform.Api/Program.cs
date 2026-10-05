@@ -6,16 +6,23 @@ using InteriorPlatform.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddApiOpenApi();
 
+// The connection string has no committed default outside Development: it must
+// come from User Secrets or the ConnectionStrings__DefaultConnection
+// environment variable. Fail fast with a clear message instead of a vague
+// provider error at the first database call.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured. Set it via User Secrets or the ConnectionStrings__DefaultConnection environment variable.");
+}
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
@@ -23,11 +30,12 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-var jwtSecret = builder.Configuration["Jwt:Secret"];
-if (string.IsNullOrWhiteSpace(jwtSecret))
-{
-    throw new InvalidOperationException("Jwt:Secret is not configured. Set it via User Secrets or environment configuration.");
-}
+// JWT secret, issuer and audience are all required and validated at startup
+// (values are never logged or echoed). The same JwtSettings instance signs
+// tokens at login and validates them here, so they cannot drift apart.
+// Signature, issuer, audience and lifetime are all validated.
+var jwtSettings = JwtSettings.Load(builder.Configuration);
+builder.Services.AddSingleton(jwtSettings);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -36,17 +44,12 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-        ValidateLifetime = true,
-        ValidateIssuer = false,
-        ValidateAudience = false
-        // TODO: set ValidIssuer / ValidAudience and enable issuer/audience validation when the login endpoint is implemented.
-    };
+    options.TokenValidationParameters = jwtSettings.CreateValidationParameters();
 });
 
+// Built-in rate limiting for anonymous, abuse-prone writes only
+// (login, register, lead submission). See RateLimitingOptions for the limits.
+builder.Services.AddApiRateLimiting(builder.Configuration);
 builder.Services.AddAuthorization();
 
 // VerifyController exposes JWT/role diagnostics for development use only.
@@ -54,12 +57,11 @@ builder.Services.AddAuthorization();
 // is unavailable (404) in Production. Real authorization behavior elsewhere
 // is unchanged.
 builder.Services.AddControllers(options =>
-{
-    if (!builder.Environment.IsDevelopment())
-    {
-        options.Conventions.Add(new HideVerifyControllerOutsideDevelopmentConvention());
-    }
-});
+    options.HideDevelopmentOnlyControllers(builder.Environment));
+
+// Behind a TLS-terminating proxy (Production) honour X-Forwarded-Proto so
+// HTTPS redirection cannot loop. No effect in Development.
+builder.Services.AddProxyHeaderHandling(builder.Environment);
 
 // CORS origins are configuration-driven (Cors:AllowedOrigins) so each
 // environment declares its own frontend origin(s) explicitly — no wildcard,
@@ -160,20 +162,31 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+// Forwarded headers first so later middleware sees the client's scheme.
+app.UseForwardedHeaders();
 
-app.UseHttpsRedirection();
+// Unexpected exceptions become a generic 500 (Production); Development keeps
+// the developer exception page. Runs early so it covers the whole pipeline.
+app.UseSafeExceptionHandling("Frontend");
+
+// OpenAPI is mapped in Development only.
+app.MapDevelopmentOnlyEndpoints();
+
+app.UseHttpsRedirectionExceptHealth();
 
 // CORS must run before authentication/authorization so controller
 // endpoints and preflight (OPTIONS) requests are handled correctly.
 app.UseCors("Frontend");
 
+// Before authentication so password-guessing floods are rejected cheaply.
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Anonymous liveness probe (no diagnostics, no database check).
+app.MapHealth();
 
 app.Run();

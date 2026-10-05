@@ -1,0 +1,49 @@
+# Keep the Docker build context limited to what the API image needs.
+
+# Version control and editor state
+.git
+.gitignore
+.gitattributes
+.vs
+.vscode
+.idea
+**/*.user
+**/*.suo
+
+# Build output
+**/bin
+**/obj
+**/TestResults
+**/test-results
+**/*.log
+
+# Frontend (deployed separately on Vercel) and other non-API folders
+Frontend
+docs
+**/node_modules
+**/dist
+**/.angular
+
+# Tests are not built into the image
+Backend/InteriorPlatform.Api.Tests
+Backend/*.slnx
+
+# Local-only configuration: must never enter an image.
+# appsettings.Development.json carries the local SQL Server Express
+# connection string; the image runs as Production.
+**/.env
+**/.env.*
+**/appsettings.Development.json
+**/Properties/launchSettings.json
+**/*.http
+**/secrets.json
+
+# Local database files
+**/*.mdf
+**/*.ldf
+**/*.ndf
+
+# Docker files themselves and docs
+Dockerfile
+.dockerignore
+**/*.md
