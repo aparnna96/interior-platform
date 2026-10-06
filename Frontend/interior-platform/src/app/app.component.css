@@ -192,6 +192,7 @@
 .placed-main span { font-size: 12.5px; font-weight: 600; display: flex; flex-direction: column; line-height: 1.25; }
 .placed-main em { font-style: normal; font-weight: 400; color: var(--muted); font-size: 11.5px; }
 .mini-btn { border: 1px solid var(--border); background: #fff; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; flex: none; }
+@media (max-width: 900px) { .mini-btn { width: 40px; height: 40px; } }
 .placed-empty { margin-top: 8px; }
 .pos-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .pos-row button { border: 1px solid var(--border); background: #fff; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }

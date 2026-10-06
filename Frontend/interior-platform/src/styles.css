@@ -141,5 +141,4 @@ div.shell .sidebar{background:#fffdf9;border-right:1px solid var(--border);color
    tap height (the desktop sizes stay compact). */
 @media (max-width: 900px) {
   .room-switch button, .seg button, .tabs button { min-height: 40px; }
-  .mini-btn { width: 36px; height: 36px; }
 }
