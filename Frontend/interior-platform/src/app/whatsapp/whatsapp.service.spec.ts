@@ -152,4 +152,13 @@ describe('WhatsappService', () => {
     expect(local).not.toHaveBeenCalled();
     expect(session).not.toHaveBeenCalled();
   });
+  it('a configured number is ignored while the master switch is off', async () => {
+    const { environment } = await import('../../environments/environment');
+    // The committed configuration keeps WhatsApp off until the client confirms a number.
+    expect(environment.whatsappEnabled).toBeFalse();
+    TestBed.configureTestingModule({});
+    const service = TestBed.inject(WhatsappService);
+    expect(service.isConfigured()).toBeFalse();
+    expect(service.buildUrl(lead())).toBeNull();
+  });
 });

@@ -586,7 +586,7 @@
               <div><dt>Demo rate</dt><dd>₹{{ money(demoRate) }} / sq ft</dd></div>
               <div class="total"><dt>Estimated total</dt><dd>₹{{ money(estimateTotal()) }}</dd></div>
             </dl>
-            <p class="sub small est-note">Pricing shown here is placeholder data for the frontend prototype.</p>
+            <p class="sub small est-note">Demo pricing. Final figures are confirmed by the design team.</p>
             <button class="btn btn-secondary btn-sm btn-block" (click)="activeView.set('estimates')">Open estimate detail</button>
           </section>
         </div>
@@ -610,6 +610,7 @@
         <app-catalogue
           [productId]="routeProductId()"
           (productRoute)="onProductRoute($event)"
+          (visualizerRequested)="onVisualizerRequested($event)"
           (openCart)="activeView.set('cart'); closeDrawer()"
           (loginRequested)="openLogin()" />
       </main>
@@ -710,7 +711,7 @@
 
         <section class="panel" aria-label="Cost breakdown">
           <h2>Cost breakdown</h2>
-          <p class="sub small">Demo structure only — individual line items will be priced in a later stage.</p>
+          <p class="sub small">Furniture and services are quoted separately by the design team.</p>
           <table class="est-table">
             <tr><th>Item</th><th>Basis</th><th>Amount</th></tr>
             <tr><td>Area-based estimate</td><td>{{ area() }} sq ft × ₹{{ money(demoRate) }}</td><td>₹{{ money(estimateTotal()) }}</td></tr>
@@ -745,7 +746,7 @@
           <p class="sub small">Create a proposal from a saved estimate above. It copies the room and the Visualizer furniture saved with that estimate (your shopping cart is not used).</p>
           <div class="row-gap">
             <button class="btn btn-secondary btn-sm" (click)="activeView.set('proposals')">Open Proposals</button>
-            <span class="sub small">Download the PDF from a proposal preview. Token payments are processed securely via Razorpay.</span>
+            <span class="sub small">Open a proposal and pay the token amount to unlock its PDF.</span>
           </div>
         </section>
 
@@ -762,7 +763,7 @@
           <div class="row-between">
             <div>
               <h2>Projects</h2>
-              <p class="sub">Session-only list · no backend.</p>
+              <p class="sub">Projects you save stay in this browser session.</p>
             </div>
             <button class="btn btn-primary btn-sm" (click)="saveProject()">Save current</button>
           </div>

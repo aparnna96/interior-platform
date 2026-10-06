@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RevealDirective } from '../shared/reveal.directive';
 import {
@@ -48,6 +48,9 @@ export class CatalogueComponent implements OnInit {
       });
     });
   }
+
+  /** Asks the shell to place a piece of this category in the Visualizer and open it. */
+  visualizerRequested = output<string>();
 
   /** Requests the shell to open the Cart view. */
   openCart = output<void>();
@@ -104,6 +107,10 @@ export class CatalogueComponent implements OnInit {
   /** Details-view add: honours the selected quantity (min 1). */
   addToCartQty(event: AddToCartEvent): void {
     this.cart.add(event.id, event.qty);
+  }
+
+  requestVisualizer(category: string): void {
+    this.visualizerRequested.emit(category);
   }
 
   goToCart(): void {

@@ -30,12 +30,14 @@ export class ProductDetailsComponent implements OnChanges {
 
   @Output() back = new EventEmitter<void>();
   @Output() addToCart = new EventEmitter<AddToCartEvent>();
+  /** Sends the product's category so the shell can place the matching piece in the Visualizer. */
+  @Output() addToVisualizer = new EventEmitter<string>();
 
   /** Local purchase quantity. Always >= 1. */
   quantity = signal(1);
   /** Whether the product enquiry form is shown. */
   showEnquiry = signal(false);
-  /** Prototype-only hint for the future Catalogue → Visualizer link. No shared state. */
+  /** Confirmation shown after sending the piece to the Visualizer. */
   visualizerNote = signal<string | null>(null);
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -66,9 +68,10 @@ export class ProductDetailsComponent implements OnChanges {
     this.addToCart.emit({ id: this.product.id, qty: this.quantity() });
   }
 
-  /** Prototype action only — communicates the future Catalogue → Visualizer link. */
+  /** Places the matching piece in the room plan: the shell adds it and opens the Visualizer. */
   handleAddToVisualizer(): void {
-    this.visualizerNote.set('Noted for the Visualizer — room linking arrives in a later stage.');
+    this.visualizerNote.set('Added to the Visualizer.');
+    this.addToVisualizer.emit(this.product.category);
   }
 
   toggleEnquiry(): void {

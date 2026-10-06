@@ -111,11 +111,14 @@ describe('ProductDetailsComponent', () => {
     expect(backBtn?.textContent).toContain('Back to Furniture');
   });
 
-  it('shows a visualizer hint without touching visualizer state', async () => {
+  it('Add to Visualizer reports the product category and confirms', async () => {
     const fixture = await setup();
     const cmp = fixture.componentInstance;
+    const sent: string[] = [];
+    cmp.addToVisualizer.subscribe((c: string) => sent.push(c));
     expect(cmp.visualizerNote()).toBeNull();
     cmp.handleAddToVisualizer();
+    expect(sent).toEqual([cmp.product.category]);
     expect(cmp.visualizerNote()).toContain('Visualizer');
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Visualizer');

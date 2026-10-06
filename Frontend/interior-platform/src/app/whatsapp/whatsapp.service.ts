@@ -9,7 +9,9 @@ import type { LeadResponse } from '../leads/lead.service';
  */
 export const WHATSAPP_BUSINESS_NUMBER = new InjectionToken<string>('WHATSAPP_BUSINESS_NUMBER', {
   providedIn: 'root',
-  factory: () => environment.whatsappBusinessNumber,
+  // The number only counts while the master switch is on, so an unconfirmed number
+  // can stay in the config without ever being used.
+  factory: () => (environment.whatsappEnabled ? environment.whatsappBusinessNumber : ''),
 });
 
 /** E.164 allows at most 15 digits; anything shorter than 8 is not a real number. */

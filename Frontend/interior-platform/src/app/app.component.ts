@@ -1,4 +1,4 @@
-﻿import { Component, HostListener, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, HostListener, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router } from '@angular/router';
@@ -204,6 +204,23 @@ export class AppComponent {
     if (!resolved) return;
     if (this.activeView() !== resolved.view) this.activeView.set(resolved.view);
     if (this.routeProductId() !== resolved.productId) this.routeProductId.set(resolved.productId);
+    this.closeDrawer();
+  }
+
+  /** Furniture categories in the catalogue and the matching Visualizer piece. */
+  private static readonly VISUALIZER_PIECE: Record<string, FurnitureDef['id']> = {
+    Sofas: 'sofa',
+    Beds: 'bed',
+    Tables: 'table',
+    Chairs: 'chair',
+    Wardrobes: 'wardrobe',
+  };
+
+  /** "Add to Visualizer" on a product page: place the matching piece, then open the Visualizer. */
+  onVisualizerRequested(category: string): void {
+    const piece = AppComponent.VISUALIZER_PIECE[category];
+    if (piece) this.addFurniture(piece);
+    this.activeView.set('visualizer');
     this.closeDrawer();
   }
 

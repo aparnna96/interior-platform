@@ -189,7 +189,7 @@ describe('AppComponent proposals integration', () => {
     expect(view.textContent).toContain('Proposal preview');
     expect(view.textContent).toContain('prop-9');
     expect(view.textContent).toContain('Aria 3-Seater Fabric Sofa');
-    expect(view.textContent).toContain('Token payments are processed securely via Razorpay.');
+    expect(view.textContent).toContain('A small token payment unlocks the proposal PDF.');
     // The snapshot opened without a detail fetch.
     httpMock.expectNone(`${PROPOSALS_URL}/prop-9`);
     // The saved estimate and the cart were never written to.
@@ -205,7 +205,7 @@ describe('AppComponent proposals integration', () => {
     const fixture = createAuthedApp();
     const el = openEstimates(fixture);
     const panel = el.querySelector('section[aria-label="Proposal"]') as HTMLElement;
-    expect(panel?.textContent).toContain('Download the PDF from a proposal preview.');
+    expect(panel?.textContent).toContain('pay the token amount to unlock its PDF');
     (panel.querySelector('button') as HTMLButtonElement).click();
     fixture.detectChanges();
 

@@ -916,4 +916,43 @@ describe('AppComponent', () => {
       httpMock.verify();
     });
   });
+  describe('Add to Visualizer from a product page', () => {
+    function createApp() {
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.detectChanges();
+      return { fixture, app: fixture.componentInstance };
+    }
+
+    it('places the matching piece in the room plan and opens the Visualizer', () => {
+      const { fixture, app } = createApp();
+      const before = app.placed().length;
+
+      app.onVisualizerRequested('Chairs');
+      fixture.detectChanges();
+
+      expect(app.activeView()).toBe('visualizer');
+      expect(app.placed().length).toBe(before + 1);
+      expect(app.placed()[app.placed().length - 1].defId).toBe('chair');
+    });
+
+    it('maps every catalogue category to a Visualizer piece', () => {
+      const { app } = createApp();
+      const expected: Record<string, string> = {
+        Sofas: 'sofa', Beds: 'bed', Tables: 'table', Chairs: 'chair', Wardrobes: 'wardrobe',
+      };
+      for (const [category, piece] of Object.entries(expected)) {
+        const n = app.placed().length;
+        app.onVisualizerRequested(category);
+        expect(app.placed()[n].defId).toBe(piece);
+      }
+    });
+
+    it('an unknown category still opens the Visualizer without adding anything', () => {
+      const { app } = createApp();
+      const n = app.placed().length;
+      app.onVisualizerRequested('Lamps');
+      expect(app.activeView()).toBe('visualizer');
+      expect(app.placed().length).toBe(n);
+    });
+  });
 });

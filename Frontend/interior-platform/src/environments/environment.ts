@@ -7,4 +7,6 @@ export const environment = {
   // company number exists in the project yet, so this is intentionally empty:
   // the "Continue on WhatsApp" action stays hidden until it is configured.
   whatsappBusinessNumber: '',
+  // Master switch for the WhatsApp action (see environment.prod.ts).
+  whatsappEnabled: false,
 };

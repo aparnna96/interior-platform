@@ -5,6 +5,7 @@
       [cartQty]="qtyOf(s.id)"
       (back)="closeDetails()"
       (addToCart)="addToCartQty($event)"
+      (addToVisualizer)="requestVisualizer($event)"
     />
   } @else {
   <!-- ── Showroom header ─────────────────────────────── -->

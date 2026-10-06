@@ -189,7 +189,7 @@ describe('ProposalsComponent', () => {
     expect(el.textContent).toContain('× 2');
     expect(el.textContent).toContain(`₹${(42999).toLocaleString('en-IN')} each`);
     expect(el.textContent).toContain(`₹${(85998).toLocaleString('en-IN')}`);
-    expect(el.textContent).toContain('Token payments are processed securely via Razorpay.');
+    expect(el.textContent).toContain('A small token payment unlocks the proposal PDF.');
     httpMock.expectNone(PRODUCTS_URL);
   });
 
