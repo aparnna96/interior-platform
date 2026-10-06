@@ -49,6 +49,7 @@
   white-space: nowrap;
 }
 .linklike:hover { text-decoration: underline; }
+.proposal-side .linklike { padding-left: 12px; padding-right: 12px; min-width: 44px; }
 .linklike:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── Empty / loading states ── */

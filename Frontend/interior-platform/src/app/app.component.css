@@ -67,7 +67,7 @@
 .room-switch button { border: 0; background: transparent; padding: 6px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
 .room-switch button.active { background: #fff; color: var(--ink); box-shadow: var(--shadow-sm); border: 1px solid var(--border); margin: -1px; }
 .ws-actions { display: flex; gap: 8px; }
-.notice-wrap, .account-wrap { padding: 12px 24px 0; width: 100%; max-width: 1200px; margin: 0 auto; }
+.notice-wrap { padding: 12px 24px 0; width: 100%; max-width: 1200px; margin: 0 auto; }
 .notice { background: var(--success-bg); border: 1px solid var(--success-bd); color: var(--success-tx); font-size: 13px; padding: 9px 12px; border-radius: 7px; }
 
 /* Buttons / inputs */
@@ -116,11 +116,11 @@
 .controls { padding: 14px; }
 .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
 .field-row label { font-size: 12px; font-weight: 600; color: var(--ink-2); display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.field-row input, .account-panel input {
+.field-row input {
   width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
   background: #fff; font-size: 13.5px; font-weight: 600; color: var(--ink); outline: none;
 }
-.field-row input:focus, .account-panel input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.field-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .err { color: var(--danger); font-size: 12.5px; margin-top: 8px; }
 .area-line { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; font-size: 12.5px; color: var(--ink-2); }
 .area-line strong { font-size: 15px; color: var(--ink); }
@@ -221,9 +221,6 @@
 .estimate .demo-tag, .detail .demo-tag { line-height: 1.5; text-align: center; }
 .proj-name { font-weight: 650; font-size: 13px; }
 
-/* Account */
-.account-panel { display: grid; gap: 12px; }
-.account-head { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
 
 /* Statusbar */
 .statusbar { margin-top: auto; border-top: 1px solid var(--border); background: var(--surface); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: space-between; padding: 10px 24px; font-size: 12.5px; }
@@ -277,7 +274,7 @@
   .mnav button { flex: none; border: 1px solid var(--border); background: #fff; border-radius: 99px; padding: 7px 13px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
   .mnav button.active { background: #1c1917; color: #faf8f5; border-color: #1c1917; }
   .ws-head { padding: 12px 14px; }
-  .workspace, .content, .notice-wrap, .account-wrap { padding-left: 14px; padding-right: 14px; }
+  .workspace, .content, .notice-wrap { padding-left: 14px; padding-right: 14px; }
   .statusbar { padding: 10px 14px; }
 }
 @media (max-width: 719px) {
