@@ -69,7 +69,7 @@ public static class ProposalPdfGenerator
                     header.Spacing(4);
 
                     header.Item().Text("CONFIDENT GROUP")
-                        .LetterSpacing(2).FontSize(11).SemiBold().FontColor(Colors.Grey.Darken2);
+                        .LetterSpacing(0.2f).FontSize(11).SemiBold().FontColor(Colors.Grey.Darken2);
 
                     header.Item().Text("INTERIOR PROJECT PROPOSAL")
                         .FontSize(22).Bold().FontColor(Colors.Black);
