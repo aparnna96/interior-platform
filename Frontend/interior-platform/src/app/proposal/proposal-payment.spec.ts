@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+﻿import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -600,5 +600,110 @@ describe('ProposalsComponent token payment', () => {
     expect(localSet).not.toHaveBeenCalled();
     expect(sessionSet).not.toHaveBeenCalled();
     expect(saveSpy).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Demo mode (backend Payments:Mode=Demo) ──
+
+  const DEMO_CONFIRM_URL = `${environment.apiBaseUrl}/api/payments/demo/confirm`;
+
+  function demoOrder(): CreateProposalPaymentResponse {
+    return {
+      paymentId: 'pay-demo-1',
+      proposalId: 'prop-1',
+      provider: 'Demo',
+      providerOrderId: 'demo_order_abc',
+      amount: 500,
+      currency: 'INR',
+      providerKeyId: '',
+    };
+  }
+
+  function startDemoPayment(cmp: ProposalsComponent, fixture: ReturnType<typeof TestBed.createComponent<ProposalsComponent>>) {
+    cmp.payToken();
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1/payment`).flush(demoOrder());
+    fixture.detectChanges();
+  }
+
+  it('demo order shows a labelled confirmation and never opens Razorpay Checkout', () => {
+    const { fixture, cmp } = setupAuthenticatedWithDetail();
+    startDemoPayment(cmp, fixture);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(cmp.paymentState()).toBe('demo-pending');
+    expect(checkout.loadCalls).toBe(0);
+    expect(checkout.instances.length).toBe(0);
+    expect(el.textContent).toContain('Demo payment');
+    expect(el.textContent).toContain('No real money is charged');
+    expect(el.textContent).toContain('demo token payment');
+    expect(el.textContent).not.toContain('Payment verified');
+    httpMock.expectNone(DEMO_CONFIRM_URL);
+  });
+
+  it('confirming a demo payment sends only the payment id and succeeds only after the backend verifies', () => {
+    const { fixture, cmp } = setupAuthenticatedWithDetail();
+    startDemoPayment(cmp, fixture);
+
+    cmp.confirmDemoPayment();
+    const req = httpMock.expectOne(DEMO_CONFIRM_URL);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ paymentId: 'pay-demo-1' });
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Confirming your payment…');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Payment verified');
+
+    req.flush({ ...verified(), paymentId: 'pay-demo-1' });
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1`).flush(detail({ id: 'prop-1', isPaymentVerified: true }));
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(cmp.paymentState()).toBe('verified');
+    expect(el.textContent).toContain('Payment verified');
+    expect(el.querySelector('[aria-label="Download proposal PDF for prop-1"]')).not.toBeNull();
+  });
+
+  it('a demo confirmation the backend rejects shows an error and no success', () => {
+    const { fixture, cmp } = setupAuthenticatedWithDetail();
+    startDemoPayment(cmp, fixture);
+
+    cmp.confirmDemoPayment();
+    httpMock.expectOne(DEMO_CONFIRM_URL).flush(null, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(cmp.paymentState()).toBe('failed');
+    expect(el.querySelector('[role="alert"]')).not.toBeNull();
+    expect(el.textContent).not.toContain('Payment verified');
+    expect(el.querySelector('[aria-label="Download proposal PDF for prop-1"]')).toBeNull();
+  });
+
+  it('cancelling the demo confirmation makes no backend call and allows a retry', () => {
+    const { fixture, cmp } = setupAuthenticatedWithDetail();
+    startDemoPayment(cmp, fixture);
+
+    cmp.cancelDemoPayment();
+    fixture.detectChanges();
+    expect(cmp.paymentState()).toBe('cancelled');
+    httpMock.expectNone(DEMO_CONFIRM_URL);
+
+    cmp.payToken();
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1/payment`).flush(demoOrder());
+    expect(cmp.paymentState()).toBe('demo-pending');
+  });
+
+  it('confirmDemoPayment is a no-op outside the demo-pending state', () => {
+    const { cmp } = setupAuthenticatedWithDetail();
+    cmp.confirmDemoPayment();
+    httpMock.expectNone(DEMO_CONFIRM_URL);
+  });
+
+  it('duplicate demo confirmations collapse into one request', () => {
+    const { fixture, cmp } = setupAuthenticatedWithDetail();
+    startDemoPayment(cmp, fixture);
+
+    cmp.confirmDemoPayment();
+    cmp.confirmDemoPayment();
+    httpMock.expectOne(DEMO_CONFIRM_URL).flush({ ...verified(), paymentId: 'pay-demo-1' });
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1`).flush(detail({ id: 'prop-1', isPaymentVerified: true }));
   });
 });

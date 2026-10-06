@@ -143,13 +143,22 @@
             } @else {
               <p class="sub small">A token payment is required for this proposal.</p>
               @if (paymentOrder(); as order) {
-                <p class="payment-amount" role="status">Pay ₹{{ inr(order.amount) }} <span class="sub small">({{ order.currency }} token payment)</span></p>
+                <p class="payment-amount" role="status">Pay ₹{{ inr(order.amount) }} <span class="sub small">({{ order.currency }} {{ isDemoPayment() ? 'demo ' : '' }}token payment)</span></p>
               }
               @if (paymentState() === 'creating') {
                 <p aria-live="polite">Creating your payment order…</p>
               }
               @if (paymentState() === 'checkout-open') {
                 <p aria-live="polite">Checkout is open — complete the payment in the Razorpay window.</p>
+              }
+              @if (paymentState() === 'demo-pending') {
+                <div class="demo-pay" role="group" aria-label="Demo payment">
+                  <p class="proposal-notice" role="status"><strong>Demo payment.</strong> No real money is charged. This site runs in demo mode, so confirming simulates the token payment.</p>
+                  <div class="proposal-actions">
+                    <button class="btn-primary btn-sm" (click)="confirmDemoPayment()">Confirm demo payment</button>
+                    <button class="linklike" (click)="cancelDemoPayment()">Cancel</button>
+                  </div>
+                </div>
               }
               @if (paymentState() === 'verifying') {
                 <p aria-live="polite">Confirming your payment…</p>

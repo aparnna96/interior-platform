@@ -1,4 +1,4 @@
-using InteriorPlatform.Api.Configuration;
+﻿using InteriorPlatform.Api.Configuration;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
@@ -13,7 +13,7 @@ using System.Security.Claims;
 namespace InteriorPlatform.Api.Controllers;
 
 /// <summary>
-/// Razorpay TEST-mode token payments against the authenticated customer's
+/// Razorpay TEST-mode (or, when Payments:Mode=Demo, simulated) token payments against the authenticated customer's
 /// proposals. The backend is the sole authority for the token amount
 /// (configuration), proposal ownership (claims + persisted state), payment
 /// status transitions, and signature verification (Key Secret, server-side
@@ -27,6 +27,9 @@ public class PaymentsController : ControllerBase
 {
     /// <summary>Provider identifier persisted on every payment attempt.</summary>
     private const string RazorpayProvider = "Razorpay";
+
+    /// <summary>Provider identifier for simulated (Payments:Mode=Demo) payments.</summary>
+    private const string DemoProvider = "Demo";
 
     private readonly ApplicationDbContext _db;
     private readonly IOptions<PaymentsOptions> _payments;
@@ -70,8 +73,12 @@ public class PaymentsController : ControllerBase
                 statusCode: StatusCodes.Status500InternalServerError);
         }
 
-        var keyId = _gateway.KeyId;
-        if (string.IsNullOrWhiteSpace(keyId))
+        var demo = _payments.Value.IsDemo;
+        var provider = demo ? DemoProvider : RazorpayProvider;
+
+        // Demo mode has no external gateway and therefore no key id.
+        var keyId = demo ? string.Empty : _gateway.KeyId;
+        if (!demo && string.IsNullOrWhiteSpace(keyId))
         {
             return Problem(
                 title: "Payments are not available. Razorpay credentials are missing.",
@@ -104,6 +111,7 @@ public class PaymentsController : ControllerBase
             .Where(p => p.ProposalId == proposalId
                 && p.UserId == userId
                 && p.Status == PaymentStatus.Created
+                && p.Provider == provider
                 && p.ProviderOrderId != null)
             .OrderByDescending(p => p.CreatedAt)
             .FirstOrDefaultAsync();
@@ -134,9 +142,19 @@ public class PaymentsController : ControllerBase
             Amount = tokenAmount,
             Currency = currency,
             Status = PaymentStatus.Created,
-            Provider = RazorpayProvider,
+            Provider = provider,
             CreatedAt = now,
         };
+
+        if (demo)
+        {
+            // No provider call: the order id is a server-generated,
+            // clearly-labelled demo reference.
+            payment.ProviderOrderId = $"demo_order_{Guid.NewGuid():N}";
+            _db.Payments.Add(payment);
+            await _db.SaveChangesAsync();
+            return StatusCode(StatusCodes.Status201Created, ToCreateResponse(payment, keyId));
+        }
 
         // The external order is created BEFORE the local transaction opens:
         // there is no distributed atomicity across Razorpay and SQL Server,
@@ -209,6 +227,15 @@ public class PaymentsController : ControllerBase
             return Ok(ToVerifyResponse(payment));
         }
 
+        // Demo payments never carry a provider signature: they can only be
+        // settled through the demo confirm endpoint, never by this one.
+        if (string.Equals(payment.Provider, DemoProvider, StringComparison.Ordinal))
+        {
+            return Problem(
+                title: "Demo payments are confirmed through the demo confirmation step.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
         // The order id must be the one this attempt created — a Checkout
         // result for any other order cannot settle this record. The status
         // is left untouched so the open attempt stays retryable.
@@ -246,6 +273,65 @@ public class PaymentsController : ControllerBase
 
         payment.ProviderPaymentId = request.RazorpayPaymentId;
         payment.ProviderSignature = request.RazorpaySignature;
+        payment.Status = PaymentStatus.Verified;
+        payment.VerifiedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return Ok(ToVerifyResponse(payment));
+    }
+
+    // POST /api/payments/demo/confirm — Payments:Mode=Demo only. Marks the
+    // caller's own open demo payment Verified without any gateway. In every
+    // other mode this endpoint does not exist (404), so a production
+    // deployment running Razorpay can never be unlocked through it.
+    // Ownership follows the usual convention (another user's payment is a
+    // 404), only Demo-provider payments qualify, and the body carries nothing
+    // but our local payment id.
+    [HttpPost("demo/confirm")]
+    public async Task<ActionResult<VerifyPaymentResponse>> ConfirmDemoPayment(
+        [FromBody] DemoConfirmPaymentRequest request)
+    {
+        if (!_payments.Value.IsDemo)
+        {
+            return NotFound();
+        }
+
+        if (!ModelState.IsValid || request.PaymentId == Guid.Empty)
+        {
+            ModelState.AddModelError(nameof(DemoConfirmPaymentRequest.PaymentId), "PaymentId is required.");
+            return ValidationProblem(ModelState);
+        }
+
+        var userId = ResolveUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var payment = await _db.Payments
+            .FirstOrDefaultAsync(p => p.Id == request.PaymentId
+                && p.UserId == userId
+                && p.Provider == DemoProvider);
+        if (payment is null)
+        {
+            return NotFound();
+        }
+
+        if (payment.Status == PaymentStatus.Verified)
+        {
+            return Ok(ToVerifyResponse(payment));
+        }
+
+        // One verified token payment per proposal, same rule as the real flow.
+        if (await _db.Payments.AnyAsync(p =>
+                p.ProposalId == payment.ProposalId && p.Status == PaymentStatus.Verified))
+        {
+            return Problem(
+                title: "This proposal already has a verified token payment.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        payment.ProviderPaymentId = $"demo_pay_{Guid.NewGuid():N}";
         payment.Status = PaymentStatus.Verified;
         payment.VerifiedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();

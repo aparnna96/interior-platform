@@ -198,6 +198,16 @@ export class ProposalService {
   }
 
   /**
+   * POST /api/payments/demo/confirm — settle a demo-mode payment. Only
+   * exists when the backend runs with Payments:Mode=Demo (404 otherwise).
+   * Sends nothing but our local payment id.
+   */
+  confirmDemoPayment(paymentId: string): Observable<VerifyProposalPaymentResponse> {
+    return this.http.post<VerifyProposalPaymentResponse>(
+      `${environment.apiBaseUrl}/api/payments/demo/confirm`, { paymentId }, { headers: this.authHeaders() });
+  }
+
+  /**
    * POST /api/payments/verify — ask the backend to verify a Checkout result.
    * Sends only the Razorpay values plus the local payment id; the backend
    * response is the sole authority on whether payment succeeded.

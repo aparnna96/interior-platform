@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+﻿import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth.service';
 import {
@@ -28,11 +28,15 @@ export type ProposalPaymentState =
   | 'idle'
   | 'creating'
   | 'checkout-open'
+  | 'demo-pending'
   | 'verifying'
   | 'verified'
   | 'failed'
   | 'cancelled'
   | 'unavailable';
+
+/** Provider id the backend returns for simulated (Payments:Mode=Demo) payments. */
+const DEMO_PROVIDER = 'Demo';
 
 /** Razorpay Checkout takes the smallest currency unit (paise for INR). */
 function toCheckoutPaise(amountMajorUnits: number): number {
@@ -274,7 +278,7 @@ export class ProposalsComponent {
   /** True while a payment step is in flight — the Pay action stays parked. */
   paymentBusy(): boolean {
     const state = this.paymentState();
-    return state === 'creating' || state === 'checkout-open' || state === 'verifying';
+    return state === 'creating' || state === 'checkout-open' || state === 'demo-pending' || state === 'verifying';
   }
 
   /**
@@ -293,12 +297,46 @@ export class ProposalsComponent {
     this.proposals.createProposalPayment(proposal.id).subscribe({
       next: (order) => {
         this.paymentOrder.set(order);
+        if (order.provider === DEMO_PROVIDER) {
+          // Demo deployment: no gateway. Wait for an explicit, labelled
+          // confirmation instead of opening Razorpay Checkout.
+          this.paymentState.set('demo-pending');
+          return;
+        }
         void this.openCheckout(order);
       },
       error: (err: unknown) => {
         this.handleCreatePaymentError(err);
       },
     });
+  }
+
+  /**
+   * Demo deployments only: confirms the simulated token payment. The backend
+   * still decides — success shows only after it reports Verified.
+   */
+  confirmDemoPayment(): void {
+    const order = this.paymentOrder();
+    if (order === null || order.provider !== DEMO_PROVIDER || this.paymentState() !== 'demo-pending') return;
+    if (this.selected()?.id !== order.proposalId) return;
+    this.paymentState.set('verifying');
+    this.paymentError.set(null);
+    this.proposals.confirmDemoPayment(order.paymentId).subscribe({
+      next: (outcome) => this.applyVerifyOutcome(outcome),
+      error: (err: unknown) => this.handleVerifyError(err),
+    });
+  }
+
+  /** The user backed out of the demo confirmation; the order stays reusable. */
+  cancelDemoPayment(): void {
+    if (this.paymentState() !== 'demo-pending') return;
+    this.paymentState.set('cancelled');
+    this.paymentError.set(null);
+  }
+
+  /** True when the current payment order is a simulated demo payment. */
+  isDemoPayment(): boolean {
+    return this.paymentOrder()?.provider === DEMO_PROVIDER;
   }
 
   /** Re-attempts the payment order after a retryable failure. */
@@ -381,25 +419,28 @@ export class ProposalsComponent {
         razorpaySignature: response.razorpay_signature,
       })
       .subscribe({
-        next: (outcome) => {
-          if (outcome.status === ProposalPaymentStatus.Verified) {
-            this.verifiedPayment.set(outcome);
-            this.paymentState.set('verified');
-            this.paymentError.set(null);
-            // The payment box reflects the authoritative verify response;
-            // the PDF gate additionally needs the backend detail flag, so
-            // refresh the detail without touching payment flow state.
-            this.refreshPaymentAvailability();
-          } else {
-            this.paymentState.set('failed');
-            this.paymentError.set('Payment verification failed. You can try again.');
-            this.paymentRetryAllowed.set(true);
-          }
-        },
+        next: (outcome) => this.applyVerifyOutcome(outcome),
         error: (err: unknown) => {
           this.handleVerifyError(err);
         },
       });
+  }
+
+  /** Applies a backend verification outcome (Razorpay or demo confirmation). */
+  private applyVerifyOutcome(outcome: VerifyProposalPaymentResponse): void {
+    if (outcome.status === ProposalPaymentStatus.Verified) {
+      this.verifiedPayment.set(outcome);
+      this.paymentState.set('verified');
+      this.paymentError.set(null);
+      // The payment box reflects the authoritative verify response;
+      // the PDF gate additionally needs the backend detail flag, so
+      // refresh the detail without touching payment flow state.
+      this.refreshPaymentAvailability();
+    } else {
+      this.paymentState.set('failed');
+      this.paymentError.set('Payment verification failed. You can try again.');
+      this.paymentRetryAllowed.set(true);
+    }
   }
 
   /**

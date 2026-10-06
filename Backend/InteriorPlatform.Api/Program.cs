@@ -116,6 +116,16 @@ if (paymentsCurrency is not null && string.IsNullOrWhiteSpace(paymentsCurrency))
     throw new InvalidOperationException("Payments:Currency must be a non-empty value (e.g. \"INR\") or be omitted to default to INR.");
 }
 
+// Payments:Mode selects the gateway: "Razorpay" (default) or "Demo". Demo is a
+// deliberate opt-in for internship/demo deployments (no external gateway); any
+// other value is a configuration error so a typo can never silently change
+// how the paywall behaves.
+var paymentsMode = builder.Configuration.GetValue<string>("Payments:Mode");
+if (paymentsMode is not null && !PaymentsOptions.IsValidMode(paymentsMode))
+{
+    throw new InvalidOperationException("Payments:Mode must be \"Razorpay\" or \"Demo\", or be omitted to default to Razorpay.");
+}
+
 // Razorpay TEST-mode credentials (Razorpay:KeyId / Razorpay:KeySecret) come
 // from User Secrets or environment variables — never from source control.
 // They are intentionally NOT validated at startup: a missing credential must
@@ -141,6 +151,13 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+if (PaymentsOptions.IsValidMode(paymentsMode) &&
+    string.Equals(paymentsMode, PaymentsOptions.DemoMode, StringComparison.OrdinalIgnoreCase))
+{
+    app.Logger.LogWarning(
+        "Payments:Mode is Demo: token payments are simulated and the proposal PDF unlocks without a real charge.");
+}
 
 // Apply pending EF Core migrations before seeding so a fresh production
 // database has the required schema. If migration fails, startup fails

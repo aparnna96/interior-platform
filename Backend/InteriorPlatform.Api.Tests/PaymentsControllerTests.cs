@@ -1,4 +1,4 @@
-using InteriorPlatform.Api.Configuration;
+﻿using InteriorPlatform.Api.Configuration;
 using InteriorPlatform.Api.Controllers;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
@@ -654,5 +654,233 @@ public sealed class PaymentsControllerTests
         Assert.False(RazorpaySignatureVerifier.Verify(TestSecret, string.Empty, "pay-test-1", new string('0', 64)));
         Assert.False(RazorpaySignatureVerifier.Verify(TestSecret, "order-test-1", "pay-test-1", "not-hex!!"));
         Assert.False(RazorpaySignatureVerifier.Verify(TestSecret, "order-test-1", "pay-test-1", "abc"));
+    }
+
+    // ── Payments:Mode=Demo ─────────────────────────────────────────────
+
+    private static PaymentsOptions DemoPayments() => new()
+    {
+        TokenAmount = 500m,
+        Currency = "INR",
+        Mode = PaymentsOptions.DemoMode,
+    };
+
+    private static async Task<Payment> SeedDemoPaymentAsync(
+        ApplicationDbContext db, Proposal proposal, PaymentStatus status = PaymentStatus.Created)
+    {
+        var payment = new Payment
+        {
+            Id = Guid.NewGuid(),
+            ProposalId = proposal.Id,
+            UserId = proposal.UserId,
+            Amount = 500m,
+            Currency = "INR",
+            Status = status,
+            Provider = "Demo",
+            ProviderOrderId = $"demo_order_{Guid.NewGuid():N}",
+            CreatedAt = DateTime.UtcNow,
+            VerifiedAt = status == PaymentStatus.Verified ? DateTime.UtcNow : null,
+        };
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+        return payment;
+    }
+
+    [Fact]
+    public void PaymentsMode_DefaultsToRazorpay_AndValidatesValues()
+    {
+        Assert.False(new PaymentsOptions().IsDemo);
+        Assert.Equal(PaymentsOptions.RazorpayMode, new PaymentsOptions().Mode);
+        Assert.True(PaymentsOptions.IsValidMode("Razorpay"));
+        Assert.True(PaymentsOptions.IsValidMode("demo"));
+        Assert.False(PaymentsOptions.IsValidMode("Demoo"));
+        Assert.False(PaymentsOptions.IsValidMode(""));
+        Assert.False(PaymentsOptions.IsValidMode(null));
+    }
+
+    [Fact]
+    public void DemoConfirmPaymentRequest_ExposesOnlyPaymentId()
+    {
+        var names = typeof(DemoConfirmPaymentRequest)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => p.Name)
+            .ToList();
+        Assert.Equal(["PaymentId"], names);
+    }
+
+    [Fact]
+    public async Task DemoMode_CreatePayment_NeedsNoRazorpayCredentialsOrGatewayCall()
+    {
+        using var test = new TestDb();
+        var proposal = await SeedProposalAsync(test.Db, UserA);
+        var gateway = new FakeGateway { KeyId = string.Empty };
+
+        var response = CreatedPayment(await PaymentsFor(
+                test.Db, UserA, DemoPayments(), Razorpay(keyId: "", secret: ""), gateway)
+            .CreatePayment(proposal.Id));
+
+        Assert.Empty(gateway.Calls);
+        Assert.Equal("Demo", response.Provider);
+        Assert.StartsWith("demo_order_", response.ProviderOrderId);
+        Assert.Equal(string.Empty, response.ProviderKeyId);
+        Assert.Equal(500m, response.Amount);
+
+        var stored = await test.Db.Payments.SingleAsync();
+        Assert.Equal("Demo", stored.Provider);
+        Assert.Equal(PaymentStatus.Created, stored.Status);
+        Assert.Null(stored.VerifiedAt);
+    }
+
+    [Fact]
+    public async Task DemoMode_CreatePayment_ReusesOpenDemoOrder()
+    {
+        using var test = new TestDb();
+        var proposal = await SeedProposalAsync(test.Db, UserA);
+        var controller = PaymentsFor(test.Db, UserA, DemoPayments());
+
+        var first = CreatedPayment(await controller.CreatePayment(proposal.Id));
+        var second = Assert.IsType<CreatePaymentResponse>(Assert.IsType<OkObjectResult>(
+            (await controller.CreatePayment(proposal.Id)).Result).Value);
+
+        Assert.Equal(first.PaymentId, second.PaymentId);
+        Assert.Equal(1, await test.Db.Payments.CountAsync());
+    }
+
+    [Fact]
+    public async Task DemoMode_Confirm_VerifiesOwnDemoPayment()
+    {
+        using var test = new TestDb();
+        var proposal = await SeedProposalAsync(test.Db, UserA);
+        var controller = PaymentsFor(test.Db, UserA, DemoPayments());
+        var created = CreatedPayment(await controller.CreatePayment(proposal.Id));
+
+        var outcome = VerifiedPayment(await controller.ConfirmDemoPayment(
+            new DemoConfirmPaymentRequest { PaymentId = created.PaymentId }));
+
+        Assert.Equal(PaymentStatus.Verified, outcome.Status);
+        Assert.NotNull(outcome.VerifiedAt);
+        var stored = await test.Db.Payments.SingleAsync();
+        Assert.Equal(PaymentStatus.Verified, stored.Status);
+        Assert.StartsWith("demo_pay_", stored.ProviderPaymentId);
+
+        // Confirming again is idempotent.
+        var again = VerifiedPayment(await controller.ConfirmDemoPayment(
+            new DemoConfirmPaymentRequest { PaymentId = created.PaymentId }));
+        Assert.Equal(PaymentStatus.Verified, again.Status);
+    }
+
+    [Fact]
+    public async Task DemoMode_Confirm_UnlocksTheProposalPdfGate()
+    {
+        using var test = new TestDb();
+        var proposal = await SeedProposalAsync(test.Db, UserA);
+        var controller = PaymentsFor(test.Db, UserA, DemoPayments());
+        var created = CreatedPayment(await controller.CreatePayment(proposal.Id));
+        await controller.ConfirmDemoPayment(new DemoConfirmPaymentRequest { PaymentId = created.PaymentId });
+
+        var proposals = new ProposalsController(test.Db)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = PrincipalFor(UserA) },
+            },
+        };
+        Assert.IsType<FileContentResult>(await proposals.DownloadProposalPdf(proposal.Id));
+    }
+
+    [Fact]
+    public async Task RazorpayMode_DemoConfirm_DoesNotExist()
+    {
+        using var test = new TestDb();
+        var proposal = await SeedProposalAsync(test.Db, UserA);
+        var payment = await SeedDemoPaymentAsync(test.Db, proposal);
+
+        // Default mode is Razorpay: the demo endpoint must be a plain 404.
+        var result = await PaymentsFor(test.Db, UserA)
+            .ConfirmDemoPayment(new DemoConfirmPaymentRequest { PaymentId = payment.Id });
+
+        Assert.IsType<NotFoundResult>(result.Result);
+        Assert.Equal(PaymentStatus.Created, (await test.Db.Payments.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task DemoMode_Confirm_OtherUsersPayment_Returns404()
+    {
+        using var test = new TestDb();
+        var proposal = await SeedProposalAsync(test.Db, UserA);
+        var payment = await SeedDemoPaymentAsync(test.Db, proposal);
+
+        var result = await PaymentsFor(test.Db, UserB, DemoPayments())
+            .ConfirmDemoPayment(new DemoConfirmPaymentRequest { PaymentId = payment.Id });
+
+        Assert.IsType<NotFoundResult>(result.Result);
+        Assert.Equal(PaymentStatus.Created, (await test.Db.Payments.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task DemoMode_Confirm_CannotSettleARealRazorpayPayment()
+    {
+        using var test = new TestDb();
+        var proposal = await SeedProposalAsync(test.Db, UserA);
+        var real = await SeedPaymentAsync(test.Db, proposal, PaymentStatus.Created, "order-real-1");
+
+        var result = await PaymentsFor(test.Db, UserA, DemoPayments())
+            .ConfirmDemoPayment(new DemoConfirmPaymentRequest { PaymentId = real.Id });
+
+        Assert.IsType<NotFoundResult>(result.Result);
+        Assert.Equal(PaymentStatus.Created, (await test.Db.Payments.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task DemoMode_Confirm_RejectsEmptyIdAndAnonymous()
+    {
+        using var test = new TestDb();
+        var proposal = await SeedProposalAsync(test.Db, UserA);
+        var payment = await SeedDemoPaymentAsync(test.Db, proposal);
+
+        var empty = await PaymentsFor(test.Db, UserA, DemoPayments())
+            .ConfirmDemoPayment(new DemoConfirmPaymentRequest { PaymentId = Guid.Empty });
+        Assert.NotNull(Assert.IsType<ObjectResult>(empty.Result).Value);
+
+        var anonymous = await PaymentsFor(test.Db, null, DemoPayments())
+            .ConfirmDemoPayment(new DemoConfirmPaymentRequest { PaymentId = payment.Id });
+        Assert.IsType<UnauthorizedResult>(anonymous.Result);
+        Assert.Equal(PaymentStatus.Created, (await test.Db.Payments.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task DemoMode_Confirm_SecondVerifiedPaymentOnSameProposal_Returns409()
+    {
+        using var test = new TestDb();
+        var proposal = await SeedProposalAsync(test.Db, UserA);
+        await SeedDemoPaymentAsync(test.Db, proposal, PaymentStatus.Verified);
+        var open = await SeedDemoPaymentAsync(test.Db, proposal);
+
+        var result = await PaymentsFor(test.Db, UserA, DemoPayments())
+            .ConfirmDemoPayment(new DemoConfirmPaymentRequest { PaymentId = open.Id });
+
+        Problem(result, StatusCodes.Status409Conflict);
+        Assert.Equal(PaymentStatus.Created,
+            (await test.Db.Payments.SingleAsync(p => p.Id == open.Id)).Status);
+    }
+
+    [Fact]
+    public async Task Verify_RejectsDemoPayments_SoNoSignatureBypassExists()
+    {
+        using var test = new TestDb();
+        var proposal = await SeedProposalAsync(test.Db, UserA);
+        var payment = await SeedDemoPaymentAsync(test.Db, proposal);
+
+        var result = await PaymentsFor(test.Db, UserA, DemoPayments()).VerifyPayment(
+            new VerifyPaymentRequest
+            {
+                PaymentId = payment.Id,
+                RazorpayOrderId = payment.ProviderOrderId!,
+                RazorpayPaymentId = "pay_x",
+                RazorpaySignature = "sig",
+            });
+
+        Problem(result, StatusCodes.Status400BadRequest);
+        Assert.Equal(PaymentStatus.Created, (await test.Db.Payments.SingleAsync()).Status);
     }
 }
