@@ -3,8 +3,8 @@ export const environment = {
   // Production backend: ASP.NET Core API on Railway (Singapore). No trailing
   // slash. Must match the Railway service's public domain.
   apiBaseUrl: 'https://interior-platform-production.up.railway.app',
-  // Public WhatsApp business number, digits only with country code
-  // (e.g. '919876543210'). Intentionally empty until the real company number
-  // is supplied; the WhatsApp action stays hidden while it is empty.
-  whatsappBusinessNumber: '',
+  // Public WhatsApp business number, digits only with country code. Taken
+  // from the company website's own WhatsApp link (wa.me/918139860663). The
+  // "Continue on WhatsApp" action stays hidden if this is ever emptied.
+  whatsappBusinessNumber: '918139860663',
 };
