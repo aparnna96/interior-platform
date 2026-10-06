@@ -9,8 +9,9 @@
 | --- | --- | --- |
 | Customer | demo.customer@confidentgroup.example | provided separately |
 | Admin | demo.admin@confidentgroup.example | provided separately |
+| Field Staff | demo.fieldstaff@confidentgroup.example | provided separately |
 
-The demo accounts already hold sample orders, proposals and enquiries, so every screen has something to show. Use the **customer** login for steps 1 to 9 and the **admin** login for step 10.
+The demo accounts already hold sample orders, proposals and enquiries, so every screen has something to show. Use the **customer** login for steps 1 to 9 and the **admin** login for step 10. The **Field Staff** login is for the short team-access demo at the end.
 
 ## Customer demo (about 10 minutes)
 
@@ -41,6 +42,14 @@ Log out, then log in as the admin, or open `/login` in a private window. The adm
 2. **Manage proposals:** every proposal with its payment state ("Token payment verified" or "No payment attempt"). Open one to see the room details, furniture lines and payment record.
 3. **Leads:** the enquiries submitted through the site, filterable as New, In Progress and Closed. Open one to update its status.
 4. **Manage products:** the catalogue (eight pieces). Edit a price or description, or deactivate a product. A deactivated product disappears from the public store immediately.
+
+## Field Staff demo (about 2 minutes)
+
+Log out, then log in as the Field Staff user. It lands on **Leads**.
+
+- **Access:** Leads.
+- **Demonstrates:** viewing the enquiries submitted through the site, and updating a lead's status (New, In Progress, Closed).
+- The Manage orders, Manage proposals and Manage products pages are not available to this role. Opening one of those addresses returns the user to Leads.
 
 ## Notes
 
