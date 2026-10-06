@@ -57,7 +57,9 @@ builder.Services.AddAuthorization();
 // is unavailable (404) in Production. Real authorization behavior elsewhere
 // is unchanged.
 builder.Services.AddControllers(options =>
-    options.HideDevelopmentOnlyControllers(builder.Environment));
+        options.HideDevelopmentOnlyControllers(builder.Environment))
+    // Timestamps are stored as UTC; make the JSON say so (trailing "Z").
+    .AddUtcDateTimes();
 
 // Behind a TLS-terminating proxy (Production) honour X-Forwarded-Proto so
 // HTTPS redirection cannot loop. No effect in Development.
