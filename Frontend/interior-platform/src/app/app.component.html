@@ -1,4 +1,4 @@
-﻿<div class="shell" [class.rail]="sidebarCollapsed()" [class.drawer]="drawerOpen()" [class.public]="isPublicView()">
+<div class="shell" [class.rail]="sidebarCollapsed()" [class.drawer]="drawerOpen()" [class.public]="isPublicView()">
   <!-- ── Sidebar (desktop) ─────────────────── -->
   <aside class="sidebar" id="app-sidebar" aria-label="Primary navigation" (keydown.escape)="closeDrawer()">
     <div class="brand">
@@ -37,7 +37,19 @@
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
         <span>Furniture</span>
       </button>
-    </nav>
+      <button
+        class="nav-item"
+        aria-label="Cart"
+        [attr.title]="sidebarCollapsed() ? 'Cart' : null"
+        [class.active]="activeView() === 'cart'"
+        (click)="activeView.set('cart'); closeDrawer()"
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 2.5h2l1.3 7h7.2l1.2-5H4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="13" r="1" fill="currentColor"/><circle cx="11.5" cy="13" r="1" fill="currentColor"/></svg>
+        <span>Cart</span>
+        @if (cart.totalQty() > 0) {
+          <span class="nav-count">{{ cart.totalQty() }}</span>
+        }
+      </button>    </nav>
 
     <nav class="nav" aria-label="Workspace">
       <p class="nav-label">Workspace</p>
@@ -84,55 +96,70 @@
           <span class="nav-count">{{ projects().length }}</span>
         }
       </button>
-      @if (auth.isStaff()) {
-        <button
-          class="nav-item"
-          aria-label="Leads"
-          [attr.title]="sidebarCollapsed() ? 'Leads' : null"
-          [class.active]="activeView() === 'leads'"
-          (click)="activeView.set('leads'); closeDrawer()"
-        >
-          <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 5.5h13" stroke="currentColor" stroke-width="1.4"/><circle cx="4" cy="4" r="0.9" fill="currentColor"/></svg>
-          <span>Leads</span>
-        </button>
-      }
-      @if (auth.isAdmin()) {
-        <button
-          class="nav-item"
-          aria-label="Products"
-          [attr.title]="sidebarCollapsed() ? 'Products' : null"
-          [class.active]="activeView() === 'admin-products'"
-          (click)="activeView.set('admin-products'); closeDrawer()"
-        >
-          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
-          <span>Products</span>
-        </button>
-      }
-      @if (auth.isAdmin()) {
+      @if (auth.isAuthenticated()) {
         <button
           class="nav-item"
           aria-label="Orders"
           [attr.title]="sidebarCollapsed() ? 'Orders' : null"
-          [class.active]="activeView() === 'admin-orders'"
-          (click)="activeView.set('admin-orders'); closeDrawer()"
+          [class.active]="activeView() === 'orders'"
+          (click)="activeView.set('orders'); closeDrawer()"
         >
           <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="10" x2="10.5" y2="10" stroke="currentColor" stroke-width="1.2"/></svg>
           <span>Orders</span>
         </button>
       }
+    </nav>
+
+    @if (auth.isStaff()) {
+    <nav class="nav" aria-label="Operations">
+      <p class="nav-label">Operations</p>      <button
+        class="nav-item"
+        aria-label="Leads"
+        [attr.title]="sidebarCollapsed() ? 'Leads' : null"
+        [class.active]="activeView() === 'leads'"
+        (click)="activeView.set('leads'); closeDrawer()"
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 5.5h13" stroke="currentColor" stroke-width="1.4"/><circle cx="4" cy="4" r="0.9" fill="currentColor"/></svg>
+        <span>Leads</span>
+      </button>
       @if (auth.isAdmin()) {
         <button
           class="nav-item"
-          aria-label="Admin proposals"
-          [attr.title]="sidebarCollapsed() ? 'Proposals' : null"
+          aria-label="Manage products"
+          [attr.title]="sidebarCollapsed() ? 'Manage products' : null"
+          [class.active]="activeView() === 'admin-products'"
+          (click)="activeView.set('admin-products'); closeDrawer()"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+          <span>Manage products</span>
+        </button>
+      }
+      @if (auth.isAdmin()) {
+        <button
+          class="nav-item"
+          aria-label="Manage orders"
+          [attr.title]="sidebarCollapsed() ? 'Manage orders' : null"
+          [class.active]="activeView() === 'admin-orders'"
+          (click)="activeView.set('admin-orders'); closeDrawer()"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="10" x2="10.5" y2="10" stroke="currentColor" stroke-width="1.2"/></svg>
+          <span>Manage orders</span>
+        </button>
+      }
+      @if (auth.isAdmin()) {
+        <button
+          class="nav-item"
+          aria-label="Manage proposals"
+          [attr.title]="sidebarCollapsed() ? 'Manage proposals' : null"
           [class.active]="activeView() === 'admin-proposals'"
           (click)="activeView.set('admin-proposals'); closeDrawer()"
         >
           <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="11.5" x2="8.5" y2="11.5" stroke="currentColor" stroke-width="1.4"/></svg>
-          <span>Proposals</span>
+          <span>Manage proposals</span>
         </button>
       }
     </nav>
+    }
 
     <nav class="nav" aria-label="General">
       <p class="nav-label">General</p>
@@ -259,9 +286,13 @@
         <button [class.active]="activeView() === 'home'" (click)="activeView.set('home')">Home</button>
         <button [class.active]="activeView() === 'interiors'" (click)="activeView.set('interiors')">Interiors</button>
         <button [class.active]="activeView() === 'catalogue'" (click)="activeView.set('catalogue')">Furniture</button>
+        <button [class.active]="activeView() === 'cart'" (click)="activeView.set('cart')">Cart@if (cart.totalQty() > 0) { <span class="nav-count">{{ cart.totalQty() }}</span> }</button>
         <button [class.active]="activeView() === 'visualizer'" (click)="activeView.set('visualizer')">Visualizer</button>
         <button [class.active]="activeView() === 'estimates'" (click)="activeView.set('estimates')">Estimates</button>
         <button [class.active]="activeView() === 'proposals'" (click)="activeView.set('proposals')">Proposals</button>
+        @if (auth.isAuthenticated()) {
+          <button [class.active]="activeView() === 'orders'" (click)="activeView.set('orders')">Orders</button>
+        }
         <button [class.active]="activeView() === 'projects'" (click)="activeView.set('projects')">
           Projects@if (projects().length > 0) { <span class="nav-count">{{ projects().length }}</span> }
         </button>
@@ -269,13 +300,13 @@
           <button [class.active]="activeView() === 'leads'" (click)="activeView.set('leads')">Leads</button>
         }
         @if (auth.isAdmin()) {
-          <button [class.active]="activeView() === 'admin-products'" (click)="activeView.set('admin-products')">Products</button>
+          <button [class.active]="activeView() === 'admin-products'" (click)="activeView.set('admin-products')">Manage products</button>
         }
         @if (auth.isAdmin()) {
-          <button [class.active]="activeView() === 'admin-orders'" (click)="activeView.set('admin-orders')">Orders</button>
+          <button [class.active]="activeView() === 'admin-orders'" (click)="activeView.set('admin-orders')">Manage orders</button>
         }
         @if (auth.isAdmin()) {
-          <button [class.active]="activeView() === 'admin-proposals'" (click)="activeView.set('admin-proposals')" aria-label="Admin proposals">Proposals</button>
+          <button [class.active]="activeView() === 'admin-proposals'" (click)="activeView.set('admin-proposals')">Manage proposals</button>
         }
         <button [class.active]="isAccountView()" (click)="openAccount()">Account</button>
       </nav>
