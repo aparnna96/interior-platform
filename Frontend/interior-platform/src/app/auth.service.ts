@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+﻿import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../environments/environment';
@@ -59,6 +59,31 @@ export function decodeJwtRoles(token: string | null): string[] {
   }
 }
 
+/** Claim keys that may carry the user's email in a JWT payload. */
+const EMAIL_CLAIM_KEYS = [
+  'email',
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+  'unique_name',
+  'name',
+];
+
+/** Display-only email from a JWT payload (no signature check), or null. */
+export function decodeJwtEmail(token: string | null): string | null {
+  if (!token) return null;
+  const parts = token.split('.');
+  if (parts.length < 2) return null;
+  try {
+    const payload = JSON.parse(base64UrlDecode(parts[1])) as Record<string, unknown>;
+    for (const key of EMAIL_CLAIM_KEYS) {
+      const value = payload[key];
+      if (typeof value === 'string' && value) return value;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function base64UrlDecode(segment: string): string {
   const base64 = segment.replace(/-/g, '+').replace(/_/g, '/');
   const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
@@ -79,6 +104,9 @@ export class AuthService {
 
   /** Role names decoded from the stored JWT (display-only, see decodeJwtRoles). */
   readonly roles = computed(() => decodeJwtRoles(this.tokenState()));
+
+  /** Email from the stored JWT (display-only), or null when logged out. */
+  readonly email = computed(() => decodeJwtEmail(this.tokenState()));
 
   /** True for Admin/FieldStaff sessions: gates the internal Leads workspace. */
   readonly isStaff = computed(

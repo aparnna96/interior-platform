@@ -1,10 +1,10 @@
-import { TestBed } from '@angular/core/testing';
+﻿import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { AuthService, AUTH_TOKEN_KEY, decodeJwtRoles } from './auth.service';
+import { AuthService, AUTH_TOKEN_KEY, decodeJwtEmail, decodeJwtRoles } from './auth.service';
 import { environment } from '../environments/environment';
 
 const LOGIN_URL = `${environment.apiBaseUrl}/api/auth/login`;
@@ -147,5 +147,27 @@ describe('AuthService role handling', () => {
 
   it('reports no admin without authentication', () => {
     expect(TestBed.inject(AuthService).isAdmin()).toBe(false);
+  });
+});
+
+describe('AuthService email claim', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('reads the email from the token payload', () => {
+    expect(decodeJwtEmail(unsignedJwt({ email: 'a@test.local' }))).toBe('a@test.local');
+    expect(decodeJwtEmail(unsignedJwt({ 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': 'b@test.local' }))).toBe('b@test.local');
+  });
+
+  it('is null for logged-out, malformed or email-less tokens', () => {
+    expect(decodeJwtEmail(null)).toBeNull();
+    expect(decodeJwtEmail('not-a-jwt')).toBeNull();
+    expect(decodeJwtEmail(unsignedJwt({ role: 'Admin' }))).toBeNull();
+  });
+
+  it('exposes the email of the stored session', () => {
+    localStorage.setItem(AUTH_TOKEN_KEY, unsignedJwt({ email: 'c@test.local' }));
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    expect(TestBed.inject(AuthService).email()).toBe('c@test.local');
   });
 });

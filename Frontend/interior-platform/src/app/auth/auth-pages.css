@@ -1,0 +1,67 @@
+﻿/* Login, register and account pages: same warm-white, hairline, single-bronze
+   language as the cart, orders and proposals pages. */
+.auth-page {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+  min-width: 0;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+  padding-top: 8px;
+}
+.kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.auth-head h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+.sub { color: var(--ink-2); font-size: 13.5px; line-height: 1.55; margin-top: 8px; }
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  min-width: 0;
+}
+.auth-switch { font-size: 13px; color: var(--ink-2); }
+.linklike {
+  border: 0;
+  background: none;
+  padding: 8px 2px;
+  min-height: 40px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--accent-ink);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.linklike:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.acct-rows { display: grid; margin: 0; }
+.acct-rows div {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border-soft); font-size: 13.5px;
+}
+.acct-rows div:last-child { border-bottom: 0; }
+.acct-rows dt { color: var(--muted); font-weight: 550; }
+.acct-rows dd { margin: 0; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+.acct-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.acct-h2 { font-size: 13.5px; font-weight: 650; letter-spacing: -0.005em; margin: 0 0 10px; }
+.btn {
+  appearance: none; border: 1px solid transparent; border-radius: 7px;
+  padding: 9px 16px; min-height: 40px; font-size: 13px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-primary { background: #1c1917; color: #faf8f5; }
+.btn-secondary { background: #fff; border-color: #e4ded4; color: #1c1917; }

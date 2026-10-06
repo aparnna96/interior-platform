@@ -1,9 +1,14 @@
-﻿import { Component, HostListener, ViewChild, computed, effect, inject, signal } from '@angular/core';
+﻿import { Component, HostListener, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter } from 'rxjs';
 import { RoomVisualizerComponent } from './room-visualizer/room-visualizer.component';
 import { FloorPlanComponent } from './floor-plan/floor-plan.component';
-import { LoginComponent } from './auth/login.component';
-import { RegisterComponent } from './register/register.component';
+import { LoginPageComponent } from './auth/login-page.component';
+import { RegisterPageComponent } from './auth/register-page.component';
+import { AccountPageComponent } from './auth/account-page.component';
+import { pathForView, requiresLogin, safeReturnUrl, viewForPath, type AppView } from './app-paths';
 import { CatalogueComponent } from './catalogue/catalogue.component';
 import { CartComponent } from './catalogue/cart.component';
 import { CartService } from './catalogue/cart.service';
@@ -66,7 +71,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginComponent, RegisterComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -74,8 +79,19 @@ export class AppComponent {
   title = 'interior-platform';
 
   // ── views ──────────────────────────────────
-  activeView = signal<'home' | 'interiors' | 'visualizer' | 'catalogue' | 'cart' | 'orders' | 'proposals' | 'estimates' | 'projects' | 'leads' | 'admin-products' | 'admin-orders' | 'admin-proposals'>('home');
-  showAccount = signal(false);
+  /** The Router owns the address bar; this shell keeps it in step with `activeView`. */
+  private readonly router = inject(Router);
+
+  /**
+   * The page being shown. The URL and this signal follow each other: a click
+   * sets the signal and the address updates; opening, reloading or going back
+   * to an address updates the signal. Starts from the current address, so a
+   * deep link renders the right page on first paint.
+   */
+  activeView = signal<AppView>(viewForPath(this.router.url)?.view ?? 'home');
+
+  /** Product id from a /furniture/:id address; the catalogue shows its details page. */
+  routeProductId = signal<string | null>(viewForPath(this.router.url)?.productId ?? null);
 
   /** Shared frontend cart store (Pillar 2) — badge count in the navbar. */
   readonly cart = inject(CartService);
@@ -91,19 +107,66 @@ export class AppComponent {
       this.activeView() === 'catalogue' ||
       this.activeView() === 'cart' ||
       this.activeView() === 'orders' ||
-      this.activeView() === 'proposals'
+      this.activeView() === 'proposals' ||
+      this.activeView() === 'login' ||
+      this.activeView() === 'register' ||
+      this.activeView() === 'account'
+  );
+
+  /** The room controls header belongs to the design workspace views only. */
+  showWorkspaceHeader = computed(
+    () =>
+      this.activeView() === 'visualizer' ||
+      this.activeView() === 'estimates' ||
+      this.activeView() === 'projects'
+  );
+
+  /** Highlights the Account entry on the account, login and register pages. */
+  isAccountView = computed(
+    () =>
+      this.activeView() === 'account' ||
+      this.activeView() === 'login' ||
+      this.activeView() === 'register'
   );
 
   constructor() {
-    // All views render in the same document: no router, and no app container
-    // owns the scroll (verified: no overflow-y on .shell/.main), so the
-    // window keeps the previous page's position across view switches.
+    // All views render in the same document and the Router (configured in
+    // app.config.ts) owns the address bar. No app container owns the scroll
+    // (verified: no overflow-y on .shell/.main); the Router scrolls to the
+    // top on each new page and restores the position on Back.
     // Reset it instantly whenever the Visualizer is entered, from any entry
     // point (Home buttons, navbar, sidebar, project loading).
     effect(() => {
       if (this.activeView() === 'visualizer') {
         window.scrollTo(0, 0);
       }
+    });
+    // Address -> page: opening, reloading, Back/Forward and guard redirects.
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed()
+      )
+      .subscribe((e) => this.applyUrl(e.urlAfterRedirects));
+    // Page -> address: a click (or code) that changes the page updates the URL.
+    // Guards still apply, so a logged-out visitor asking for a private page
+    // ends up on /login with a return address.
+    effect(() => {
+      const view = this.activeView();
+      untracked(() => {
+        if (viewForPath(this.router.url)?.view === view) return;
+        this.router.navigateByUrl(pathForView(view)).catch(() => undefined);
+      });
+    });
+    // Session ended while on a private page (expired token, a 401 from the API):
+    // go to the login page and come back here afterwards. Tracks only the login
+    // state, so an explicit "Log out" (which moves to Home in the same click)
+    // and normal navigation never trigger it.
+    effect(() => {
+      const authed = this.auth.isAuthenticated();
+      untracked(() => {
+        if (!authed && requiresLogin(this.activeView())) this.openLogin();
+      });
     });
     effect(() => {
       if (!this.auth.isAuthenticated()) {
@@ -132,8 +195,23 @@ export class AppComponent {
   onProposalCreated(proposal: ProposalDetailDto): void {
     this.createdProposal.set(proposal);
     this.activeView.set('proposals');
-    this.showAccount.set(false);
     this.closeDrawer();
+  }
+
+  /** Follows the address bar: shows the page the URL stands for. */
+  private applyUrl(url: string): void {
+    const resolved = viewForPath(url);
+    if (!resolved) return;
+    if (this.activeView() !== resolved.view) this.activeView.set(resolved.view);
+    if (this.routeProductId() !== resolved.productId) this.routeProductId.set(resolved.productId);
+    this.closeDrawer();
+  }
+
+  /** The catalogue opened or closed a product details page: mirror it in the address. */
+  onProductRoute(productId: string | null): void {
+    if (this.routeProductId() === productId) return;
+    this.routeProductId.set(productId);
+    this.router.navigateByUrl(pathForView('catalogue', productId)).catch(() => undefined);
   }
 
   /**
@@ -658,18 +736,23 @@ export class AppComponent {
     this.projects.update((list) => list.filter((p) => p.id !== id));
   }
 
-  toggleAccount(): void {
-    this.showAccount.update((v) => !v);
+  /**
+   * Account entry in the navigation: the account page when logged in. For a
+   * visitor the account guard sends them to /login and, after logging in,
+   * back to /account.
+   */
+  openAccount(): void {
+    this.activeView.set('account');
+    this.closeDrawer();
   }
 
-  /** Opens the login panel from a "Log in" prompt elsewhere (cart, catalogue). */
+  /** Opens the login page from a "Log in" prompt elsewhere (cart, catalogue), returning here afterwards. */
   openLogin(): void {
-    this.showAccount.set(true);
     this.closeDrawer();
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0 });
-      setTimeout(() => document.getElementById('login-email')?.focus(), 0);
-    }
+    const returnUrl = safeReturnUrl(this.router.url);
+    this.router
+      .navigate(['/login'], returnUrl ? { queryParams: { returnUrl } } : {})
+      .catch(() => undefined);
   }
 
   money(n: number): string {

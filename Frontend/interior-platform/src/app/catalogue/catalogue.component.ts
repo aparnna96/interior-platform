@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, output, signal } from '@angular/core';
+﻿import { Component, OnInit, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RevealDirective } from '../shared/reveal.directive';
 import {
@@ -26,7 +26,30 @@ export class CatalogueComponent implements OnInit {
   private readonly cart = inject(CartService);
   readonly productService = inject(ProductService);
 
-  /** Requests the shell to open the Cart view. No routing. */
+  /**
+   * Product id from a /furniture/:id address. The shell owns the address bar;
+   * when it changes (deep link, Back/Forward) the details page follows.
+   */
+  productId = input<string | null>(null);
+
+  /** Tells the shell a details page was opened (id) or closed (null) so the address follows. */
+  productRoute = output<string | null>();
+
+  private lastRouteId: string | null = null;
+
+  constructor() {
+    effect(() => {
+      const id = this.productId();
+      untracked(() => {
+        if (id !== this.lastRouteId) {
+          this.lastRouteId = id;
+          this.selectedId.set(id);
+        }
+      });
+    });
+  }
+
+  /** Requests the shell to open the Cart view. */
   openCart = output<void>();
 
   /** Asks the shell to open the login panel (logged-out visitor tried to use the cart). */
@@ -98,10 +121,12 @@ export class CatalogueComponent implements OnInit {
 
   viewDetails(id: string): void {
     this.selectedId.set(id);
+    this.productRoute.emit(id);
   }
 
   closeDetails(): void {
     this.selectedId.set(null);
+    this.productRoute.emit(null);
   }
 
   inr(n: number): string {
