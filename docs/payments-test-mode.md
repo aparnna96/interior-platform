@@ -58,6 +58,30 @@ or returned by any API.
 - Razorpay amounts use paise (smallest unit), converted with decimal-only
   arithmetic — no floating point near money.
 
+## Demo mode (no Razorpay account needed)
+
+Set `Payments__Mode=Demo` to simulate the token payment when no Razorpay keys
+are available (for example, a demo deployment). The default is `Razorpay`; any
+other value makes the API stop at startup, so a typo cannot change the paywall
+silently.
+
+- `POST /api/proposals/{id}/payment` creates a payment with provider `Demo` and
+  an order id starting `demo_order_`. No gateway call is made and no key id is
+  returned.
+- `POST /api/payments/demo/confirm` with `{ "paymentId": "<id>" }` marks the
+  caller's own Demo payment Verified. In any other mode this endpoint returns 404.
+  Another user's payment, a non-Demo payment, and a second verified payment on the
+  same proposal are refused (404, 404, 409).
+- `POST /api/payments/verify` rejects Demo payments, so there is no signature
+  bypass.
+- The PDF gate is unchanged: the download needs a Verified payment stored in the
+  database.
+- The UI shows a labelled "Demo payment - no real money is charged" step with
+  Confirm and Cancel instead of Razorpay Checkout.
+
+Trade-off: while Demo mode is on, any signed-in customer can unlock their own
+proposal PDF without paying. Use it for demos only, and remove the setting before
+real use.
 ## Deferred to follow-ups
 
 - Live/production payments, webhooks, refunds.

@@ -17,7 +17,7 @@ check it in the console before relying on it.
 | --- | --- |
 | Frontend | Angular on Vercel (`https://interior-platform-sigma.vercel.app` is the origin currently allowed by CORS in `appsettings.Production.json`) |
 | API | ASP.NET Core, .NET 10, one Dockerfile-based Railway service built from the repository root, Railway region Asia Southeast (Singapore) |
-| Database | Amazon RDS for SQL Server 2022 Express, Single-AZ, `db.t3.micro`, General Purpose SSD 20 GiB, region `ap-southeast-1` (Singapore) **only if** that instance class and edition are orderable there [not verified] |
+| Database | Amazon RDS for SQL Server Express, Single-AZ, `db.t3.micro`, General Purpose SSD 20 GiB, region `ap-southeast-1` (Singapore). It is orderable there [verified: the instance is running]. The engine version actually deployed is SQL Server 2019 (15.0.x) |
 | Link | Railway -> public RDS endpoint, TCP 1433, SQL authentication, TLS enforced by the server and validated by the client |
 
 Railway private networking only connects services inside one Railway project
@@ -57,7 +57,7 @@ TLS and the least-privilege login. Tighten it before any real client data.
   `update-ca-certificates`. This is what lets
   `Encrypt=True;TrustServerCertificate=False` succeed. If the database moves to
   another region, update the Dockerfile URL, hash and certificate count. The
-  Docker image has not been built or run yet [not verified].
+  Docker image builds and runs on Railway from `main` [verified]: the checksum, CA split, font and publish steps all ran, `/health` returns 200, and the rupee sign renders in the generated proposal PDF.
 - Production configuration in `appsettings.Production.json`: CORS origin,
   estimate rate, token payment amount, empty Razorpay placeholders, and
   `REPLACE_WITH_*` placeholders for JWT issuer and audience.
@@ -111,7 +111,7 @@ Consequences for this deployment:
 
 1. Preferred region: Asia Pacific (Singapore), `ap-southeast-1`.
 2. In the RDS console, start "Create database" and confirm that SQL Server
-   Express, version 2022, `db.t3.micro` is offered there. If not, pick the
+   Express, `db.t3.micro` is offered there (the deployed instance is SQL Server 2019; 2022 also works if offered). If not, pick the
    nearest region that offers it and remember that the Dockerfile CA URL, hash
    and count then change too. Optional CLI check:
    `aws rds describe-orderable-db-instance-options --engine sqlserver-ex --db-instance-class db.t3.micro --region <REGION>`.
@@ -123,9 +123,9 @@ Consequences for this deployment:
 `rds.force_ssl` is a static parameter, so a reboot is needed if you change it
 after creation [verified]. Create and attach the group at creation time.
 
-1. RDS -> Parameter groups -> Create. Family for SQL Server 2022 Express is
-   `sqlserver-ex-16.0` [not verified; use the family the console offers for
-   your engine version].
+1. RDS -> Parameter groups -> Create. Family for SQL Server 2019 Express is
+   `sqlserver-ex-15.0` (SQL Server 2022 would be `sqlserver-ex-16.0`; use the family the console offers for
+   your engine version). The deployed instance still uses the default parameter group, so `rds.force_ssl` is **not** enforced yet: see section 15.
 2. Set `rds.force_ssl` = `1`. Save.
 
 ### 5.4 Create the instance
@@ -135,7 +135,7 @@ after creation [verified]. Create and attach the group at creation time.
 | Creation method | Standard create |
 | Engine | Microsoft SQL Server |
 | Edition | Express Edition |
-| Version | SQL Server 2022, latest minor offered |
+| Version | SQL Server 2019 as deployed (2022 also works if offered), latest minor |
 | Licence | License Included |
 | Template | Free tier / Dev-Test if offered, otherwise the smallest |
 | DB instance identifier | `<RDS_INSTANCE_ID>` |
@@ -266,13 +266,15 @@ migration step.
 | Variable | Value | Notes |
 | --- | --- | --- |
 | `ASPNETCORE_ENVIRONMENT` | `Production` | Required. Enables proxy headers, safe error handler, hides `/api/verify/*` |
-| `ASPNETCORE_URLS` | `http://+:${PORT}` | Railway's documented pattern for ASP.NET Core [verified] |
+| `ASPNETCORE_URLS` | `http://+:8080` | Use a fixed port. The `http://+:${PORT}` pattern did not work on this deployment [verified by the first deploy] |
+| `PORT` | `8080` | Must match the port in `ASPNETCORE_URLS` |
 | `ConnectionStrings__DefaultConnection` | see 7.3 | Startup fails if missing |
 | `Jwt__Secret` | `<JWT_SECRET>` | Required |
 | `Jwt__Issuer` | `<JWT_ISSUER>` | Required. Must not start with `REPLACE_WITH_` |
 | `Jwt__Audience` | `<JWT_AUDIENCE>` | Required. Must not start with `REPLACE_WITH_` |
 | `Razorpay__KeyId` | TEST key id | Name only here. Payments fail cleanly if empty |
 | `Razorpay__KeySecret` | TEST key secret | Name only here |
+| `Payments__Mode` | `Demo` (optional) | Default is `Razorpay`. `Demo` simulates the token payment with no gateway (see `docs/payments-test-mode.md`). Any other value stops the API at startup. Remove it before real use |
 | `Cors__AllowedOrigins__0` | `<VERCEL_ORIGIN>` | Only needed if the final Vercel origin differs from the committed one. No wildcards, no trailing path |
 | `DOTNET_gcServer` | `0` (optional) | The published app uses Server GC, which can use more memory on small containers [memory effect not verified] |
 
@@ -311,7 +313,7 @@ tokens, `.bak` backups, and any screenshot showing them.
 
 1. Create a Railway project and add a service from the GitHub repository
    `aparnna96/interior-platform`. Railway detects a file named `Dockerfile` at
-   the repository root [verified]. No Railway config file is needed.
+   the repository root [verified]. No Railway config file is needed. The service deploys from the `main` branch on every push; watch paths are not set, so a frontend-only push also rebuilds the API.
 2. Service settings -> region: Asia Southeast (Singapore). Railway's four
    regions are US West, US East, Europe West and Asia Southeast; there is no
    India region [verified].
@@ -362,7 +364,7 @@ Development overrides do not apply in Production, so pace your tests.
 Public registration only assigns the `Customer` role (`AuthController`). No
 code creates an Admin user. After registering the users in step 5, assign roles
 with SQL, as the master user (or a DBA login) in `<DATABASE_NAME>`. Run the
-SELECTs first to confirm the standard Identity columns exist [not verified].
+SELECTs first to confirm the standard Identity columns exist (they do on the deployed database [verified]). The application login with `db_datawriter` is enough for the INSERT, so the master user is not needed [verified].
 
 ```sql
 SELECT Id, Email FROM dbo.AspNetUsers WHERE NormalizedEmail = UPPER(N'<USER_EMAIL>');
@@ -375,22 +377,25 @@ WHERE u.NormalizedEmail = UPPER(N'<USER_EMAIL>') AND r.NormalizedName = N'ADMIN'
 ```
 
 Role claims are written into the token at login, so the user must log in again
-after the change. Never put admin credentials in the repository.
+after the change. Never put admin credentials in the repository. Register the account through the API (so Identity hashes the password) using a random password kept outside the repository. The account then holds both the Admin and Customer roles, because registration always adds Customer.
 
-## 10. Vercel step (a separate code task)
+## 10. Vercel step
 
-`Frontend/interior-platform/src/environments/environment.prod.ts` still has the
-placeholder `https://YOUR-PRODUCTION-API-DOMAIN`. Replacing it with
-`<RAILWAY_API_URL>` (no trailing slash) is a frontend code change, so it belongs
-in its own task and is **not** part of this runbook's preparation. Afterwards
-redeploy on Vercel, keep `Cors__AllowedOrigins__0` matching the Vercel origin
-(preview URLs are different origins), then repeat section 9 from the browser.
+Done for the current deployment: `Frontend/interior-platform/src/environments/environment.prod.ts`
+points at the Railway API (`https://interior-platform-production.up.railway.app`).
+Keep `Cors__AllowedOrigins__0` matching the Vercel origin (preview URLs are
+different origins), then repeat section 9 from the browser.
 
+The app uses real URLs (`/orders`, `/account`, `/admin/orders`, ...). Vercel must
+answer every path with `index.html`, otherwise a refresh or a shared link gives a
+404. `Frontend/interior-platform/vercel.json` holds that rewrite. Write it
+without a UTF-8 byte-order mark: Node cannot parse a BOM-prefixed JSON file, and
+the Vercel deployment failed until the BOM was removed.
 ## 11. Full production end-to-end test
 
 From the deployed Vercel site, with the API on Railway: register, log in, browse
 products, add to cart, place an order, create an estimate and proposal, pay with
-Razorpay TEST, download the PDF, submit a lead, then log in as FieldStaff and
+Razorpay TEST (or the Demo confirmation when `Payments__Mode=Demo`), download the PDF, submit a lead, then log in as FieldStaff and
 Admin and work the admin screens. Record anything that fails with its
 `traceId`.
 
@@ -405,7 +410,7 @@ Admin and work the admin screens. Record anything that fails with its
 | Permission denied during migration | Apply the `db_owner` fallback in section 6 for this database, then redeploy |
 | Startup error naming `Jwt:Issuer` / `Jwt:Audience` / `Jwt:Secret` | Variable missing or still a `REPLACE_WITH_` placeholder |
 | Startup error about `Cors:AllowedOrigins` | The configuration is empty or contains an invalid origin |
-| Service up but Railway cannot reach it | The listening port differs from `PORT`. Check the logs for the bound address and the `ASPNETCORE_URLS` value |
+| Service up but Railway cannot reach it | The listening port differs from `PORT` (keep both at 8080). Check the logs for the bound address and the `ASPNETCORE_URLS` value |
 | HTTP redirect loop | Proxy headers not applied: confirm `ASPNETCORE_ENVIRONMENT=Production` |
 | 429 responses while testing | Expected rate limits: wait 60 s |
 | PDF shows boxes instead of the rupee sign, or a native-library error | Fonts or libraries missing in the image: capture the log and raise it in the next task |
@@ -433,6 +438,27 @@ Admin and work the admin screens. Record anything that fails with its
 5. Create the Railway project and service, region, variables (7, 8).
 6. First deploy. Check logs, then section 9 checks 1-4.
 7. Register users, assign Admin/FieldStaff (9.1), complete section 9.
-8. Frontend API URL task (10), Vercel redeploy, full E2E (11).
+8. Frontend API URL and the `vercel.json` rewrite (10), Vercel redeploy, full E2E (11).
 9. Record the open items: security group `0.0.0.0/0`, free-plan expiry date,
    TEST payment keys, QuestPDF license review.
+
+## 15. Deployed state and open items
+
+What is running now, and what still needs a decision. No secrets are recorded here.
+
+- **Database security.** `rds.force_ssl` is not enforced (the instance uses the
+  default parameter group): create a custom group with `rds.force_ssl=1` and
+  reboot. The RDS master password was shared in a chat and must be rotated.
+  Confirm deletion protection is on. Storage autoscaling allows up to 1000 GiB:
+  consider lowering the cap to limit cost.
+- **Payments.** `Payments__Mode=Demo` is set and no Razorpay keys are present.
+  Before any real use, remove `Payments__Mode` and add Razorpay TEST keys first,
+  then live keys after the account is activated.
+- **Deploys.** Railway rebuilds the API on every push to `main` (no watch paths).
+- **Test data in production.** Audit accounts (`audit.test@example.invalid`,
+  `admin.audit@example.invalid`) and the orders, estimates, proposals, payments
+  and leads created while testing. Removing them needs a direct SQL run.
+- **Local credential files.** Test passwords live in a local folder outside the
+  repository. Delete them once stored elsewhere.
+- **Known gap.** Admin order screens are read-only: the API has no order status
+  change endpoint.
