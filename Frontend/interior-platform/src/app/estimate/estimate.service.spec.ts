@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+﻿import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -48,19 +48,39 @@ describe('EstimateService', () => {
     localStorage.clear();
   });
 
-  it('createEstimate sends only width and length with Bearer auth', () => {
+  it('createEstimate sends only dimensions and furniture lines with Bearer auth', () => {
     setup(TOKEN);
     let received: EstimateDto | null = null;
     estimates.createEstimate(12, 15).subscribe((e) => (received = e));
     const req = httpMock.expectOne(ESTIMATES_URL);
     expect(req.request.method).toBe('POST');
     // No userId, area, rate, amount or timestamps may leave the client.
-    expect(req.request.body).toEqual({ width: 12, length: 15 });
-    expect(Object.keys(req.request.body).sort()).toEqual(['length', 'width']);
+    expect(req.request.body).toEqual({ width: 12, length: 15, items: [] });
+    expect(Object.keys(req.request.body).sort()).toEqual(['items', 'length', 'width']);
     expect(req.request.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
     req.flush(estimate());
     expect(received!.id).toBe('est-1');
     expect(received!.estimatedAmount).toBe(270000);
+  });
+
+  it('createEstimate sends furniture as type and quantity only', () => {
+    setup(TOKEN);
+    estimates
+      .createEstimate(12, 15, [
+        { furnitureType: 'sofa', quantity: 1 },
+        { furnitureType: 'chair', quantity: 4 },
+      ])
+      .subscribe();
+    const req = httpMock.expectOne(ESTIMATES_URL);
+    expect(req.request.body.items).toEqual([
+      { furnitureType: 'sofa', quantity: 1 },
+      { furnitureType: 'chair', quantity: 4 },
+    ]);
+    // Names, sizes and prices are server-resolved and never sent.
+    for (const line of req.request.body.items) {
+      expect(Object.keys(line).sort()).toEqual(['furnitureType', 'quantity']);
+    }
+    req.flush(estimate());
   });
 
   it('getEstimates lists with Bearer auth', () => {

@@ -1,4 +1,4 @@
-<section class="admin-proposals" aria-label="Admin proposals workspace">
+﻿<section class="admin-proposals" aria-label="Admin proposals workspace">
   <header class="admin-proposals-head">
     <div>
       <p class="kicker">Operations · Proposals</p>
@@ -119,15 +119,22 @@
               @for (i of proposal.items; track i.id) {
                 <li>
                   <span class="item-name">{{ i.productName }}</span>
-                  <span class="item-id mono">{{ i.productId }}</span>
+                  <span class="item-id mono">{{ i.productId ?? i.furnitureType }}</span>
                   <span class="item-qty">× {{ i.quantity }}</span>
-                  <span class="item-price">₹{{ inr(i.unitPrice) }} each</span>
-                  <span class="item-total">₹{{ inr(i.lineTotal) }}</span>
+                  @if (i.productId === null || i.productId === undefined) {
+                    @if (i.widthFt != null && i.lengthFt != null) {
+                      <span class="item-price">{{ i.widthFt }} × {{ i.lengthFt }} ft</span>
+                    }
+                    <span class="item-total">To be quoted</span>
+                  } @else {
+                    <span class="item-price">₹{{ inr(i.unitPrice) }} each</span>
+                    <span class="item-total">₹{{ inr(i.lineTotal) }}</span>
+                  }
                 </li>
               }
             </ul>
           }
-          <p class="sub small">Item names and prices are proposal-time snapshots, preserved even if the catalogue changes.</p>
+          <p class="sub small">Lines are proposal-time snapshots of the estimate's visualizer furniture (or, for older proposals, catalogue items with prices).</p>
           <h2>Token payments</h2>
           @if (proposal.isPaymentVerified) {
             <p class="proposal-notice" role="status">Token payment verified</p>

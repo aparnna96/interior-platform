@@ -13,8 +13,12 @@ public class ProposalItemConfiguration : IEntityTypeConfiguration<ProposalItem>
     {
         builder.HasKey(i => i.Id);
 
-        // Matches Products.Id slug (see ProductConfiguration).
-        builder.Property(i => i.ProductId).IsRequired().HasMaxLength(100);
+        // Matches Products.Id slug (see ProductConfiguration). Null for
+        // visualizer furniture lines, which are not catalogue products.
+        builder.Property(i => i.ProductId).IsRequired(false).HasMaxLength(100);
+        builder.Property(i => i.FurnitureType).IsRequired(false).HasMaxLength(50);
+        builder.Property(i => i.WidthFt).HasColumnType("decimal(18,2)");
+        builder.Property(i => i.LengthFt).HasColumnType("decimal(18,2)");
         builder.Property(i => i.ProductName).IsRequired().HasMaxLength(200);
         builder.Property(i => i.Quantity).IsRequired();
 
@@ -41,6 +45,7 @@ public class ProposalItemConfiguration : IEntityTypeConfiguration<ProposalItem>
         builder.HasOne(i => i.Product)
             .WithMany()
             .HasForeignKey(i => i.ProductId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Proposal-scoped line lookups.

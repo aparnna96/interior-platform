@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+﻿import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import type { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -7,7 +7,12 @@ import { AuthService } from '../auth.service';
 /** One backend proposal line (name/price snapshotted at proposal time). */
 export interface ProposalItemDto {
   id: string;
-  productId: string;
+  /** Catalogue slug for legacy lines; null for visualizer furniture lines. */
+  productId: string | null;
+  /** Visualizer furniture key (e.g. "sofa"); null for legacy catalogue lines. */
+  furnitureType?: string | null;
+  widthFt?: number | null;
+  lengthFt?: number | null;
   productName: string;
   unitPrice: number;
   quantity: number;

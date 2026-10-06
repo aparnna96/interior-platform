@@ -1,4 +1,4 @@
-using InteriorPlatform.Api.Data;
+﻿using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
 using InteriorPlatform.Api.Services;
@@ -20,7 +20,7 @@ namespace InteriorPlatform.Api.Controllers;
 /// client can influence neither ownership nor money. Every lookup is scoped
 /// to the current user's proposals, so one customer can never see another
 /// customer's proposals. Created proposals never follow later estimate,
-/// product, cart or visualizer changes.
+/// estimate, product or cart changes.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -125,9 +125,8 @@ public class ProposalsController : ControllerBase
     // POST /api/proposals — snapshot one of the current user's estimates into
     // a Draft proposal. The body carries only the source estimate id: user,
     // dimensions, prices, names, totals, status and timestamps all come from
-    // the server. Furniture lines snapshot the current user's cart at creation
-    // time (product name + current price, line totals computed server-side);
-    // the cart itself is left untouched.
+    // the server. Furniture lines are copied from the source estimate's saved
+    // visualizer furniture; the shopping cart is never used as a source.
     [HttpPost]
     public async Task<ActionResult<ProposalDetailResponse>> CreateProposal(
         [FromBody] CreateProposalRequest request)
@@ -155,44 +154,11 @@ public class ProposalsController : ControllerBase
         // one) is reported the same way (404) so ids cannot be probed.
         var estimate = await _db.Estimates
             .AsNoTracking()
+            .Include(e => e.Items)
             .FirstOrDefaultAsync(e => e.Id == request.EstimateId && e.UserId == userId);
         if (estimate is null)
         {
             return NotFound();
-        }
-
-        // Snapshot source: the customer's current cart (selected furniture).
-        // An absent or empty cart still yields a valid dimension-only draft.
-        var cartItems = await _db.CartItems
-            .AsNoTracking()
-            .Include(i => i.Cart)
-            .Where(i => i.Cart.UserId == userId)
-            .OrderBy(i => i.ProductId)
-            .ToListAsync();
-
-        Dictionary<string, Product> products = new();
-        if (cartItems.Count > 0)
-        {
-            var productIds = cartItems.Select(i => i.ProductId).Distinct().ToList();
-            products = await _db.Products
-                .AsNoTracking()
-                .Where(p => productIds.Contains(p.Id))
-                .ToDictionaryAsync(p => p.Id);
-
-            // Every line must still resolve to an active product. Validate all
-            // lines before creating anything: no partial proposals. Missing
-            // and inactive products are reported the same way (400) so a
-            // stale cart cannot leak catalog state — same choice as orders.
-            foreach (var item in cartItems)
-            {
-                if (!products.TryGetValue(item.ProductId, out var product) || !product.IsActive)
-                {
-                    ModelState.AddModelError(
-                        "Cart",
-                        $"Product '{item.ProductId}' is no longer available.");
-                    return ValidationProblem(ModelState);
-                }
-            }
         }
 
         var now = DateTime.UtcNow;
@@ -210,20 +176,24 @@ public class ProposalsController : ControllerBase
             CreatedAt = now,
         };
 
-        foreach (var item in cartItems)
+        // Furniture lines are copied from the saved estimate's visualizer
+        // furniture. The shopping cart is never read. Visualizer furniture is
+        // not priced ("to be quoted"), so unit price and line total are 0 and
+        // the proposal amount stays the area-based estimate.
+        foreach (var item in estimate.Items.OrderBy(i => i.FurnitureType, StringComparer.Ordinal))
         {
-            var product = products[item.ProductId];
-            var unitPrice = (decimal)product.Price;
-            var lineTotal = unitPrice * item.Quantity;
             proposal.Items.Add(new ProposalItem
             {
                 Id = Guid.NewGuid(),
                 ProposalId = proposal.Id,
-                ProductId = product.Id,
-                ProductName = product.Name,
-                UnitPrice = unitPrice,
+                ProductId = null,
+                FurnitureType = item.FurnitureType,
+                WidthFt = item.WidthFt,
+                LengthFt = item.LengthFt,
+                ProductName = item.Name,
+                UnitPrice = 0m,
                 Quantity = item.Quantity,
-                LineTotal = lineTotal,
+                LineTotal = 0m,
             });
         }
 
@@ -265,11 +235,14 @@ public class ProposalsController : ControllerBase
         CreatedAt = proposal.CreatedAt,
         IsPaymentVerified = isPaymentVerified,
         Items = proposal.Items
-            .OrderBy(i => i.ProductId)
+            .OrderBy(i => i.FurnitureType ?? i.ProductId, StringComparer.Ordinal)
             .Select(i => new ProposalItemResponse
             {
                 Id = i.Id,
                 ProductId = i.ProductId,
+                FurnitureType = i.FurnitureType,
+                WidthFt = i.WidthFt,
+                LengthFt = i.LengthFt,
                 ProductName = i.ProductName,
                 UnitPrice = i.UnitPrice,
                 Quantity = i.Quantity,

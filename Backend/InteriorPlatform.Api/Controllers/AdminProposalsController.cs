@@ -1,4 +1,4 @@
-using InteriorPlatform.Api.Data;
+﻿using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -156,11 +156,14 @@ public class AdminProposalsController : ControllerBase
         CreatedAt = proposal.CreatedAt,
         IsPaymentVerified = payments.Any(p => p.Status == PaymentStatus.Verified),
         Items = proposal.Items
-            .OrderBy(i => i.ProductId)
+            .OrderBy(i => i.FurnitureType ?? i.ProductId, StringComparer.Ordinal)
             .Select(i => new ProposalItemResponse
             {
                 Id = i.Id,
                 ProductId = i.ProductId,
+                FurnitureType = i.FurnitureType,
+                WidthFt = i.WidthFt,
+                LengthFt = i.LengthFt,
                 ProductName = i.ProductName,
                 UnitPrice = i.UnitPrice,
                 Quantity = i.Quantity,

@@ -48,9 +48,12 @@ public static class ProposalPdfGenerator
         ArgumentNullException.ThrowIfNull(proposal);
 
         var items = proposal.Items
-            .OrderBy(i => i.ProductId, StringComparer.Ordinal)
+            .OrderBy(i => i.FurnitureType ?? i.ProductId, StringComparer.Ordinal)
             .ToList();
         var furnitureTotal = items.Sum(i => i.LineTotal);
+        // Visualizer furniture is unpriced ("to be quoted"): the table then
+        // shows size and quantity instead of a column of zero rupee amounts.
+        var hasPricedItems = items.Any(i => i.LineTotal > 0m);
 
         return Document.Create(document =>
         {
@@ -138,16 +141,24 @@ public static class ProposalPdfGenerator
                             {
                                 header.Cell().Element(HeaderCell).Text("Item");
                                 header.Cell().Element(HeaderCell).AlignRight().Text("Quantity");
-                                header.Cell().Element(HeaderCell).AlignRight().Text("Unit Price");
-                                header.Cell().Element(HeaderCell).AlignRight().Text("Amount");
+                                header.Cell().Element(HeaderCell).AlignRight().Text(hasPricedItems ? "Unit Price" : "Size");
+                                header.Cell().Element(HeaderCell).AlignRight().Text(hasPricedItems ? "Amount" : "Pricing");
                             });
 
                             foreach (var item in items)
                             {
                                 table.Cell().Element(BodyCell).Text(item.ProductName);
                                 table.Cell().Element(BodyCell).AlignRight().Text(item.Quantity.ToString(CultureInfo.InvariantCulture));
-                                table.Cell().Element(BodyCell).AlignRight().Text(FormatInr(item.UnitPrice));
-                                table.Cell().Element(BodyCell).AlignRight().Text(FormatInr(item.LineTotal));
+                                if (hasPricedItems)
+                                {
+                                    table.Cell().Element(BodyCell).AlignRight().Text(FormatInr(item.UnitPrice));
+                                    table.Cell().Element(BodyCell).AlignRight().Text(FormatInr(item.LineTotal));
+                                }
+                                else
+                                {
+                                    table.Cell().Element(BodyCell).AlignRight().Text(FormatSize(item));
+                                    table.Cell().Element(BodyCell).AlignRight().Text("To be quoted");
+                                }
                             }
 
                             static IContainer HeaderCell(IContainer container) => container
@@ -173,12 +184,21 @@ public static class ProposalPdfGenerator
                                 row.AutoItem().Text(FormatInr(proposal.EstimatedAmount));
                             });
 
-                            if (items.Count > 0)
+                            if (hasPricedItems)
                             {
                                 summary.Item().Row(row =>
                                 {
                                     row.RelativeItem().Text($"Furniture total ({items.Count} item{(items.Count == 1 ? string.Empty : "s")})").FontColor(Colors.Grey.Darken2);
                                     row.AutoItem().Text(FormatInr(furnitureTotal));
+                                });
+                            }
+                            else if (items.Count > 0)
+                            {
+                                var pieces = items.Sum(i => i.Quantity);
+                                summary.Item().Row(row =>
+                                {
+                                    row.RelativeItem().Text($"Furniture ({pieces} piece{(pieces == 1 ? string.Empty : "s")})").FontColor(Colors.Grey.Darken2);
+                                    row.AutoItem().Text("To be quoted");
                                 });
                             }
 
@@ -251,6 +271,11 @@ public static class ProposalPdfGenerator
 
     private static string FormatInr(decimal value) =>
         "₹" + value.ToString("N2", InrCulture);
+
+    private static string FormatSize(ProposalItem item) =>
+        item.WidthFt is { } w && item.LengthFt is { } l
+            ? $"{FormatNumber(w)} x {FormatNumber(l)} ft"
+            : "-";
 
     private static string FormatNumber(decimal value) =>
         value.ToString("0.##", CultureInfo.InvariantCulture);

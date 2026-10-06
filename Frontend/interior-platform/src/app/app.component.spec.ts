@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+﻿import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -205,7 +205,7 @@ describe('AppComponent', () => {
       httpMock.expectNone(SAVE_URL);
     });
 
-    it('authenticated save posts only width/length and shows the server record', () => {
+    it('authenticated save posts dimensions and the visualizer furniture, and shows the server record', () => {
       const { fixture, app, httpMock, el } = openEstimatesAuthed();
 
       const button = savePanel(el)?.querySelector('button') as HTMLButtonElement;
@@ -214,8 +214,16 @@ describe('AppComponent', () => {
 
       const req = httpMock.expectOne(SAVE_URL);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ width: 12, length: 15 });
-      expect(Object.keys(req.request.body).sort()).toEqual(['length', 'width']);
+      // The default visualizer scene places one sofa and one table.
+      expect(req.request.body).toEqual({
+        width: 12,
+        length: 15,
+        items: [
+          { furnitureType: 'sofa', quantity: 1 },
+          { furnitureType: 'table', quantity: 1 },
+        ],
+      });
+      expect(Object.keys(req.request.body).sort()).toEqual(['items', 'length', 'width']);
       req.flush(savedDetail());
       httpMock.expectOne(SAVE_URL).flush([savedRow('est-1')]);
       fixture.detectChanges();
@@ -226,6 +234,27 @@ describe('AppComponent', () => {
       expect(panel?.textContent).toContain(`₹${(2000).toLocaleString('en-IN')} / sq ft`);
       expect(app.savedEstimate()?.id).toBe('est-1');
       httpMock.verify();
+    });
+
+    it('save merges repeated pieces into type + quantity lines (never names or sizes)', () => {
+      const { app, httpMock } = openEstimatesAuthed();
+      app.addFurniture('chair');
+      app.addFurniture('chair');
+      app.addFurniture('chair');
+
+      app.saveEstimate();
+
+      const req = httpMock.expectOne(SAVE_URL);
+      expect(req.request.body.items).toEqual([
+        { furnitureType: 'sofa', quantity: 1 },
+        { furnitureType: 'table', quantity: 1 },
+        { furnitureType: 'chair', quantity: 3 },
+      ]);
+      for (const line of req.request.body.items) {
+        expect(Object.keys(line).sort()).toEqual(['furnitureType', 'quantity']);
+      }
+      req.flush(savedDetail());
+      httpMock.expectOne(SAVE_URL).flush([]);
     });
 
     it('duplicate save clicks produce only one POST', () => {

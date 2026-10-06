@@ -1,4 +1,4 @@
-<section class="saved" aria-label="Saved estimates">
+﻿<section class="saved" aria-label="Saved estimates">
   @if (!isAuthenticated()) {
     <p class="sub small login-hint" role="status">Log in to save estimates and see them here.</p>
   } @else {
@@ -79,6 +79,18 @@
             <div><dt>Area</dt><dd>{{ estimate.area }} sq ft</dd></div>
             <div><dt>Rate</dt><dd>₹{{ inr(estimate.ratePerSquareFoot) }} / sq ft</dd></div>
             <div class="total"><dt>Estimated amount</dt><dd>₹{{ inr(estimate.estimatedAmount) }}</dd></div>
+            <div>
+              <dt>Furniture</dt>
+              <dd>
+                @if (estimate.items && estimate.items.length > 0) {
+                  @for (f of estimate.items; track f.furnitureType; let last = $last) {
+                    {{ f.name }} × {{ f.quantity }}{{ last ? '' : ', ' }}
+                  }
+                } @else {
+                  None saved
+                }
+              </dd>
+            </div>
           </dl>
           <div class="row-gap">
             <button class="linklike" (click)="backToList()">Back to saved estimates</button>

@@ -32,4 +32,10 @@ public class Estimate
 
     /// <summary>Server-set UTC creation time.</summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Visualizer furniture saved with this estimate. Proposals copy these
+    /// lines; the shopping cart is never a proposal source.
+    /// </summary>
+    public List<EstimateItem> Items { get; set; } = [];
 }

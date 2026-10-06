@@ -12,4 +12,10 @@ public class CreateEstimateRequest
 
     /// <summary>Room length in feet. Must be within the allowed range.</summary>
     public decimal Length { get; set; }
+
+    /// <summary>
+    /// Furniture placed in the visualizer (type + quantity only). Optional:
+    /// omitted or empty saves a dimensions-only estimate.
+    /// </summary>
+    public List<EstimateItemRequest> Items { get; set; } = [];
 }

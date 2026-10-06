@@ -22,4 +22,7 @@ public class EstimateResponse
     public decimal EstimatedAmount { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Visualizer furniture saved with this estimate.</summary>
+    public List<EstimateItemResponse> Items { get; set; } = [];
 }

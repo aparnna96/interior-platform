@@ -1,4 +1,4 @@
-import { Component, HostListener, ViewChild, computed, effect, inject, signal } from '@angular/core';
+﻿import { Component, HostListener, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RoomVisualizerComponent } from './room-visualizer/room-visualizer.component';
 import { FloorPlanComponent } from './floor-plan/floor-plan.component';
@@ -137,7 +137,7 @@ export class AppComponent {
   }
 
   /**
-   * POSTs the current visualizer dimensions (width + length only) and shows
+   * POSTs the current visualizer dimensions and furniture (type + quantity) and shows
    * the server-created estimate. The local calculation is untouched: saved
    * records are snapshots and never follow later dimension edits.
    */
@@ -150,7 +150,7 @@ export class AppComponent {
     this.savingEstimate.set(true);
     this.saveEstimateError.set(null);
     this.estimates
-      .createEstimate(this.appliedWidth(), this.appliedLength())
+      .createEstimate(this.appliedWidth(), this.appliedLength(), this.placedFurnitureLines())
       .subscribe({
         next: (estimate) => {
           this.savingEstimate.set(false);
@@ -170,6 +170,18 @@ export class AppComponent {
           this.saveEstimateError.set(this.describeEstimateError(err, status));
         },
       });
+  }
+
+  /**
+   * The visualizer furniture as type + quantity lines (same pieces merged).
+   * Names, sizes and prices are resolved server-side, never sent.
+   */
+  private placedFurnitureLines(): { furnitureType: string; quantity: number }[] {
+    const counts = new Map<string, number>();
+    for (const item of this.placed()) {
+      counts.set(item.defId, (counts.get(item.defId) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([furnitureType, quantity]) => ({ furnitureType, quantity }));
   }
 
   private describeEstimateError(err: unknown, status?: number): string {

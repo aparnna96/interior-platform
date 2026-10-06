@@ -1,4 +1,4 @@
-<div class="shell" [class.rail]="sidebarCollapsed()" [class.drawer]="drawerOpen()" [class.public]="isPublicView()">
+﻿<div class="shell" [class.rail]="sidebarCollapsed()" [class.drawer]="drawerOpen()" [class.public]="isPublicView()">
   <!-- ── Sidebar (desktop) ─────────────────── -->
   <aside class="sidebar" id="app-sidebar" aria-label="Primary navigation" (keydown.escape)="closeDrawer()">
     <div class="brand">
@@ -666,7 +666,7 @@
               <div><dt>Demo rate</dt><dd>₹{{ money(demoRate) }} / sq ft</dd></div>
               <div class="total"><dt>Estimated amount</dt><dd>₹{{ money(estimateTotal()) }}</dd></div>
             </dl>
-            <p class="sub small">Illustrative estimate — final pricing may vary. Frontend calculation, no backend call.</p>
+            <p class="sub small">Illustrative estimate — final pricing may vary. Saving stores the room size and the furniture placed in the Visualizer.</p>
             @if (!auth.isAuthenticated()) {
               <p class="sub small" role="status">Log in to save this estimate to your account.</p>
             } @else {
@@ -686,6 +686,7 @@
                   <div><dt>Saved ID</dt><dd class="code">{{ saved.id }}</dd></div>
                   <div><dt>Area</dt><dd>{{ saved.area }} sq ft</dd></div>
                   <div><dt>Rate</dt><dd>₹{{ money(saved.ratePerSquareFoot) }} / sq ft</dd></div>
+                  <div><dt>Furniture saved</dt><dd>{{ saved.items?.length ?? 0 }} type(s)</dd></div>
                   <div class="total"><dt>Saved amount</dt><dd>₹{{ money(saved.estimatedAmount) }}</dd></div>
                   <div><dt>Saved at</dt><dd>{{ saved.createdAt | date:'medium' }}</dd></div>
                 </dl>
@@ -736,7 +737,7 @@
 
         <section class="panel" aria-label="Proposal">
           <h2>Proposal</h2>
-          <p class="sub small">Create a proposal from a saved estimate above — the proposal preview opens with snapshot room and furniture lines.</p>
+          <p class="sub small">Create a proposal from a saved estimate above. It copies the room and the Visualizer furniture saved with that estimate (your shopping cart is not used).</p>
           <div class="row-gap">
             <button class="btn btn-secondary btn-sm" (click)="activeView.set('proposals')">Open Proposals</button>
             <span class="sub small">Download the PDF from a proposal preview. Token payments are processed securely via Razorpay.</span>

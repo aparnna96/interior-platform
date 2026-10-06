@@ -2,6 +2,7 @@ using InteriorPlatform.Api.Configuration;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
+using InteriorPlatform.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,12 @@ public class EstimatesController : ControllerBase
 {
     /// <summary>Upper bound blocking absurd dimensions (rooms are in feet).</summary>
     private const decimal MaxDimensionFt = 1000m;
+
+    /// <summary>Per-line and per-merged-type quantity bounds (matches the DB check).</summary>
+    private const int MaxItemQuantity = 99;
+
+    /// <summary>Upper bound on furniture lines accepted in one request.</summary>
+    private const int MaxItemLines = 50;
 
     private readonly ApplicationDbContext _db;
     private readonly decimal _demoRatePerSquareFoot;
@@ -75,6 +82,40 @@ public class EstimatesController : ControllerBase
             CreatedAt = now,
         };
 
+        // Visualizer furniture: same type lines are merged, name and
+        // footprint come from the server-side catalogue.
+        var merged = new Dictionary<string, (VisualizerFurnitureCatalogue.Entry Entry, int Quantity)>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var line in request.Items ?? [])
+        {
+            VisualizerFurnitureCatalogue.TryGet(line.FurnitureType, out var entry);
+            merged[entry.Type] = merged.TryGetValue(entry.Type, out var existing)
+                ? (entry, existing.Quantity + line.Quantity)
+                : (entry, line.Quantity);
+        }
+
+        foreach (var (entry, quantity) in merged.Values.OrderBy(v => v.Entry.Type, StringComparer.Ordinal))
+        {
+            if (quantity > MaxItemQuantity)
+            {
+                ModelState.AddModelError(
+                    nameof(CreateEstimateRequest.Items),
+                    $"At most {MaxItemQuantity} pieces of '{entry.Name}' can be saved.");
+                return ValidationProblem(ModelState);
+            }
+
+            estimate.Items.Add(new EstimateItem
+            {
+                Id = Guid.NewGuid(),
+                EstimateId = estimate.Id,
+                FurnitureType = entry.Type,
+                Name = entry.Name,
+                WidthFt = entry.WidthFt,
+                LengthFt = entry.LengthFt,
+                Quantity = quantity,
+            });
+        }
+
         _db.Estimates.Add(estimate);
         await _db.SaveChangesAsync();
 
@@ -96,21 +137,12 @@ public class EstimatesController : ControllerBase
 
         var estimates = await _db.Estimates
             .AsNoTracking()
+            .Include(e => e.Items)
             .Where(e => e.UserId == userId)
             .OrderByDescending(e => e.CreatedAt)
-            .Select(e => new EstimateResponse
-            {
-                Id = e.Id,
-                Width = e.Width,
-                Length = e.Length,
-                Area = e.Area,
-                RatePerSquareFoot = e.RatePerSquareFoot,
-                EstimatedAmount = e.EstimatedAmount,
-                CreatedAt = e.CreatedAt,
-            })
             .ToListAsync();
 
-        return Ok(estimates);
+        return Ok(estimates.Select(ToResponse).ToList());
     }
 
     // GET /api/estimates/{id} — one of the current user's estimates.
@@ -125,6 +157,7 @@ public class EstimatesController : ControllerBase
 
         var estimate = await _db.Estimates
             .AsNoTracking()
+            .Include(e => e.Items)
             .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
         if (estimate is null)
         {
@@ -160,6 +193,33 @@ public class EstimatesController : ControllerBase
             valid = false;
         }
 
+        var items = request.Items ?? [];
+        if (items.Count > MaxItemLines)
+        {
+            ModelState.AddModelError(
+                nameof(CreateEstimateRequest.Items),
+                $"At most {MaxItemLines} furniture lines can be saved.");
+            valid = false;
+        }
+
+        foreach (var line in items)
+        {
+            if (line is null || !VisualizerFurnitureCatalogue.TryGet(line.FurnitureType, out _))
+            {
+                ModelState.AddModelError(
+                    nameof(CreateEstimateRequest.Items),
+                    $"Unknown furniture type '{line?.FurnitureType}'.");
+                valid = false;
+            }
+            else if (line.Quantity < 1 || line.Quantity > MaxItemQuantity)
+            {
+                ModelState.AddModelError(
+                    nameof(CreateEstimateRequest.Items),
+                    $"Furniture quantity must be between 1 and {MaxItemQuantity}.");
+                valid = false;
+            }
+        }
+
         return valid;
     }
 
@@ -193,5 +253,16 @@ public class EstimatesController : ControllerBase
         RatePerSquareFoot = e.RatePerSquareFoot,
         EstimatedAmount = e.EstimatedAmount,
         CreatedAt = e.CreatedAt,
+        Items = e.Items
+            .OrderBy(i => i.FurnitureType, StringComparer.Ordinal)
+            .Select(i => new EstimateItemResponse
+            {
+                FurnitureType = i.FurnitureType,
+                Name = i.Name,
+                WidthFt = i.WidthFt,
+                LengthFt = i.LengthFt,
+                Quantity = i.Quantity,
+            })
+            .ToList(),
     };
 }

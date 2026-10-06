@@ -1,4 +1,4 @@
-<section class="proposals" aria-label="Proposals">
+﻿<section class="proposals" aria-label="Proposals">
   <header class="proposals-head">
     <div>
       <p class="kicker">Account · Proposals</p>
@@ -94,15 +94,22 @@
           </dl>
           <h2>Furniture ({{ proposalItemCount(proposal) }})</h2>
           @if (proposal.items.length === 0) {
-            <p class="sub small">No furniture lines — this proposal covers the room estimate only.</p>
+            <p class="sub small">No furniture lines — the saved estimate had no visualizer furniture, so this proposal covers the room estimate only.</p>
           } @else {
             <ul class="proposal-lines">
               @for (i of proposal.items; track i.id) {
                 <li>
                   <span class="item-name">{{ i.productName }}</span>
                   <span class="item-qty">× {{ i.quantity }}</span>
-                  <span class="item-price">₹{{ inr(i.unitPrice) }} each</span>
-                  <span class="item-total">₹{{ inr(i.lineTotal) }}</span>
+                  @if (i.productId === null || i.productId === undefined) {
+                    @if (i.widthFt != null && i.lengthFt != null) {
+                      <span class="item-price">{{ i.widthFt }} × {{ i.lengthFt }} ft</span>
+                    }
+                    <span class="item-total">To be quoted</span>
+                  } @else {
+                    <span class="item-price">₹{{ inr(i.unitPrice) }} each</span>
+                    <span class="item-total">₹{{ inr(i.lineTotal) }}</span>
+                  }
                 </li>
               }
             </ul>

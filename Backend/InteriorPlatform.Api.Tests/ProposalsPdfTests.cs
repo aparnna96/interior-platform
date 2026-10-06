@@ -1,4 +1,4 @@
-using InteriorPlatform.Api.Controllers;
+﻿using InteriorPlatform.Api.Controllers;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
@@ -145,6 +145,22 @@ public sealed class ProposalsPdfTests
         return estimate;
     }
 
+    private static async Task AddFurnitureAsync(
+        ApplicationDbContext db, Estimate estimate, string type, int quantity)
+    {
+        Assert.True(InteriorPlatform.Api.Services.VisualizerFurnitureCatalogue.TryGet(type, out var entry));
+        db.EstimateItems.Add(new EstimateItem
+        {
+            Id = Guid.NewGuid(),
+            EstimateId = estimate.Id,
+            FurnitureType = entry.Type,
+            Name = entry.Name,
+            WidthFt = entry.WidthFt,
+            LengthFt = entry.LengthFt,
+            Quantity = quantity,
+        });
+        await db.SaveChangesAsync();
+    }
     private static async Task AddToCartAsync(
         ApplicationDbContext db, string userId, string productId, int quantity)
     {
@@ -210,7 +226,7 @@ public sealed class ProposalsPdfTests
     {
         using var test = new TestDb();
         var estimate = await SeedEstimateAsync(test.Db, UserA);
-        await AddToCartAsync(test.Db, UserA, SofaId, 2);
+        await AddFurnitureAsync(test.Db, estimate, "sofa", 2);
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
         await SeedVerifiedPaymentAsync(test.Db, proposal.Id, UserA);
@@ -240,7 +256,7 @@ public sealed class ProposalsPdfTests
     {
         using var test = new TestDb();
         var estimate = await SeedEstimateAsync(test.Db, UserA);
-        await AddToCartAsync(test.Db, UserA, SofaId, 1);
+        await AddFurnitureAsync(test.Db, estimate, "sofa", 1);
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
         await SeedPaymentAsync(test.Db, proposal.Id, UserA, PaymentStatus.Created, "order-test-created");
@@ -354,7 +370,7 @@ public sealed class ProposalsPdfTests
     {
         using var test = new TestDb();
         var estimate = await SeedEstimateAsync(test.Db, UserA);
-        await AddToCartAsync(test.Db, UserA, SofaId, 1);
+        await AddFurnitureAsync(test.Db, estimate, "sofa", 1);
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
         await SeedVerifiedPaymentAsync(test.Db, proposal.Id, UserA);
@@ -451,7 +467,7 @@ public sealed class ProposalsPdfTests
     {
         using var test = new TestDb();
         var estimate = await SeedEstimateAsync(test.Db, UserA);
-        await AddToCartAsync(test.Db, UserA, SofaId, 1);
+        await AddFurnitureAsync(test.Db, estimate, "sofa", 1);
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
         await SeedVerifiedPaymentAsync(test.Db, proposal.Id, UserA);

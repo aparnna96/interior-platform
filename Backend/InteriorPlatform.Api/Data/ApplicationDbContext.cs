@@ -32,6 +32,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Estimate> Estimates => Set<Estimate>();
 
+    public DbSet<EstimateItem> EstimateItems => Set<EstimateItem>();
+
     public DbSet<Proposal> Proposals => Set<Proposal>();
 
     public DbSet<ProposalItem> ProposalItems => Set<ProposalItem>();
@@ -48,6 +50,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new OrderConfiguration());
         builder.ApplyConfiguration(new OrderItemConfiguration());
         builder.ApplyConfiguration(new EstimateConfiguration());
+        builder.ApplyConfiguration(new EstimateItemConfiguration());
         builder.ApplyConfiguration(new ProposalConfiguration());
         builder.ApplyConfiguration(new ProposalItemConfiguration());
         builder.ApplyConfiguration(new PaymentConfiguration());

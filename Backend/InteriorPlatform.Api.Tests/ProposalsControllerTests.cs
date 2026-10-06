@@ -1,7 +1,8 @@
-using InteriorPlatform.Api.Controllers;
+﻿using InteriorPlatform.Api.Controllers;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
+using InteriorPlatform.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -17,8 +18,8 @@ namespace InteriorPlatform.Api.Tests;
 /// Proposal foundation rules (Task 13A). SQLite in-memory is used for
 /// relational fidelity (FKs). These tests never touch SQL Server.
 /// Proposals snapshot one of the customer's saved estimates (dimensions,
-/// rate, amount) plus the customer's current cart furniture lines
-/// (product name + current price, server-computed line totals).
+/// rate, amount) plus the furniture saved with that estimate from the
+/// visualizer. The shopping cart is never a proposal source.
 /// </summary>
 public sealed class ProposalsControllerTests
 {
@@ -127,6 +128,24 @@ public sealed class ProposalsControllerTests
         return estimate;
     }
 
+    /// <summary>Adds a visualizer furniture line (server catalogue values) to a saved estimate.</summary>
+    private static async Task AddFurnitureAsync(
+        ApplicationDbContext db, Estimate estimate, string type, int quantity)
+    {
+        Assert.True(VisualizerFurnitureCatalogue.TryGet(type, out var entry));
+        db.EstimateItems.Add(new EstimateItem
+        {
+            Id = Guid.NewGuid(),
+            EstimateId = estimate.Id,
+            FurnitureType = entry.Type,
+            Name = entry.Name,
+            WidthFt = entry.WidthFt,
+            LengthFt = entry.LengthFt,
+            Quantity = quantity,
+        });
+        await db.SaveChangesAsync();
+    }
+
     private static async Task AddToCartAsync(
         ApplicationDbContext db, string userId, string productId, int quantity)
     {
@@ -207,7 +226,7 @@ public sealed class ProposalsControllerTests
     {
         using var test = new TestDb();
         var estimate = await SeedEstimateAsync(test.Db, UserA);
-        await AddToCartAsync(test.Db, UserA, SofaId, 2);
+        await AddFurnitureAsync(test.Db, estimate, "sofa", 2);
 
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
@@ -279,36 +298,63 @@ public sealed class ProposalsControllerTests
     }
 
     [Fact]
-    public async Task CreatedProposal_SnapshotsProductNameAndPrice_WithServerLineTotals()
+    public async Task CreatedProposal_CopiesEstimateFurniture_UnpricedWithFootprint()
     {
         using var test = new TestDb();
         var estimate = await SeedEstimateAsync(test.Db, UserA);
-        await AddToCartAsync(test.Db, UserA, SofaId, 2);
-        await AddToCartAsync(test.Db, UserA, ChairId, 1);
+        await AddFurnitureAsync(test.Db, estimate, "sofa", 2);
+        await AddFurnitureAsync(test.Db, estimate, "chair", 4);
 
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
 
         Assert.Equal(2, proposal.Items.Count);
 
-        var sofa = Assert.Single(proposal.Items, i => i.ProductId == SofaId);
-        Assert.Equal(SofaName, sofa.ProductName);
-        Assert.Equal((decimal)SofaPrice, sofa.UnitPrice);
+        var sofa = Assert.Single(proposal.Items, i => i.FurnitureType == "sofa");
+        Assert.Null(sofa.ProductId);
+        Assert.Equal("Sofa", sofa.ProductName);
         Assert.Equal(2, sofa.Quantity);
-        Assert.Equal(2 * (decimal)SofaPrice, sofa.LineTotal);
+        Assert.Equal(7m, sofa.WidthFt);
+        Assert.Equal(3m, sofa.LengthFt);
 
-        var chair = Assert.Single(proposal.Items, i => i.ProductId == ChairId);
-        Assert.Equal(ChairName, chair.ProductName);
-        Assert.Equal((decimal)ChairPrice, chair.UnitPrice);
-        Assert.Equal(1, chair.Quantity);
-        Assert.Equal((decimal)ChairPrice, chair.LineTotal);
+        var chair = Assert.Single(proposal.Items, i => i.FurnitureType == "chair");
+        Assert.Equal("Chair", chair.ProductName);
+        Assert.Equal(4, chair.Quantity);
 
-        // Every line total is UnitPrice * Quantity, computed server-side.
-        Assert.All(proposal.Items, i => Assert.Equal(i.UnitPrice * i.Quantity, i.LineTotal));
+        // Visualizer furniture is "to be quoted": no invented prices, and the
+        // proposal amount stays the area-based estimate.
+        Assert.All(proposal.Items, i =>
+        {
+            Assert.Equal(0m, i.UnitPrice);
+            Assert.Equal(0m, i.LineTotal);
+        });
+        Assert.Equal(estimate.EstimatedAmount, proposal.EstimatedAmount);
     }
 
     [Fact]
-    public async Task ProposalHistory_SurvivesProductChanges()
+    public async Task CreateProposal_IgnoresCartContents()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        await AddFurnitureAsync(test.Db, estimate, "bed", 1);
+        await AddToCartAsync(test.Db, UserA, SofaId, 3);
+        await AddToCartAsync(test.Db, UserA, ChairId, 2);
+
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+
+        // Only the estimate's visualizer furniture appears; no cart product.
+        var line = Assert.Single(proposal.Items);
+        Assert.Equal("bed", line.FurnitureType);
+        Assert.DoesNotContain(proposal.Items, i => i.ProductId is not null);
+
+        // The e-commerce cart is left exactly as it was.
+        Assert.Equal(2, await test.Db.CartItems.CountAsync());
+        Assert.Equal(5, await test.Db.CartItems.SumAsync(i => i.Quantity));
+    }
+
+    [Fact]
+    public async Task CreateProposal_CartOnly_YieldsDimensionOnlyProposal()
     {
         using var test = new TestDb();
         var estimate = await SeedEstimateAsync(test.Db, UserA);
@@ -317,21 +363,105 @@ public sealed class ProposalsControllerTests
         var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
 
-        var product = test.Db.Products.Single(p => p.Id == SofaId);
-        product.Name = "Renamed Sofa";
-        product.Price = 1;
-        product.IsActive = false;
-        await test.Db.SaveChangesAsync();
-
-        var reloaded = await ProposalsFor(test.Db, UserA).GetProposal(proposal.Id);
-        var detail = Assert.IsType<ProposalDetailResponse>(
-            Assert.IsType<OkObjectResult>(reloaded.Result).Value);
-        var item = Assert.Single(detail.Items);
-        Assert.Equal(SofaName, item.ProductName);
-        Assert.Equal((decimal)SofaPrice, item.UnitPrice);
-        Assert.Equal((decimal)SofaPrice, item.LineTotal);
+        Assert.Empty(proposal.Items);
+        Assert.Equal(0, await test.Db.ProposalItems.CountAsync());
     }
 
+    [Fact]
+    public async Task CreateProposal_ForbidsOtherUsersEstimateFurniture()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        await AddFurnitureAsync(test.Db, estimate, "sofa", 1);
+
+        var result = await ProposalsFor(test.Db, UserB)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id });
+
+        Assert.IsType<NotFoundResult>(result.Result);
+        Assert.Equal(0, await test.Db.ProposalItems.CountAsync());
+    }
+
+    [Fact]
+    public async Task ProposalHistory_SurvivesEstimateFurnitureChanges()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        await AddFurnitureAsync(test.Db, estimate, "sofa", 1);
+
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+
+        // Later edits to the saved estimate's furniture must not mutate history.
+        test.Db.EstimateItems.RemoveRange(test.Db.EstimateItems);
+        await AddFurnitureAsync(test.Db, estimate, "wardrobe", 5);
+
+        var detail = await GetDetailAsync(test.Db, UserA, proposal.Id);
+        var item = Assert.Single(detail.Items);
+        Assert.Equal("sofa", item.FurnitureType);
+        Assert.Equal(1, item.Quantity);
+    }
+
+    [Fact]
+    public async Task ProposalHistory_SurvivesCartChanges()
+    {
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        await AddFurnitureAsync(test.Db, estimate, "sofa", 1);
+
+        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
+            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
+        Assert.Single(proposal.Items);
+
+        await AddToCartAsync(test.Db, UserA, ChairId, 3);
+        test.Db.CartItems.RemoveRange(test.Db.CartItems);
+        await test.Db.SaveChangesAsync();
+
+        var detail = await GetDetailAsync(test.Db, UserA, proposal.Id);
+        var item = Assert.Single(detail.Items);
+        Assert.Equal("sofa", item.FurnitureType);
+        Assert.Equal("Sofa", item.ProductName);
+    }
+
+    [Fact]
+    public async Task LegacyCatalogueProposalLines_StillReadable()
+    {
+        // Proposals created before this change hold product snapshot lines.
+        using var test = new TestDb();
+        var estimate = await SeedEstimateAsync(test.Db, UserA);
+        var legacy = new Proposal
+        {
+            Id = Guid.NewGuid(),
+            UserId = UserA,
+            EstimateId = estimate.Id,
+            Width = estimate.Width,
+            Length = estimate.Length,
+            Area = estimate.Area,
+            RatePerSquareFoot = estimate.RatePerSquareFoot,
+            EstimatedAmount = estimate.EstimatedAmount,
+            Status = ProposalStatus.Draft,
+            CreatedAt = DateTime.UtcNow,
+            Items =
+            [
+                new ProposalItem
+                {
+                    Id = Guid.NewGuid(),
+                    ProductId = SofaId,
+                    ProductName = SofaName,
+                    UnitPrice = SofaPrice,
+                    Quantity = 2,
+                    LineTotal = 2 * (decimal)SofaPrice,
+                },
+            ],
+        };
+        test.Db.Proposals.Add(legacy);
+        await test.Db.SaveChangesAsync();
+
+        var detail = await GetDetailAsync(test.Db, UserA, legacy.Id);
+        var item = Assert.Single(detail.Items);
+        Assert.Equal(SofaId, item.ProductId);
+        Assert.Null(item.FurnitureType);
+        Assert.Equal(2 * (decimal)SofaPrice, item.LineTotal);
+    }
     [Fact]
     public async Task ProposalHistory_SurvivesEstimateChanges()
     {
@@ -357,37 +487,6 @@ public sealed class ProposalsControllerTests
         Assert.Equal(100m, detail.Area);
         Assert.Equal(2000m, detail.RatePerSquareFoot);
         Assert.Equal(100m * 2000m, detail.EstimatedAmount);
-    }
-
-    [Fact]
-    public async Task ProposalHistory_SurvivesCartChanges()
-    {
-        using var test = new TestDb();
-        var estimate = await SeedEstimateAsync(test.Db, UserA);
-        await AddToCartAsync(test.Db, UserA, SofaId, 1);
-
-        var proposal = CreatedProposal(await ProposalsFor(test.Db, UserA)
-            .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
-        Assert.Single(proposal.Items);
-
-        // Later visualizer/cart edits (add + clear) must not mutate history.
-        await AddToCartAsync(test.Db, UserA, ChairId, 3);
-        var cart = await CartFor(test.Db, UserA).GetCart();
-        var cartResponse = Assert.IsType<CartResponse>(
-            Assert.IsType<OkObjectResult>(cart.Result).Value);
-        foreach (var cartLine in cartResponse.Items)
-        {
-            var stored = await test.Db.CartItems.SingleAsync(i => i.Id == cartLine.Id);
-            test.Db.CartItems.Remove(stored);
-        }
-        await test.Db.SaveChangesAsync();
-
-        var reloaded = await ProposalsFor(test.Db, UserA).GetProposal(proposal.Id);
-        var detail = Assert.IsType<ProposalDetailResponse>(
-            Assert.IsType<OkObjectResult>(reloaded.Result).Value);
-        var item = Assert.Single(detail.Items);
-        Assert.Equal(SofaId, item.ProductId);
-        Assert.Equal(SofaName, item.ProductName);
     }
 
     [Fact]
@@ -423,7 +522,7 @@ public sealed class ProposalsControllerTests
     {
         using var test = new TestDb();
         var estimate = await SeedEstimateAsync(test.Db, UserA);
-        await AddToCartAsync(test.Db, UserA, SofaId, 3);
+        await AddFurnitureAsync(test.Db, estimate, "sofa", 3);
 
         var created = CreatedProposal(await ProposalsFor(test.Db, UserA)
             .CreateProposal(new CreateProposalRequest { EstimateId = estimate.Id }));
@@ -436,11 +535,10 @@ public sealed class ProposalsControllerTests
         Assert.Equal(estimate.Id, detail.EstimateId);
         Assert.Equal(ProposalStatus.Draft, detail.Status);
         var item = Assert.Single(detail.Items);
-        Assert.Equal(SofaId, item.ProductId);
-        Assert.Equal(SofaName, item.ProductName);
-        Assert.Equal((decimal)SofaPrice, item.UnitPrice);
+        Assert.Equal("sofa", item.FurnitureType);
+        Assert.Equal("Sofa", item.ProductName);
         Assert.Equal(3, item.Quantity);
-        Assert.Equal(3 * (decimal)SofaPrice, item.LineTotal);
+        Assert.Equal(0m, item.LineTotal);
     }
 
     [Fact]

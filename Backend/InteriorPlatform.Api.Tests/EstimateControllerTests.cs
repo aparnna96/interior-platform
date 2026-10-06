@@ -1,4 +1,4 @@
-using InteriorPlatform.Api.Configuration;
+﻿using InteriorPlatform.Api.Configuration;
 using InteriorPlatform.Api.Controllers;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
@@ -97,15 +97,16 @@ public sealed class EstimateControllerTests
     }
 
     [Fact]
-    public void CreateEstimateRequest_ExposesOnlyDimensions()
+    public void CreateEstimateRequest_ExposesOnlyDimensionsAndFurnitureLines()
     {
-        // The client must have nowhere to put ownership, money or timestamps.
+        // The client must have nowhere to put ownership, money or timestamps;
+        // furniture lines carry only a type key and a quantity.
         var names = typeof(CreateEstimateRequest)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Select(p => p.Name)
             .OrderBy(n => n)
             .ToList();
-        Assert.Equal(["Length", "Width"], names);
+        Assert.Equal(["Items", "Length", "Width"], names);
     }
 
     [Fact]
@@ -127,6 +128,127 @@ public sealed class EstimateControllerTests
         Assert.Equal(180m, stored.Area);
         Assert.Equal(180m * TestRate, stored.EstimatedAmount);
         Assert.NotEqual(default, stored.CreatedAt);
+    }
+
+    [Fact]
+    public void EstimateItemRequest_ExposesOnlyTypeAndQuantity()
+    {
+        var names = typeof(EstimateItemRequest)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => p.Name)
+            .OrderBy(n => n)
+            .ToList();
+        Assert.Equal(["FurnitureType", "Quantity"], names);
+    }
+
+    [Fact]
+    public async Task CreateEstimate_SavesVisualizerFurniture_WithServerNamesAndFootprints()
+    {
+        using var test = new TestDb();
+
+        var response = CreatedEstimate(await ControllerFor(test.Db, UserA).CreateEstimate(
+            new CreateEstimateRequest
+            {
+                Width = 12m,
+                Length = 15m,
+                Items =
+                [
+                    new EstimateItemRequest { FurnitureType = "sofa", Quantity = 1 },
+                    new EstimateItemRequest { FurnitureType = "Chair", Quantity = 4 },
+                ],
+            }));
+
+        Assert.Equal(2, response.Items.Count);
+        var sofa = Assert.Single(response.Items, i => i.FurnitureType == "sofa");
+        Assert.Equal("Sofa", sofa.Name);
+        Assert.Equal(7m, sofa.WidthFt);
+        Assert.Equal(3m, sofa.LengthFt);
+        var chair = Assert.Single(response.Items, i => i.FurnitureType == "chair");
+        Assert.Equal(4, chair.Quantity);
+
+        // Furniture does not change the money: the amount stays area-based.
+        Assert.Equal(180m * TestRate, response.EstimatedAmount);
+        Assert.Equal(2, await test.Db.EstimateItems.CountAsync());
+    }
+
+    [Fact]
+    public async Task CreateEstimate_MergesRepeatedFurnitureTypes()
+    {
+        using var test = new TestDb();
+
+        var response = CreatedEstimate(await ControllerFor(test.Db, UserA).CreateEstimate(
+            new CreateEstimateRequest
+            {
+                Width = 10m,
+                Length = 10m,
+                Items =
+                [
+                    new EstimateItemRequest { FurnitureType = "chair", Quantity = 2 },
+                    new EstimateItemRequest { FurnitureType = "chair", Quantity = 3 },
+                ],
+            }));
+
+        var chair = Assert.Single(response.Items);
+        Assert.Equal(5, chair.Quantity);
+    }
+
+    [Fact]
+    public async Task CreateEstimate_RejectsUnknownFurnitureAndBadQuantities()
+    {
+        using var test = new TestDb();
+        var controller = ControllerFor(test.Db, UserA);
+
+        BadRequest(await controller.CreateEstimate(new CreateEstimateRequest
+        {
+            Width = 10m, Length = 10m,
+            Items = [new EstimateItemRequest { FurnitureType = "spaceship", Quantity = 1 }],
+        }));
+        BadRequest(await controller.CreateEstimate(new CreateEstimateRequest
+        {
+            Width = 10m, Length = 10m,
+            Items = [new EstimateItemRequest { FurnitureType = "sofa", Quantity = 0 }],
+        }));
+        BadRequest(await controller.CreateEstimate(new CreateEstimateRequest
+        {
+            Width = 10m, Length = 10m,
+            Items = [new EstimateItemRequest { FurnitureType = "sofa", Quantity = 100 }],
+        }));
+        BadRequest(await controller.CreateEstimate(new CreateEstimateRequest
+        {
+            Width = 10m, Length = 10m,
+            Items =
+            [
+                new EstimateItemRequest { FurnitureType = "sofa", Quantity = 60 },
+                new EstimateItemRequest { FurnitureType = "sofa", Quantity = 60 },
+            ],
+        }));
+
+        Assert.Equal(0, await test.Db.Estimates.CountAsync());
+        Assert.Equal(0, await test.Db.EstimateItems.CountAsync());
+    }
+
+    [Fact]
+    public async Task GetEstimate_ReturnsFurnitureOnlyForOwner()
+    {
+        using var test = new TestDb();
+        var created = CreatedEstimate(await ControllerFor(test.Db, UserA).CreateEstimate(
+            new CreateEstimateRequest
+            {
+                Width = 12m,
+                Length = 15m,
+                Items = [new EstimateItemRequest { FurnitureType = "bed", Quantity = 1 }],
+            }));
+
+        var own = Assert.IsType<EstimateResponse>(Assert.IsType<OkObjectResult>(
+            (await ControllerFor(test.Db, UserA).GetEstimate(created.Id)).Result).Value);
+        Assert.Equal("Bed", Assert.Single(own.Items).Name);
+
+        var list = Assert.IsType<List<EstimateResponse>>(Assert.IsType<OkObjectResult>(
+            (await ControllerFor(test.Db, UserA).GetEstimates()).Result).Value);
+        Assert.Single(Assert.Single(list).Items);
+
+        Assert.IsType<NotFoundResult>(
+            (await ControllerFor(test.Db, UserB).GetEstimate(created.Id)).Result);
     }
 
     [Fact]
