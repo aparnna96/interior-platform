@@ -12,7 +12,10 @@ import {
  * Internal Admin-only order operations over GET /api/admin/orders(+/{id}).
  * Visible only to Admin sessions; the backend remains the authorization
  * boundary, so anyone else issues no requests and sees an access-denied /
- * login state instead. Status is read-only: no status-mutation API exists.
+ * login state instead. The one write is the order status: the detail page offers only
+ * the moves the server lists in llowedNextStatuses, Cancel asks for a second
+ * click, and the server's answer (including a 409 for a move that is no longer
+ * legal) is what the page shows.
  *
  * List state and detail state are separate: selecting an order clears the
  * previous detail first so stale data is never shown while the next record
@@ -47,6 +50,13 @@ export class AdminOrdersComponent {
   readonly detailError = signal<string | null>(null);
   readonly detailForbidden = signal(false);
 
+  /** Status number being saved for the open order, or null. Blocks double clicks. */
+  readonly updatingStatus = signal<number | null>(null);
+  /** Status waiting for a second click (Cancel only), or null. */
+  readonly confirmingStatus = signal<number | null>(null);
+  readonly statusError = signal<string | null>(null);
+  readonly statusNotice = signal<string | null>(null);
+
   constructor() {
     if (this.auth.isAdmin()) {
       this.loadOrders();
@@ -69,6 +79,109 @@ export class AdminOrdersComponent {
 
   statusLabel(status: number): string {
     return orderStatusLabel(status);
+  }
+
+  /** Moves the server allows for the open order (empty when the order is final). */
+  nextStatuses(order: AdminOrderDetailDto): number[] {
+    return order.allowedNextStatuses ?? [];
+  }
+
+  /** Button text for a target status. */
+  actionLabel(status: number): string {
+    switch (status) {
+      case 1: return 'Confirm order';
+      case 2: return 'Start processing';
+      case 3: return 'Mark completed';
+      case 4: return 'Cancel order';
+      default: return orderStatusLabel(status);
+    }
+  }
+
+  /** Cancelling is the one move that asks for a second click. */
+  needsConfirm(status: number): boolean {
+    return status === 4;
+  }
+
+  /**
+   * Starts a status change. Cancel first asks for confirmation; everything else
+   * is sent straight away. Duplicate clicks while a change is in flight are ignored.
+   */
+  changeStatus(status: number): void {
+    if (this.updatingStatus() !== null) return;
+    if (this.needsConfirm(status) && this.confirmingStatus() !== status) {
+      this.confirmingStatus.set(status);
+      this.statusError.set(null);
+      this.statusNotice.set(null);
+      return;
+    }
+    this.sendStatus(status);
+  }
+
+  cancelConfirm(): void {
+    this.confirmingStatus.set(null);
+  }
+
+  retryStatus(): void {
+    const status = this.confirmingStatus();
+    if (status !== null) this.changeStatus(status);
+  }
+
+  /** PATCH /api/admin/orders/{id}/status — Admin only. */
+  private sendStatus(status: number): void {
+    const id = this.selectedId();
+    if (!this.auth.isAdmin() || id === null) return;
+    this.updatingStatus.set(status);
+    this.statusError.set(null);
+    this.statusNotice.set(null);
+    this.orders.updateAdminOrderStatus(id, status).subscribe({
+      next: (order) => {
+        this.updatingStatus.set(null);
+        this.confirmingStatus.set(null);
+        if (this.selectedId() !== id) return;
+        this.selected.set(order);
+        this.statusNotice.set(`Order is now ${orderStatusLabel(order.status)}.`);
+        // Keep the list row in step without refetching everything.
+        this.list.update((rows) =>
+          rows === null ? rows : rows.map((r) => (r.id === order.id ? { ...r, status: order.status } : r))
+        );
+      },
+      error: (err: unknown) => {
+        this.updatingStatus.set(null);
+        this.handleStatusError(err, id);
+      },
+    });
+  }
+
+  private handleStatusError(err: unknown, id: string): void {
+    const status = (err as { status?: number })?.status;
+    if (status === 401) {
+      this.auth.logout();
+      this.resetAll();
+      this.listError.set('Your session has expired. Please log in again.');
+      return;
+    }
+    if (status === 403) {
+      this.statusError.set("You don't have access to change orders.");
+      return;
+    }
+    if (status === 409) {
+      // Someone else moved the order first: show the server's reason and reload the truth.
+      this.statusError.set(this.describeError(err));
+      this.confirmingStatus.set(null);
+      this.viewDetailKeepingError(id);
+      return;
+    }
+    this.statusError.set(this.describeError(err));
+  }
+
+  /** Reloads the open order after a conflict without clearing the error message. */
+  private viewDetailKeepingError(id: string): void {
+    this.orders.getAdminOrder(id).subscribe({
+      next: (order) => {
+        if (this.selectedId() === id) this.selected.set(order);
+      },
+      error: () => undefined,
+    });
   }
 
   orderItemCount(order: AdminOrderDetailDto): number {
@@ -105,6 +218,7 @@ export class AdminOrdersComponent {
   /** GET /api/admin/orders/{id} — Admin only; clears the previous detail first. */
   viewDetails(id: string): void {
     if (!this.auth.isAdmin()) return;
+    this.clearStatusUi();
     this.selectedId.set(id);
     this.selected.set(null);
     this.detailNotFound.set(false);
@@ -124,6 +238,7 @@ export class AdminOrdersComponent {
   }
 
   backToList(): void {
+    this.clearStatusUi();
     this.selectedId.set(null);
     this.selected.set(null);
     this.detailNotFound.set(false);
@@ -139,7 +254,15 @@ export class AdminOrdersComponent {
     }
   }
 
+  private clearStatusUi(): void {
+    this.updatingStatus.set(null);
+    this.confirmingStatus.set(null);
+    this.statusError.set(null);
+    this.statusNotice.set(null);
+  }
+
   private resetAll(): void {
+    this.clearStatusUi();
     this.list.set(null);
     this.listLoading.set(false);
     this.listError.set(null);

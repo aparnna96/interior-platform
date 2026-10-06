@@ -54,6 +54,8 @@ export interface AdminOrderDetailDto {
   createdAt: string;
   updatedAt: string;
   subtotal: number;
+  /** Statuses the server allows this order to move to next (empty when final). */
+  allowedNextStatuses?: number[];
   items: OrderItemDto[];
 }
 
@@ -103,6 +105,19 @@ export class OrderService {
   /** GET /api/admin/orders/{id} — Admin only, any owner. Bearer auth. */
   getAdminOrder(id: string): Observable<AdminOrderDetailDto> {
     return this.http.get<AdminOrderDetailDto>(`${ADMIN_ORDERS_URL}/${id}`, { headers: this.authHeaders() });
+  }
+
+  /**
+   * PATCH /api/admin/orders/{id}/status — Admin only. Sends just the new status
+   * number; the server decides whether the move is legal and answers with the
+   * updated order (409 for an illegal move).
+   */
+  updateAdminOrderStatus(id: string, status: number): Observable<AdminOrderDetailDto> {
+    return this.http.patch<AdminOrderDetailDto>(
+      `${ADMIN_ORDERS_URL}/${id}/status`,
+      { status },
+      { headers: this.authHeaders() }
+    );
   }
 
   private authHeaders(): HttpHeaders {

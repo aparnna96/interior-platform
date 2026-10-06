@@ -331,4 +331,158 @@ describe('AdminOrdersComponent', () => {
     expect(localSet).not.toHaveBeenCalled();
     expect(sessionSet).not.toHaveBeenCalled();
   });
+  describe('status changes', () => {
+    function openOrder(status: number, allowed: number[]) {
+      const fixture = setupAdmin([adminRow({ id: 'order-1', status })]);
+      const cmp = fixture.componentInstance;
+      cmp.viewDetails('order-1');
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1`).flush(
+        adminDetail({ id: 'order-1', status, allowedNextStatuses: allowed })
+      );
+      fixture.detectChanges();
+      return { fixture, cmp, el: fixture.nativeElement as HTMLElement };
+    }
+
+    function button(el: HTMLElement, label: string): HTMLButtonElement | undefined {
+      return Array.from(el.querySelectorAll('.status-box button')).find(
+        (b) => (b as HTMLElement).getAttribute('aria-label') === label || b.textContent?.trim() === label
+      ) as HTMLButtonElement | undefined;
+    }
+
+    it('offers only the moves the server lists', () => {
+      const { el } = openOrder(0, [1, 4]);
+      expect(button(el, 'Confirm order')).toBeTruthy();
+      expect(button(el, 'Cancel order')).toBeTruthy();
+      expect(button(el, 'Mark completed')).toBeUndefined();
+      expect(button(el, 'Start processing')).toBeUndefined();
+    });
+
+    it('shows no actions for a final order', () => {
+      const { el } = openOrder(3, []);
+      expect(el.querySelector('.status-actions')).toBeNull();
+      expect(el.textContent).toContain('It is final and cannot be changed');
+    });
+
+    it('a normal move sends one PATCH with only the status and shows the server result', () => {
+      const { fixture, cmp, el } = openOrder(0, [1, 4]);
+
+      button(el, 'Confirm order')!.click();
+      const req = httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1/status`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ status: 1 });
+      expect(req.request.headers.get('Authorization')).toBe(`Bearer ${ADMIN_JWT}`);
+      expect(cmp.updatingStatus()).toBe(1);
+
+      req.flush(adminDetail({ id: 'order-1', status: 1, allowedNextStatuses: [2, 4] }));
+      fixture.detectChanges();
+
+      expect(cmp.updatingStatus()).toBeNull();
+      expect(cmp.selected()?.status).toBe(1);
+      expect(el.textContent).toContain('Order is now Confirmed');
+      expect(button(el, 'Start processing')).toBeTruthy();
+      expect(button(el, 'Confirm order')).toBeUndefined();
+      // The list row follows without refetching the list.
+      expect(cmp.list()![0].status).toBe(1);
+      httpMock.expectNone(ADMIN_ORDERS_URL);
+    });
+
+    it('double clicks while saving send one request', () => {
+      const { cmp, el } = openOrder(0, [1, 4]);
+      button(el, 'Confirm order')!.click();
+      cmp.changeStatus(1);
+      cmp.changeStatus(1);
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1/status`).flush(
+        adminDetail({ id: 'order-1', status: 1, allowedNextStatuses: [2, 4] })
+      );
+    });
+
+    it('Cancel asks for a second click and sends nothing until confirmed', () => {
+      const { fixture, cmp, el } = openOrder(0, [1, 4]);
+
+      button(el, 'Cancel order')!.click();
+      fixture.detectChanges();
+      httpMock.expectNone(`${ADMIN_ORDERS_URL}/order-1/status`);
+      expect(cmp.confirmingStatus()).toBe(4);
+      expect(el.textContent).toContain('Cancel this order? This cannot be undone.');
+
+      // Backing out sends nothing and restores the normal buttons.
+      button(el, 'Keep order')!.click();
+      fixture.detectChanges();
+      expect(cmp.confirmingStatus()).toBeNull();
+      expect(button(el, 'Cancel order')).toBeTruthy();
+      httpMock.expectNone(`${ADMIN_ORDERS_URL}/order-1/status`);
+
+      button(el, 'Cancel order')!.click();
+      fixture.detectChanges();
+      (el.querySelector('[aria-label="Confirm cancel order"]') as HTMLButtonElement).click();
+      const req = httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1/status`);
+      expect(req.request.body).toEqual({ status: 4 });
+      req.flush(adminDetail({ id: 'order-1', status: 4, allowedNextStatuses: [] }));
+      fixture.detectChanges();
+      expect(el.textContent).toContain('Order is now Cancelled');
+      expect(el.querySelector('.status-actions')).toBeNull();
+    });
+
+    it('a 409 shows the server reason and reloads the order', () => {
+      const { fixture, cmp, el } = openOrder(0, [1, 4]);
+
+      button(el, 'Confirm order')!.click();
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1/status`).flush(
+        { title: 'An order that is Cancelled cannot be changed to Confirmed.' },
+        { status: 409, statusText: 'Conflict' }
+      );
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1`).flush(
+        adminDetail({ id: 'order-1', status: 4, allowedNextStatuses: [] })
+      );
+      fixture.detectChanges();
+
+      expect(el.textContent).toContain('An order that is Cancelled cannot be changed to Confirmed.');
+      expect(cmp.selected()?.status).toBe(4);
+      expect(cmp.updatingStatus()).toBeNull();
+    });
+
+    it('a server error keeps the order and lets the admin try again', () => {
+      const { fixture, cmp, el } = openOrder(0, [1, 4]);
+
+      button(el, 'Confirm order')!.click();
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1/status`).flush(null, { status: 500, statusText: 'Server Error' });
+      fixture.detectChanges();
+
+      expect(el.textContent).toContain('Something went wrong');
+      expect(cmp.selected()?.status).toBe(0);
+      expect(button(el, 'Confirm order')).toBeTruthy();
+    });
+
+    it('a 401 ends the session like every other admin call', () => {
+      const { cmp, el } = openOrder(0, [1, 4]);
+      const auth = TestBed.inject(AuthService);
+
+      button(el, 'Confirm order')!.click();
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1/status`).flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+
+      expect(auth.isAuthenticated()).toBeFalse();
+      expect(cmp.selected()).toBeNull();
+    });
+
+    it('leaving an order clears the status message', () => {
+      const { fixture, cmp, el } = openOrder(0, [1, 4]);
+      button(el, 'Confirm order')!.click();
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1/status`).flush(
+        adminDetail({ id: 'order-1', status: 1, allowedNextStatuses: [2, 4] })
+      );
+      fixture.detectChanges();
+      expect(cmp.statusNotice()).toContain('Confirmed');
+
+      cmp.backToList();
+      expect(cmp.statusNotice()).toBeNull();
+      expect(cmp.statusError()).toBeNull();
+    });
+
+    it('customers and staff never reach the status endpoint', () => {
+      const fixture = setup(STAFF_JWT);
+      fixture.componentInstance.changeStatus(1);
+      httpMock.expectNone(`${ADMIN_ORDERS_URL}/order-1/status`);
+      httpMock.verify();
+    });
+  });
 });

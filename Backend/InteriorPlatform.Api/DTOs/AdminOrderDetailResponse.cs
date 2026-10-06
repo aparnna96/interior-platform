@@ -26,5 +26,11 @@ public class AdminOrderDetailResponse
 
     public decimal Subtotal { get; set; }
 
+    /// <summary>
+    /// Statuses this order may move to next, decided server-side (empty for a
+    /// Completed or Cancelled order). The admin UI only offers these.
+    /// </summary>
+    public List<OrderStatus> AllowedNextStatuses { get; set; } = [];
+
     public List<OrderItemResponse> Items { get; set; } = [];
 }

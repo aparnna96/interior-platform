@@ -1,4 +1,4 @@
-﻿<section class="admin-orders" aria-label="Admin orders workspace">
+<section class="admin-orders" aria-label="Admin orders workspace">
   <header class="admin-orders-head">
     <div>
       <p class="kicker">Operations · Orders</p>
@@ -119,6 +119,45 @@
             }
           </ul>
           <p class="sub small">Item names and prices are order-time snapshots, preserved even if the catalogue changes.</p>
+
+          <section class="status-box" aria-label="Order status">
+            <h2>Order status</h2>
+            @if (statusNotice()) {
+              <p class="status-notice" role="status">{{ statusNotice() }}</p>
+            }
+            @if (nextStatuses(order).length === 0) {
+              <p class="sub small">This order is {{ statusLabel(order.status) }}. It is final and cannot be changed.</p>
+            } @else {
+              <p class="sub small">Currently {{ statusLabel(order.status) }}. Move it to:</p>
+              <div class="status-actions">
+                @for (s of nextStatuses(order); track s) {
+                  @if (confirmingStatus() === s) {
+                    <span class="confirm-inline" role="group" aria-label="Confirm cancellation">
+                      <span>Cancel this order? This cannot be undone.</span>
+                      <button
+                        class="btn-primary btn-sm"
+                        (click)="changeStatus(s)"
+                        [disabled]="updatingStatus() !== null"
+                        [attr.aria-label]="'Confirm ' + actionLabel(s).toLowerCase()"
+                      >{{ updatingStatus() === s ? 'Saving…' : 'Yes, cancel' }}</button>
+                      <button class="linklike" (click)="cancelConfirm()" [disabled]="updatingStatus() !== null">Keep order</button>
+                    </span>
+                  } @else {
+                    <button
+                      [class]="needsConfirm(s) ? 'btn-secondary btn-sm danger' : 'btn-primary btn-sm'"
+                      (click)="changeStatus(s)"
+                      [disabled]="updatingStatus() !== null"
+                      [attr.aria-label]="actionLabel(s)"
+                    >{{ updatingStatus() === s ? 'Saving…' : actionLabel(s) }}</button>
+                  }
+                }
+              </div>
+            }
+            @if (statusError()) {
+              <p class="admin-orders-error" role="alert">{{ statusError() }}</p>
+            }
+          </section>
+
           <button class="linklike" (click)="backToList()">Back to orders</button>
         </div>
         }

@@ -173,4 +173,23 @@ describe('OrderService', () => {
     detailReq.flush(null);
     httpMock.expectNone(ORDERS_URL);
   });
+  it('updateAdminOrderStatus PATCHes only the status with Bearer auth', () => {
+    setup(TOKEN);
+    let received: AdminOrderDetailDto | null = null;
+    orders.updateAdminOrderStatus('order-1', 1).subscribe((o) => (received = o));
+    const req = httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1/status`);
+    expect(req.request.method).toBe('PATCH');
+    // Nothing but the new status may leave the client: no items, prices or owner.
+    expect(req.request.body).toEqual({ status: 1 });
+    expect(Object.keys(req.request.body)).toEqual(['status']);
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
+    req.flush({
+      id: 'order-1', userId: 'user-a', customerEmail: 'a@test.local', status: 1,
+      createdAt: '2026-10-01T10:00:00Z', updatedAt: '2026-10-01T12:00:00Z', subtotal: 85998,
+      allowedNextStatuses: [2, 4], items: [],
+    });
+    const result = received as AdminOrderDetailDto | null;
+    expect(result?.status).toBe(1);
+    expect(result?.allowedNextStatuses).toEqual([2, 4]);
+  });
 });

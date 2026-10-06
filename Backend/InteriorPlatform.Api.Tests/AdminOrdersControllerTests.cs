@@ -2,6 +2,7 @@ using InteriorPlatform.Api.Controllers;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
+using InteriorPlatform.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +16,7 @@ using Xunit;
 namespace InteriorPlatform.Api.Tests;
 
 /// <summary>
-/// Admin order read rules (Task 15C). SQLite in-memory is used for relational
+/// Admin order read rules (Task 15C) and status changes. SQLite in-memory is used for relational
 /// fidelity. These tests never touch the real SQL Server database.
 /// Role enforcement itself lives in [Authorize(Roles = "Admin")] and is
 /// verified declaratively below; the ASP.NET Core pipeline (not direct
@@ -225,5 +226,230 @@ public sealed class AdminOrdersControllerTests
         {
             Assert.DoesNotContain(banned, payload, StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    // ── status changes ────────────────────────────────────────────────
+
+    private static AdminOrderDetailResponse Updated(ActionResult<AdminOrderDetailResponse> result) =>
+        Assert.IsType<AdminOrderDetailResponse>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+    private static async Task<AdminOrderDetailResponse> MoveAsync(
+        ApplicationDbContext db, Guid id, OrderStatus to) =>
+        Updated(await AdminOrdersFor(db, "admin-user")
+            .UpdateStatus(id, new AdminOrderStatusUpdateRequest { Status = to }));
+
+    [Fact]
+    public void UpdateStatus_IsAdminOnlyThroughTheControllerAttribute()
+    {
+        // The class-level [Authorize(Roles = "Admin")] covers the new endpoint; it must
+        // not be loosened with an [AllowAnonymous] or a wider role on the method.
+        var method = typeof(AdminOrdersController).GetMethod(nameof(AdminOrdersController.UpdateStatus))!;
+        Assert.Empty(method.GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true));
+        Assert.DoesNotContain(
+            method.GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true).OfType<AuthorizeAttribute>(),
+            a => a.Roles != "Admin");
+        Assert.Contains(
+            method.GetCustomAttributes(typeof(HttpPatchAttribute), inherit: true).OfType<HttpPatchAttribute>(),
+            a => a.Template == "{id:guid}/status");
+    }
+
+    [Fact]
+    public void AdminOrderStatusUpdateRequest_ExposesOnlyStatus()
+    {
+        var names = typeof(AdminOrderStatusUpdateRequest)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => p.Name)
+            .ToList();
+        Assert.Equal(["Status"], names);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_WalksTheHappyPath_AndStampsUpdatedAt()
+    {
+        using var test = new TestDb();
+        var created = new DateTime(2026, 9, 1, 10, 0, 0, DateTimeKind.Utc);
+        var order = await SeedOrderAsync(test.Db, UserA, created);
+
+        foreach (var step in new[] { OrderStatus.Confirmed, OrderStatus.Processing, OrderStatus.Completed })
+        {
+            var detail = await MoveAsync(test.Db, order.Id, step);
+            Assert.Equal(step, detail.Status);
+            Assert.True(detail.UpdatedAt > created);
+            Assert.Equal(created, detail.CreatedAt);
+        }
+
+        var stored = await test.Db.Orders.AsNoTracking().SingleAsync();
+        Assert.Equal(OrderStatus.Completed, stored.Status);
+        Assert.Equal(created, stored.CreatedAt);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Pending)]
+    [InlineData(OrderStatus.Confirmed)]
+    [InlineData(OrderStatus.Processing)]
+    public async Task UpdateStatus_AnOpenOrderCanBeCancelled(OrderStatus startingAt)
+    {
+        using var test = new TestDb();
+        var order = await SeedOrderAsync(test.Db, UserA, DateTime.UtcNow);
+        order.Status = startingAt;
+        await test.Db.SaveChangesAsync();
+
+        var detail = await MoveAsync(test.Db, order.Id, OrderStatus.Cancelled);
+
+        Assert.Equal(OrderStatus.Cancelled, detail.Status);
+        Assert.Empty(detail.AllowedNextStatuses);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Pending, OrderStatus.Processing)]
+    [InlineData(OrderStatus.Pending, OrderStatus.Completed)]
+    [InlineData(OrderStatus.Confirmed, OrderStatus.Pending)]
+    [InlineData(OrderStatus.Confirmed, OrderStatus.Completed)]
+    [InlineData(OrderStatus.Processing, OrderStatus.Confirmed)]
+    [InlineData(OrderStatus.Completed, OrderStatus.Pending)]
+    [InlineData(OrderStatus.Completed, OrderStatus.Cancelled)]
+    [InlineData(OrderStatus.Cancelled, OrderStatus.Pending)]
+    [InlineData(OrderStatus.Cancelled, OrderStatus.Confirmed)]
+    public async Task UpdateStatus_IllegalMoves_Return409AndChangeNothing(OrderStatus from, OrderStatus to)
+    {
+        using var test = new TestDb();
+        var when = new DateTime(2026, 9, 1, 10, 0, 0, DateTimeKind.Utc);
+        var order = await SeedOrderAsync(test.Db, UserA, when);
+        order.Status = from;
+        await test.Db.SaveChangesAsync();
+
+        var result = await AdminOrdersFor(test.Db, "admin-user")
+            .UpdateStatus(order.Id, new AdminOrderStatusUpdateRequest { Status = to });
+
+        var problem = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status409Conflict, problem.StatusCode);
+        var stored = await test.Db.Orders.AsNoTracking().SingleAsync();
+        Assert.Equal(from, stored.Status);
+        Assert.Equal(when, stored.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_RepeatingTheCurrentStatus_SucceedsWithoutTouchingTheOrder()
+    {
+        using var test = new TestDb();
+        var when = new DateTime(2026, 9, 1, 10, 0, 0, DateTimeKind.Utc);
+        var order = await SeedOrderAsync(test.Db, UserA, when);
+        await MoveAsync(test.Db, order.Id, OrderStatus.Confirmed);
+        var afterFirst = (await test.Db.Orders.AsNoTracking().SingleAsync()).UpdatedAt;
+
+        await Task.Delay(20);
+        var again = await MoveAsync(test.Db, order.Id, OrderStatus.Confirmed);
+
+        Assert.Equal(OrderStatus.Confirmed, again.Status);
+        Assert.Equal(afterFirst, (await test.Db.Orders.AsNoTracking().SingleAsync()).UpdatedAt);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_RejectsMissingOrUnknownStatus_With400()
+    {
+        using var test = new TestDb();
+        var order = await SeedOrderAsync(test.Db, UserA, DateTime.UtcNow);
+        var controller = AdminOrdersFor(test.Db, "admin-user");
+
+        foreach (var bad in new OrderStatus?[] { null, (OrderStatus)99, (OrderStatus)(-1) })
+        {
+            var result = await controller.UpdateStatus(order.Id, new AdminOrderStatusUpdateRequest { Status = bad });
+            var problem = Assert.IsType<ObjectResult>(result.Result);
+            Assert.True(
+                problem.StatusCode == StatusCodes.Status400BadRequest ||
+                (problem.StatusCode is null && problem.Value is ValidationProblemDetails),
+                $"Expected 400 for {bad}, got {problem.StatusCode}.");
+        }
+
+        Assert.Equal(OrderStatus.Pending, (await test.Db.Orders.AsNoTracking().SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_MissingOrder_Returns404()
+    {
+        using var test = new TestDb();
+
+        var result = await AdminOrdersFor(test.Db, "admin-user")
+            .UpdateStatus(Guid.NewGuid(), new AdminOrderStatusUpdateRequest { Status = OrderStatus.Confirmed });
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_Unauthenticated_Returns401AndChangesNothing()
+    {
+        using var test = new TestDb();
+        var order = await SeedOrderAsync(test.Db, UserA, DateTime.UtcNow);
+
+        var result = await AdminOrdersFor(test.Db, null)
+            .UpdateStatus(order.Id, new AdminOrderStatusUpdateRequest { Status = OrderStatus.Confirmed });
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
+        Assert.Equal(OrderStatus.Pending, (await test.Db.Orders.AsNoTracking().SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_NeverTouchesItemsTotalsOrOwner()
+    {
+        using var test = new TestDb();
+        var order = await SeedOrderAsync(test.Db, UserA, DateTime.UtcNow);
+
+        await MoveAsync(test.Db, order.Id, OrderStatus.Confirmed);
+
+        var stored = await test.Db.Orders.AsNoTracking().Include(o => o.Items).SingleAsync();
+        Assert.Equal(UserA, stored.UserId);
+        Assert.Equal(85998m, stored.Subtotal);
+        var item = Assert.Single(stored.Items);
+        Assert.Equal(2, item.Quantity);
+        Assert.Equal(42999m, item.UnitPrice);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_IsVisibleToTheCustomerOnTheirOwnOrder()
+    {
+        using var test = new TestDb();
+        var order = await SeedOrderAsync(test.Db, UserA, DateTime.UtcNow);
+        await MoveAsync(test.Db, order.Id, OrderStatus.Confirmed);
+
+        var customer = new OrdersController(test.Db)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = PrincipalFor(UserA) },
+            },
+        };
+        var result = await customer.GetOrder(order.Id);
+        var detail = Assert.IsType<OrderDetailResponse>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        Assert.Equal(OrderStatus.Confirmed, detail.Status);
+    }
+
+    [Fact]
+    public async Task GetOrder_ListsOnlyTheMovesTheServerAllows()
+    {
+        using var test = new TestDb();
+        var order = await SeedOrderAsync(test.Db, UserA, DateTime.UtcNow);
+
+        var pending = Assert.IsType<AdminOrderDetailResponse>(Assert.IsType<OkObjectResult>(
+            (await AdminOrdersFor(test.Db, "admin-user").GetOrder(order.Id)).Result).Value);
+        Assert.Equal([OrderStatus.Confirmed, OrderStatus.Cancelled], pending.AllowedNextStatuses);
+
+        await MoveAsync(test.Db, order.Id, OrderStatus.Cancelled);
+        var cancelled = Assert.IsType<AdminOrderDetailResponse>(Assert.IsType<OkObjectResult>(
+            (await AdminOrdersFor(test.Db, "admin-user").GetOrder(order.Id)).Result).Value);
+        Assert.Empty(cancelled.AllowedNextStatuses);
+    }
+
+    [Fact]
+    public void Transitions_FinalStatesHaveNoWayOut_AndNobodyMovesToThemselves()
+    {
+        foreach (var status in Enum.GetValues<OrderStatus>())
+        {
+            Assert.DoesNotContain(status, OrderStatusTransitions.NextFor(status));
+        }
+
+        Assert.True(OrderStatusTransitions.IsFinal(OrderStatus.Completed));
+        Assert.True(OrderStatusTransitions.IsFinal(OrderStatus.Cancelled));
+        Assert.False(OrderStatusTransitions.IsFinal(OrderStatus.Pending));
+        Assert.False(OrderStatusTransitions.CanMove(OrderStatus.Completed, OrderStatus.Cancelled));
     }
 }

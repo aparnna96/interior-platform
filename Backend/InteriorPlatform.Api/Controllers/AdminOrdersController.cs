@@ -1,6 +1,7 @@
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
+using InteriorPlatform.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,11 +11,12 @@ using System.Security.Claims;
 namespace InteriorPlatform.Api.Controllers;
 
 /// <summary>
-/// Read-only Admin view over all customer orders. Every endpoint requires
-/// the Admin role; Customers and FieldStaff are rejected by authorization
-/// before any data is touched. Customer endpoints keep enforcing ownership
-/// separately — this controller never widens them. Order status is exposed
-/// read-only: no status mutation API exists, so none is offered here.
+/// Admin view over all customer orders, plus the one write an Admin may make:
+/// moving an order's status along its lifecycle. Every endpoint requires the
+/// Admin role; Customers and FieldStaff are rejected by authorization before
+/// any data is touched. Customer endpoints keep enforcing ownership
+/// separately — this controller never widens them. Items, prices, totals and
+/// ownership are never editable here.
 /// </summary>
 [ApiController]
 [Route("api/admin/orders")]
@@ -88,6 +90,68 @@ public class AdminOrdersController : ControllerBase
         return Ok(ToDetail(order, email));
     }
 
+    // PATCH /api/admin/orders/{id}/status — move an order along its lifecycle.
+    // Admin only (class-level attribute). Only the status can change, and only
+    // along the legal moves in OrderStatusTransitions: anything else is a 409.
+    // Repeating the current status succeeds without touching the order, so a
+    // retried request is harmless. The customer sees the new status on their own
+    // order endpoints, which read the same row.
+    [HttpPatch("{id:guid}/status")]
+    public async Task<ActionResult<AdminOrderDetailResponse>> UpdateStatus(
+        Guid id,
+        [FromBody] AdminOrderStatusUpdateRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var userId = ResolveUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (request.Status is null || !Enum.IsDefined(request.Status.Value))
+        {
+            ModelState.AddModelError(
+                nameof(AdminOrderStatusUpdateRequest.Status),
+                "Status must be one of: Pending, Confirmed, Processing, Completed, Cancelled.");
+            return ValidationProblem(ModelState);
+        }
+
+        var order = await _db.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == id);
+        if (order is null)
+        {
+            return NotFound();
+        }
+
+        var target = request.Status.Value;
+        if (target != order.Status)
+        {
+            if (!OrderStatusTransitions.CanMove(order.Status, target))
+            {
+                return Problem(
+                    title: $"An order that is {order.Status} cannot be changed to {target}.",
+                    statusCode: StatusCodes.Status409Conflict);
+            }
+
+            order.Status = target;
+            order.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+
+        var email = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == order.UserId)
+            .Select(u => u.Email)
+            .FirstOrDefaultAsync();
+
+        return Ok(ToDetail(order, email));
+    }
+
     /// <summary>
     /// Derives the acting user from the authenticated identity only.
     /// The JWT carries the user id in the "sub" claim, mapped by the JWT
@@ -115,6 +179,7 @@ public class AdminOrdersController : ControllerBase
         CreatedAt = order.CreatedAt,
         UpdatedAt = order.UpdatedAt,
         Subtotal = order.Subtotal,
+        AllowedNextStatuses = OrderStatusTransitions.NextFor(order.Status).ToList(),
         Items = order.Items
             .OrderBy(i => i.ProductId)
             .Select(i => new OrderItemResponse

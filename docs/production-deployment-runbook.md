@@ -460,5 +460,8 @@ What is running now, and what still needs a decision. No secrets are recorded he
   and leads created while testing. Removing them needs a direct SQL run.
 - **Local credential files.** Test passwords live in a local folder outside the
   repository. Delete them once stored elsewhere.
-- **Known gap.** Admin order screens are read-only: the API has no order status
-  change endpoint.
+- **Order status.** Admins move an order along Pending, Confirmed, Processing,
+  Completed (or Cancelled from any open state) with
+  `PATCH /api/admin/orders/{id}/status`. Completed and Cancelled are final.
+  Illegal moves return 409; the detail response lists `allowedNextStatuses` and
+  the admin screen offers only those.
