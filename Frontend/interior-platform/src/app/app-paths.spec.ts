@@ -65,6 +65,16 @@ describe('app paths', () => {
     expect(requiresLogin('login')).toBeFalse();
   });
 
+  it('the FieldStaff entry has its own address and access level, and /visualizer is still public', () => {
+    expect(pathForView('field')).toBe('/field');
+    expect(viewForPath('/field')?.view).toBe('field');
+    expect(accessOf('field')).toBe('fieldstaff');
+    expect(requiresLogin('field')).toBeTrue();
+    expect(pathForView('visualizer')).toBe('/visualizer');
+    expect(accessOf('visualizer')).toBe('public');
+    expect(requiresLogin('visualizer')).toBeFalse();
+  });
+
   describe('safeReturnUrl', () => {
     it('accepts same-site paths', () => {
       expect(safeReturnUrl('/orders')).toBe('/orders');

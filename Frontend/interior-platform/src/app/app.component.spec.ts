@@ -859,6 +859,50 @@ describe('AppComponent', () => {
       httpMock.verify();
     });
 
+    it('only field staff get the Field visualizer entry, in the Operations group', () => {
+      const staff = createAuthedApp(['FieldStaff']);
+      expect(sidebar(staff.fixture).items).toContain('Field visualizer');
+      expect(sidebar(staff.fixture).groups).toContain('Operations');
+      expect(sidebar(staff.fixture).items).toContain('Visualizer');
+      staff.httpMock.verify();
+    });
+
+    it('customers and plain admins do not get the Field visualizer entry', () => {
+      const customer = createAuthedApp(['Customer']);
+      expect(sidebar(customer.fixture).items).not.toContain('Field visualizer');
+      customer.httpMock.verify();
+      TestBed.resetTestingModule();
+      localStorage.clear();
+      TestBed.configureTestingModule({
+        imports: [AppComponent],
+        providers: [provideHttpClient(), provideHttpClientTesting()],
+      });
+      const admin = createAuthedApp(['Admin']);
+      expect(sidebar(admin.fixture).items).not.toContain('Field visualizer');
+      admin.httpMock.verify();
+    });
+
+    it('visitors do not get the Field visualizer entry', () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.detectChanges();
+      expect(sidebar(fixture).items).not.toContain('Field visualizer');
+      expect(sidebar(fixture).items).toContain('Visualizer');
+    });
+
+    it('the Field visualizer sidebar entry opens the FieldStaff view on Elevation', () => {
+      const { fixture, httpMock } = createAuthedApp(['FieldStaff']);
+      const entry = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('#app-sidebar .nav-item')
+      ).find((b) => (b as HTMLElement).textContent?.trim() === 'Field visualizer') as HTMLButtonElement;
+      entry.click();
+      fixture.detectChanges();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.activeView()).toBe('field');
+      expect(fixture.componentInstance.canvasTab()).toBe('elevation');
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-elevation-view')).toBeTruthy();
+      httpMock.verify();
+    });
+
     it('admins see customer Orders and Proposals separately from Manage orders and Manage proposals', () => {
       const { fixture, httpMock } = createAuthedApp(['Admin']);
       const { items, groups } = sidebar(fixture);
@@ -1131,6 +1175,27 @@ describe('AppComponent', () => {
       app.resetWorkspace();
       expect([app.wallPatternId(), app.floorPatternId(), app.fabricPatternId()]).toEqual(['plain', 'classic', 'plain']);
     });
+    it('the FieldStaff view opens the same workspace on the Elevation tab', () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      const app = fixture.componentInstance;
+      app.activeView.set('field');
+      fixture.detectChanges();
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(app.canvasTab()).toBe('elevation');
+      expect(el.querySelector('app-elevation-view')).toBeTruthy();
+      expect(el.querySelector('app-floor-plan')).toBeNull();
+      expect(el.querySelector('input[aria-label="Room width in feet"]')).toBeTruthy();
+      expect(el.querySelector('input[aria-label="Ceiling height in feet"]')).toBeTruthy();
+      expect(el.querySelectorAll('.seg button').length).toBe(3);
+    });
+
+    it('the public Visualizer still starts on the 2D plan', () => {
+      const { app } = openVisualizer();
+      expect(app.activeView()).toBe('visualizer');
+      expect(app.canvasTab()).toBe('plan');
+    });
+
     describe('ceiling height', () => {
       const INPUT = 'input[aria-label="Ceiling height in feet"]';
 

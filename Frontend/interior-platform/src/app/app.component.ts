@@ -126,6 +126,7 @@ export class AppComponent {
   showWorkspaceHeader = computed(
     () =>
       this.activeView() === 'visualizer' ||
+      this.activeView() === 'field' ||
       this.activeView() === 'estimates' ||
       this.activeView() === 'projects'
   );
@@ -146,9 +147,14 @@ export class AppComponent {
     // Reset it instantly whenever the Visualizer is entered, from any entry
     // point (Home buttons, navbar, sidebar, project loading).
     effect(() => {
-      if (this.activeView() === 'visualizer') {
+      if (this.activeView() === 'visualizer' || this.activeView() === 'field') {
         window.scrollTo(0, 0);
       }
+    });
+    // The FieldStaff entry (/field) is the same workspace, opened on the Elevation view
+    // every time it is entered. Tracks only the page, so switching tabs while on it sticks.
+    effect(() => {
+      if (this.activeView() === 'field') untracked(() => this.canvasTab.set('elevation'));
     });
     // Address -> page: opening, reloading, Back/Forward and guard redirects.
     this.router.events

@@ -30,6 +30,14 @@ export const staffGuard: CanActivateFn = (_route, state) => {
   return auth.isStaff() ? true : router.parseUrl(landingPathFor(auth.roles()));
 };
 
+/** FieldStaff role only. Admins without it and customers go to their own landing page. */
+export const fieldStaffGuard: CanActivateFn = (_route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  if (!auth.isAuthenticated()) return loginTree(router, state.url);
+  return auth.isFieldStaff() ? true : router.parseUrl(landingPathFor(auth.roles()));
+};
+
 /** Admin only. FieldStaff go to Leads, customers to the home page. */
 export const adminGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);

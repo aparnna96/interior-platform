@@ -1,6 +1,6 @@
 ﻿import { CanActivateFn, Route, Routes } from '@angular/router';
 import { VIEW_ROUTES, type ViewAccess } from './app-paths';
-import { adminGuard, authGuard, guestGuard, staffGuard } from './auth/auth.guards';
+import { adminGuard, authGuard, fieldStaffGuard, guestGuard, staffGuard } from './auth/auth.guards';
 
 /**
  * Route config generated from the view table in app-paths.ts.
@@ -14,6 +14,7 @@ const GUARDS: Record<ViewAccess, CanActivateFn[]> = {
   guest: [guestGuard],
   auth: [authGuard],
   staff: [staffGuard],
+  fieldstaff: [fieldStaffGuard],
   admin: [adminGuard],
 };
 

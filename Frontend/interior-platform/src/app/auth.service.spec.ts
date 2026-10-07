@@ -148,6 +148,21 @@ describe('AuthService role handling', () => {
   it('reports no admin without authentication', () => {
     expect(TestBed.inject(AuthService).isAdmin()).toBe(false);
   });
+
+  it('exposes FieldStaff sessions for the FieldStaff role only, not for Admin', () => {
+    expect(authedWith({ role: 'FieldStaff' }).isFieldStaff()).toBe(true);
+    expect(authedWith({ [DOTNET_ROLE_CLAIM]: ['Customer', 'FieldStaff'] }).isFieldStaff()).toBe(true);
+    expect(authedWith({ role: 'Admin' }).isFieldStaff()).toBe(false);
+    expect(authedWith({ role: 'Customer' }).isFieldStaff()).toBe(false);
+    expect(authedWith({}).isFieldStaff()).toBe(false);
+  });
+
+  it('reports no FieldStaff without authentication, and after logout', () => {
+    expect(TestBed.inject(AuthService).isFieldStaff()).toBe(false);
+    const staff = authedWith({ role: 'FieldStaff' });
+    staff.logout();
+    expect(staff.isFieldStaff()).toBe(false);
+  });
 });
 
 describe('AuthService email claim', () => {

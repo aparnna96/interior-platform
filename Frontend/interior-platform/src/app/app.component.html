@@ -122,6 +122,18 @@
         <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 5.5h13" stroke="currentColor" stroke-width="1.4"/><circle cx="4" cy="4" r="0.9" fill="currentColor"/></svg>
         <span>Leads</span>
       </button>
+      @if (auth.isFieldStaff()) {
+        <button
+          class="nav-item"
+          aria-label="Field visualizer"
+          [attr.title]="sidebarCollapsed() ? 'Field visualizer' : null"
+          [class.active]="activeView() === 'field'"
+          (click)="activeView.set('field'); closeDrawer()"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="1.5" y1="6" x2="14.5" y2="6" stroke="currentColor" stroke-width="1.4"/><line x1="6" y1="6" x2="6" y2="14.5" stroke="currentColor" stroke-width="1.4"/></svg>
+          <span>Field visualizer</span>
+        </button>
+      }
       @if (auth.isAdmin()) {
         <button
           class="nav-item"
@@ -299,6 +311,9 @@
         @if (auth.isStaff()) {
           <button [class.active]="activeView() === 'leads'" (click)="activeView.set('leads')">Leads</button>
         }
+        @if (auth.isFieldStaff()) {
+          <button [class.active]="activeView() === 'field'" (click)="activeView.set('field')">Field visualizer</button>
+        }
         @if (auth.isAdmin()) {
           <button [class.active]="activeView() === 'admin-products'" (click)="activeView.set('admin-products')">Manage products</button>
         }
@@ -345,7 +360,7 @@
       <div class="notice-wrap"><p class="notice">{{ projectNotice() }}</p></div>
     }
 
-    @if (activeView() === 'visualizer') {
+    @if (activeView() === 'visualizer' || activeView() === 'field') {
       <main class="workspace">
         <!-- Room setup + finishes -->
         <section class="panel controls" aria-label="Room setup and finishes">

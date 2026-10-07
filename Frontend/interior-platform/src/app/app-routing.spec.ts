@@ -22,6 +22,7 @@ function jwt(payload: unknown): string {
 const CUSTOMER = jwt({ email: 'c@test.local', [ROLE_CLAIM]: 'Customer' });
 const STAFF = jwt({ email: 's@test.local', [ROLE_CLAIM]: 'FieldStaff' });
 const ADMIN = jwt({ email: 'a@test.local', [ROLE_CLAIM]: 'Admin' });
+const ADMIN_AND_STAFF = jwt({ email: 'as@test.local', [ROLE_CLAIM]: ['Admin', 'FieldStaff'] });
 
 /**
  * Lets router navigation and effects run. Not `fixture.whenStable()`: that also
@@ -186,6 +187,83 @@ describe('AppComponent routing', () => {
       expect(location.path()).toBe('/leads');
     });
 
+    it('a visitor opening /field is sent to /login with a return address', async () => {
+      const { fixture, app } = await setup();
+      await go(fixture, '/field');
+      expect(app.activeView()).toBe('login');
+      expect(location.path()).toBe('/login?returnUrl=%2Ffield');
+    });
+
+    it('a customer is kept out of /field', async () => {
+      const { fixture, app } = await setup(CUSTOMER);
+      await go(fixture, '/field');
+      expect(app.activeView()).toBe('home');
+      expect(location.path()).toBe('/');
+    });
+
+    it('an admin without the FieldStaff role is sent to their own landing page from /field', async () => {
+      const { fixture, app } = await setup(ADMIN);
+      await go(fixture, '/field');
+      expect(app.activeView()).toBe('admin-orders');
+      expect(location.path()).toBe('/admin/orders');
+    });
+
+    it('field staff open /field directly on the Elevation view', async () => {
+      const { fixture, app, el } = await setup(STAFF);
+      await go(fixture, '/field');
+      expect(app.activeView()).toBe('field');
+      expect(location.path()).toBe('/field');
+      expect(app.canvasTab()).toBe('elevation');
+      expect(el.querySelector('app-elevation-view')).toBeTruthy();
+      expect(el.querySelector('app-floor-plan')).toBeNull();
+    });
+
+    it('someone holding both the Admin and FieldStaff roles may open /field', async () => {
+      const { fixture, app } = await setup(ADMIN_AND_STAFF);
+      await go(fixture, '/field');
+      expect(app.activeView()).toBe('field');
+      expect(location.path()).toBe('/field');
+    });
+
+    it('the Elevation default returns each time /field is entered, and a tab change sticks while on it', async () => {
+      const { fixture, app } = await setup(STAFF);
+      await go(fixture, '/field');
+      expect(app.canvasTab()).toBe('elevation');
+      app.canvasTab.set('plan');
+      await settle(fixture);
+      expect(app.canvasTab()).toBe('plan');
+      await go(fixture, '/leads');
+      await go(fixture, '/field');
+      expect(app.canvasTab()).toBe('elevation');
+    });
+
+    it('/visualizer stays public and opens on the 2D plan for a visitor', async () => {
+      const { fixture, app, el } = await setup();
+      await go(fixture, '/visualizer');
+      expect(app.activeView()).toBe('visualizer');
+      expect(location.path()).toBe('/visualizer');
+      expect(app.canvasTab()).toBe('plan');
+      expect(el.querySelector('app-floor-plan')).toBeTruthy();
+    });
+
+    it('/visualizer is unchanged for field staff: same public address, 2D plan first', async () => {
+      const { fixture, app } = await setup(STAFF);
+      await go(fixture, '/visualizer');
+      expect(app.activeView()).toBe('visualizer');
+      expect(location.path()).toBe('/visualizer');
+      expect(app.canvasTab()).toBe('plan');
+    });
+
+    it('an expired session on /field goes to login and returns afterwards', async () => {
+      const { fixture, app } = await setup(STAFF);
+      await go(fixture, '/field');
+      expect(app.activeView()).toBe('field');
+      TestBed.inject(AuthService).logout();
+      await settle(fixture);
+      expect(app.activeView()).toBe('login');
+      expect(location.path()).toBe('/login?returnUrl=%2Ffield');
+    });
+
     it('an admin may open every admin page', async () => {
       const { fixture, app } = await setup(ADMIN);
       for (const [url, view] of [
@@ -237,6 +315,45 @@ describe('AppComponent routing', () => {
 
       expect(location.path()).toBe('/orders');
       expect(fixture.componentInstance.activeView()).toBe('orders');
+    });
+
+    it('field staff logging in from the /field return address land on /field', async () => {
+      const { fixture, el } = await setup();
+      const http = TestBed.inject(HttpTestingController);
+      await go(fixture, '/field');
+      expect(location.path()).toBe('/login?returnUrl=%2Ffield');
+
+      fillAndSubmit(el);
+      http.expectOne(LOGIN_URL).flush({ Token: STAFF });
+      await settle(fixture);
+
+      expect(location.path()).toBe('/field');
+      expect(fixture.componentInstance.activeView()).toBe('field');
+    });
+
+    it('a customer logging in from the /field return address is not let in', async () => {
+      const { fixture, el } = await setup();
+      const http = TestBed.inject(HttpTestingController);
+      await go(fixture, '/field');
+
+      fillAndSubmit(el);
+      http.expectOne(LOGIN_URL).flush({ Token: CUSTOMER });
+      await settle(fixture);
+
+      expect(location.path()).toBe('/');
+      expect(fixture.componentInstance.activeView()).toBe('home');
+    });
+
+    it('an admin logging in from the /field return address goes to the admin landing page', async () => {
+      const { fixture, el } = await setup();
+      const http = TestBed.inject(HttpTestingController);
+      await go(fixture, '/field');
+
+      fillAndSubmit(el);
+      http.expectOne(LOGIN_URL).flush({ Token: ADMIN });
+      await settle(fixture);
+
+      expect(fixture.componentInstance.activeView()).toBe('admin-orders');
     });
 
     it('logging in with no return address goes to the role landing page', async () => {

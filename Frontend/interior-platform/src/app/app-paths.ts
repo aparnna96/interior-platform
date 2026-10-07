@@ -21,6 +21,7 @@ export type AppView =
   | 'estimates'
   | 'projects'
   | 'leads'
+  | 'field'
   | 'admin-products'
   | 'admin-orders'
   | 'admin-proposals'
@@ -34,12 +35,13 @@ export type AppView =
  * - guest:  only visitors who are not logged in (login / register)
  * - auth:   any logged-in user
  * - staff:  FieldStaff or Admin
+ * - fieldstaff: the FieldStaff role only (an Admin without that role is not let in)
  * - admin:  Admin only
  *
  * Display-only on the client: the API enforces the same rules with its own
  * [Authorize] attributes, so a forged token never gains data access.
  */
-export type ViewAccess = 'public' | 'guest' | 'auth' | 'staff' | 'admin';
+export type ViewAccess = 'public' | 'guest' | 'auth' | 'staff' | 'fieldstaff' | 'admin';
 
 export interface ViewRoute {
   readonly view: AppView;
@@ -62,6 +64,7 @@ export const VIEW_ROUTES: readonly ViewRoute[] = [
   { view: 'proposals', path: 'proposals', title: 'Proposals | Confident Group', access: 'auth' },
   { view: 'account', path: 'account', title: 'Account | Confident Group', access: 'auth' },
   { view: 'leads', path: 'leads', title: 'Leads | Confident Group', access: 'staff' },
+  { view: 'field', path: 'field', title: 'Field visualizer | Confident Group', access: 'fieldstaff' },
   { view: 'admin-products', path: 'admin/products', title: 'Manage products | Confident Group', access: 'admin' },
   { view: 'admin-orders', path: 'admin/orders', title: 'Manage orders | Confident Group', access: 'admin' },
   { view: 'admin-proposals', path: 'admin/proposals', title: 'Manage proposals | Confident Group', access: 'admin' },
@@ -82,7 +85,7 @@ export function accessOf(view: AppView): ViewAccess {
 /** True when the view needs a logged-in user (auth, staff or admin). */
 export function requiresLogin(view: AppView): boolean {
   const access = accessOf(view);
-  return access === 'auth' || access === 'staff' || access === 'admin';
+  return access === 'auth' || access === 'staff' || access === 'fieldstaff' || access === 'admin';
 }
 
 /** Strips query string and fragment, keeps a leading slash, drops a trailing one. */
