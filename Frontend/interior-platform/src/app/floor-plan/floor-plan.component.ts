@@ -1,5 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FabricPatternDefsComponent } from '../finishes/fabric-pattern-defs.component';
+import { FinishPattern, findPattern } from '../finishes/finish-patterns';
 
 export interface FloorPlanItem {
   uid: string;
@@ -20,7 +22,7 @@ export interface FloorPlanItem {
 @Component({
   selector: 'app-floor-plan',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FabricPatternDefsComponent],
   templateUrl: './floor-plan.component.html',
   styleUrl: './floor-plan.component.css',
 })
@@ -38,7 +40,21 @@ export class FloorPlanComponent {
   @Input() selectedId: string | null = null;
   @Input() aspect = '12 / 15';
   @Input() planStyle: Record<string, string> = {};
+  /** Floor texture id (finish-patterns.ts). "classic" keeps the texture each floor swatch already has. */
+  @Input() floorPatternId = 'classic';
+  /** Fabric texture id for cushions and pillows. "plain" is flat colour. */
+  @Input() fabricPatternId = 'plain';
   @Output() select = new EventEmitter<string>();
+
+  get floorPattern(): FinishPattern {
+    return findPattern('floor', this.floorPatternId);
+  }
+
+  /** SVG fill for upholstery, or null to keep the flat fabric colour. */
+  get fabricFill(): string | null {
+    const p = findPattern('fabric', this.fabricPatternId);
+    return p.id === 'plain' ? null : `url(#fab-${p.id})`;
+  }
 
   wPct(it: FloorPlanItem): number {
     if (!Number.isFinite(this.width) || this.width <= 0) return 0;

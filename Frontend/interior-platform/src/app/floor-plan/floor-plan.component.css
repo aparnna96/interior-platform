@@ -48,14 +48,14 @@
 .f-graphic * { vector-effect: non-scaling-stroke; }
 .g-shadow { fill: rgba(28,25,23,0.13); stroke: none; }
 .g-frame { fill: #fffdf9; stroke: #4a443c; stroke-width: 1.2; }
-.g-cushion { fill: var(--fabric); stroke: #4a443c; stroke-width: 1; }
+.g-cushion { fill: var(--fabric-fill, var(--fabric)); stroke: #4a443c; stroke-width: 1; }
 .g-seat { fill: #fffefb; stroke: #4a443c; stroke-width: 1; }
 .g-arm { fill: var(--accent); opacity: 0.88; stroke: #4a443c; stroke-width: 0.8; }
 .g-inset { fill: none; stroke: #8a8580; stroke-width: 0.9; }
 .g-leg { fill: #4a443c; stroke: none; }
 .g-head { fill: var(--accent); opacity: 0.85; }
 .g-mattress { fill: #ffffff; stroke: #4a443c; stroke-width: 1; }
-.g-pillow { fill: var(--fabric); stroke: #4a443c; stroke-width: 0.9; }
+.g-pillow { fill: var(--fabric-fill, var(--fabric)); stroke: #4a443c; stroke-width: 0.9; }
 .g-fold { stroke: #8a8580; stroke-width: 0.9; stroke-dasharray: 3 2; }
 .g-carcass { fill: #f5efe3; stroke: #4a443c; stroke-width: 1.1; }
 .g-panel { stroke: #4a443c; stroke-width: 1; }

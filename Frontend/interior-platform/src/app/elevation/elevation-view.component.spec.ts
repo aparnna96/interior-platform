@@ -226,6 +226,62 @@ describe('ElevationViewComponent', () => {
     expect(JSON.stringify(items)).toBe(before);
   });
 
+  describe('textures', () => {
+    const wallEl = () => el.querySelector<HTMLElement>('.elev-wall')!;
+    const floorEl = () => el.querySelector<HTMLElement>('.elev-floor')!;
+    const frame = () => el.querySelector<HTMLElement>('.elev')!;
+
+    it('by default the wall and floor stay flat colour and fabric is unpatterned', () => {
+      set({ items: [SOFA] });
+      expect(wallEl().style.backgroundImage).toBe('');
+      expect(floorEl().style.backgroundImage).toBe('');
+      expect(frame().style.getPropertyValue('--fabric-fill')).toBe('');
+    });
+
+    it('a wall texture is laid over the wall colour', () => {
+      set({ wallPatternId: 'slats', wallColor: '#112233' });
+      expect(wallEl().style.backgroundImage).toContain('repeating-linear-gradient');
+      expect(frame().style.getPropertyValue('--wall')).toBe('#112233');
+    });
+
+    it('a floor texture is laid over the floor colour', () => {
+      set({ floorPatternId: 'herringbone' });
+      expect(floorEl().style.backgroundImage).toContain('repeating-linear-gradient');
+    });
+
+    it('every wall and floor texture draws something', () => {
+      for (const id of ['plaster', 'slats', 'stripe']) {
+        set({ wallPatternId: id });
+        expect(wallEl().style.backgroundImage).not.toBe('');
+      }
+      for (const id of ['plank', 'herringbone', 'tile', 'concrete']) {
+        set({ floorPatternId: id });
+        expect(floorEl().style.backgroundImage).not.toBe('');
+      }
+    });
+
+    it('a fabric texture points the upholstery at an SVG pattern', () => {
+      set({ items: [SOFA], fabricPatternId: 'linen' });
+      expect(frame().style.getPropertyValue('--fabric-fill')).toBe('url(#fab-linen)');
+      expect(el.querySelector('pattern#fab-linen')).toBeTruthy();
+    });
+
+    it('unknown texture ids behave like the defaults', () => {
+      set({ wallPatternId: 'x', floorPatternId: 'y', fabricPatternId: 'z' });
+      expect(wallEl().style.backgroundImage).toBe('');
+      expect(floorEl().style.backgroundImage).toBe('');
+      expect(frame().style.getPropertyValue('--fabric-fill')).toBe('');
+    });
+
+    it('textures add no decor and change no geometry', () => {
+      set({ items: [SOFA, TABLE], wall: 'top' });
+      const before = el.querySelector('.elev-wall')!.innerHTML.length;
+      set({ items: [SOFA, TABLE], wall: 'top', wallPatternId: 'stripe', floorPatternId: 'tile', fabricPatternId: 'boucle' });
+      expect(pieces().length).toBe(2);
+      expect(el.querySelectorAll('.opening').length).toBe(1);
+      expect(el.querySelector('.elev-wall')!.innerHTML.length).toBe(before);
+    });
+  });
   describe('scroll cue for walls wider than the frame', () => {
     /** Sizes the host, then re-reads the layout the way the resize observer does. */
     function setIn(inputs: Partial<ElevationViewComponent>, hostPx: number): void {

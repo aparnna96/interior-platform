@@ -398,6 +398,8 @@
                   </button>
                 }
               </div>
+              <app-texture-chips label="Wall" [patterns]="wallPatterns" [selectedId]="wallPatternId()" [baseColor]="selectedWall().value" (choose)="wallPatternId.set($event)" />
+              <p class="sub small">Wall texture shows in the Elevation view.</p>
             }
             @if (finishTab() === 'Floor') {
               <p class="tab-desc">Floor · <strong>{{ selectedFloor().name }}</strong> <span class="code">{{ selectedFloor().code }}</span></p>
@@ -410,6 +412,7 @@
                   </button>
                 }
               </div>
+              <app-texture-chips label="Floor" [patterns]="floorPatterns" [selectedId]="floorPatternId()" [baseColor]="selectedFloor().value" (choose)="floorPatternId.set($event)" />
             }
             @if (finishTab() === 'Fabric') {
               <p class="tab-desc">Fabric · <strong>{{ selectedFabric().name }}</strong> <span class="code">{{ selectedFabric().code }}</span></p>
@@ -422,6 +425,7 @@
                   </button>
                 }
               </div>
+              <app-texture-chips label="Fabric" [patterns]="fabricPatterns" [selectedId]="fabricPatternId()" [baseColor]="selectedFabric().value" (choose)="fabricPatternId.set($event)" />
               <p class="tab-desc">Accent · <strong>{{ selectedAccent().name }}</strong></p>
               <div class="accent-row">
                 @for (a of accents; track a.code) {
@@ -474,6 +478,8 @@
               [light]="light()"
               [items]="placed()"
               [selectedId]="selectedItemId()"
+              [floorPatternId]="floorPatternId()"
+              [fabricPatternId]="fabricPatternId()"
               [aspect]="planAspect()"
               [planStyle]="planStyle()"
               (select)="selectItem($event)"
@@ -486,6 +492,9 @@
               [items]="placed()"
               [selectedId]="selectedItemId()"
               [wall]="elevationWall()"
+              [wallPatternId]="wallPatternId()"
+              [floorPatternId]="floorPatternId()"
+              [fabricPatternId]="fabricPatternId()"
               [wallColor]="selectedWall().value"
               [floorColor]="selectedFloor().value"
               [fabric]="selectedFabric().value"

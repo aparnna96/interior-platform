@@ -36,12 +36,19 @@
         [style.--floor]="floorColor"
         [style.--fabric]="fabric"
         [style.--accent]="accent"
+        [style.--fabric-fill]="fabricFill"
         [attr.data-light]="light"
         [attr.data-wall]="geometry.wall"
         role="group"
         [attr.aria-label]="frameLabel"
       >
-        <div class="elev-wall" [style.aspect-ratio]="geometry.wallLengthFt + ' / ' + geometry.ceilingHeightFt">
+        <app-fabric-pattern-defs />
+        <div
+          class="elev-wall"
+          [style.aspect-ratio]="geometry.wallLengthFt + ' / ' + geometry.ceilingHeightFt"
+          [style.background-image]="wallPattern.image"
+          [style.background-size]="wallPattern.size"
+        >
           @for (o of openings; track o.kind) {
             <div
               class="opening"
@@ -130,7 +137,12 @@
           }
           <div class="elev-veil" aria-hidden="true"></div>
         </div>
-        <div class="elev-floor" aria-hidden="true"></div>
+        <div
+          class="elev-floor"
+          aria-hidden="true"
+          [style.background-image]="floorPattern.image"
+          [style.background-size]="floorPattern.size"
+        ></div>
       </div>
     </div>
     </div>

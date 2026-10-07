@@ -15,12 +15,19 @@
         [style.--floor]="floor"
         [style.--fabric]="fabric"
         [style.--accent]="accent"
+        [style.--fabric-fill]="fabricFill"
         [attr.data-light]="light"
         [attr.data-floor]="floorCode"
         role="img"
         [attr.aria-label]="'Room plan, ' + width + ' by ' + length + ' feet, area ' + area + ' square feet'"
       >
-        <div class="floor-tex" aria-hidden="true"></div>
+        <app-fabric-pattern-defs />
+        <div
+          class="floor-tex"
+          aria-hidden="true"
+          [style.background-image]="floorPattern.image"
+          [style.background-size]="floorPattern.size"
+        ></div>
         <div class="plan-grid" aria-hidden="true"></div>
         <!-- subtle static architectural indicators (no data model) -->
         <div class="win" aria-hidden="true"><span></span></div>

@@ -1066,6 +1066,71 @@ describe('AppComponent', () => {
       expect(el.querySelector('app-elevation-view .dim-side')!.textContent).toContain('9 ft');
     });
 
+    it('starts with the default textures and shows texture chips under each finish tab', () => {
+      const { fixture, app, el } = openVisualizer();
+      expect([app.wallPatternId(), app.floorPatternId(), app.fabricPatternId()]).toEqual(['plain', 'classic', 'plain']);
+      const tabButtons = () => Array.from(el.querySelectorAll<HTMLButtonElement>('.tabs button'));
+      for (const [tab, label, count] of [['Walls', 'Wall', 4], ['Floor', 'Floor', 5], ['Fabric', 'Fabric', 5]] as const) {
+        tabButtons().find((b) => b.textContent?.trim() === tab)!.click();
+        fixture.detectChanges();
+        const group = el.querySelector(`app-texture-chips [role=group][aria-label="${label} texture"]`);
+        expect(group).toBeTruthy();
+        expect(group!.querySelectorAll('.tex-chip').length).toBe(count);
+      }
+      tabButtons().find((b) => b.textContent?.trim() === 'Light')!.click();
+      fixture.detectChanges();
+      expect(el.querySelector('app-texture-chips')).toBeNull();
+    });
+
+    it('tapping a texture chip changes only the texture, not the colour', () => {
+      const { fixture, app, el } = openVisualizer();
+      const colourBefore = app.selectedFloor().value;
+      Array.from(el.querySelectorAll<HTMLButtonElement>('.tabs button')).find((b) => b.textContent?.trim() === 'Floor')!.click();
+      fixture.detectChanges();
+      el.querySelector<HTMLButtonElement>('[data-pattern=herringbone]')!.click();
+      fixture.detectChanges();
+      expect(app.floorPatternId()).toBe('herringbone');
+      expect(app.selectedFloor().value).toBe(colourBefore);
+      // and picking a new colour keeps the chosen texture
+      app.selectedFloor.set(app.floors[2]);
+      fixture.detectChanges();
+      expect(app.floorPatternId()).toBe('herringbone');
+    });
+
+    it('the plan and the elevation receive the chosen textures', () => {
+      const { fixture, app, el, tab } = openVisualizer();
+      app.floorPatternId.set('tile');
+      app.fabricPatternId.set('velvet');
+      app.wallPatternId.set('slats');
+      fixture.detectChanges();
+      expect(el.querySelector<HTMLElement>('app-floor-plan .floor-tex')!.style.backgroundImage).toContain('linear-gradient');
+      expect(el.querySelector<HTMLElement>('app-floor-plan .plan')!.style.getPropertyValue('--fabric-fill')).toBe('url(#fab-velvet)');
+      tab('Elevation').click();
+      fixture.detectChanges();
+      expect(el.querySelector<HTMLElement>('app-elevation-view .elev-wall')!.style.backgroundImage).toContain('repeating-linear-gradient');
+      expect(el.querySelector<HTMLElement>('app-elevation-view .elev')!.style.getPropertyValue('--fabric-fill')).toBe('url(#fab-velvet)');
+    });
+
+    it('Perspective is unchanged by textures', () => {
+      const { fixture, app, el, tab } = openVisualizer();
+      tab('Perspective').click();
+      fixture.detectChanges();
+      const before = el.querySelector('app-room-visualizer')!.innerHTML;
+      app.floorPatternId.set('plank');
+      app.wallPatternId.set('stripe');
+      app.fabricPatternId.set('weave');
+      fixture.detectChanges();
+      expect(el.querySelector('app-room-visualizer')!.innerHTML).toBe(before);
+    });
+
+    it('resetting the workspace restores the default textures', () => {
+      const { app } = openVisualizer();
+      app.wallPatternId.set('stripe');
+      app.floorPatternId.set('tile');
+      app.fabricPatternId.set('linen');
+      app.resetWorkspace();
+      expect([app.wallPatternId(), app.floorPatternId(), app.fabricPatternId()]).toEqual(['plain', 'classic', 'plain']);
+    });
     it('does not change what is saved with an estimate', () => {
       const { app } = openVisualizer();
       app.addFurniture('bed');

@@ -45,7 +45,7 @@
 
 .piece { position: absolute; bottom: 0; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; min-width: 10px; }
 .piece svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.s-fabric { fill: var(--fabric); stroke: rgba(0,0,0,0.38); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.s-fabric { fill: var(--fabric-fill, var(--fabric)); stroke: rgba(0,0,0,0.38); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .s-wood { fill: var(--accent); stroke: rgba(0,0,0,0.38); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .s-leg { fill: #2e2821; }
 .s-line { stroke: rgba(0,0,0,0.38); stroke-width: 1; vector-effect: non-scaling-stroke; fill: none; }

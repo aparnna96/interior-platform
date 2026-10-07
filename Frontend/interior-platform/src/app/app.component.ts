@@ -6,6 +6,8 @@ import { filter } from 'rxjs';
 import { RoomVisualizerComponent } from './room-visualizer/room-visualizer.component';
 import { FloorPlanComponent } from './floor-plan/floor-plan.component';
 import { ElevationViewComponent } from './elevation/elevation-view.component';
+import { TextureChipsComponent } from './finishes/texture-chips.component';
+import { DEFAULT_PATTERN_ID, FABRIC_PATTERNS, FLOOR_PATTERNS, WALL_PATTERNS } from './finishes/finish-patterns';
 import { DEFAULT_CEILING_HEIGHT_FT, ElevationWall } from './elevation/elevation-geometry';
 import { LoginPageComponent } from './auth/login-page.component';
 import { RegisterPageComponent } from './auth/register-page.component';
@@ -73,7 +75,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -502,6 +504,14 @@ export class AppComponent {
   light = signal<'day' | 'evening' | 'night'>('day');
   finishTab = signal<'Walls' | 'Floor' | 'Fabric' | 'Light'>('Walls');
 
+  // Textures are chosen separately from colours. They are not saved with estimates.
+  readonly wallPatterns = WALL_PATTERNS;
+  readonly floorPatterns = FLOOR_PATTERNS;
+  readonly fabricPatterns = FABRIC_PATTERNS;
+  wallPatternId = signal(DEFAULT_PATTERN_ID.wall);
+  floorPatternId = signal(DEFAULT_PATTERN_ID.floor);
+  fabricPatternId = signal(DEFAULT_PATTERN_ID.fabric);
+
   schemeName = computed(
     () => `${this.selectedWall().name} × ${this.selectedFabric().name}`
   );
@@ -575,6 +585,9 @@ export class AppComponent {
     this.selectedAccent.set(this.accents[0]);
     this.light.set('day');
     this.elevationWall.set('top');
+    this.wallPatternId.set(DEFAULT_PATTERN_ID.wall);
+    this.floorPatternId.set(DEFAULT_PATTERN_ID.floor);
+    this.fabricPatternId.set(DEFAULT_PATTERN_ID.fabric);
     this.placed.set([
       { uid: 'f-sofa-1', defId: 'sofa', name: 'Sofa', short: 'SF', w: 7, l: 3, x: 20, y: 8 },
       { uid: 'f-table-1', defId: 'table', name: 'Table', short: 'TB', w: 4, l: 2.5, x: 34, y: 44 },

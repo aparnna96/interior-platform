@@ -12,6 +12,8 @@ import {
   ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FabricPatternDefsComponent } from '../finishes/fabric-pattern-defs.component';
+import { FinishPattern, findPattern } from '../finishes/finish-patterns';
 import { FloorPlanItem } from '../floor-plan/floor-plan.component';
 import {
   DEFAULT_CEILING_HEIGHT_FT,
@@ -47,7 +49,7 @@ export const ELEVATION_MAX_HEIGHT_PX = 420;
 @Component({
   selector: 'app-elevation-view',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FabricPatternDefsComponent],
   templateUrl: './elevation-view.component.html',
   styleUrl: './elevation-view.component.css',
 })
@@ -63,6 +65,10 @@ export class ElevationViewComponent implements OnChanges, AfterViewInit, OnDestr
   @Input() fabric = '#ece1d1';
   @Input() accent = '#7c5c3e';
   @Input() light: 'day' | 'evening' | 'night' = 'day';
+  /** Texture ids from finish-patterns.ts. The defaults keep today's flat colours. */
+  @Input() wallPatternId = 'plain';
+  @Input() floorPatternId = 'classic';
+  @Input() fabricPatternId = 'plain';
   @Output() select = new EventEmitter<string>();
   @Output() wallChange = new EventEmitter<ElevationWall>();
 
@@ -128,6 +134,20 @@ export class ElevationViewComponent implements OnChanges, AfterViewInit, OnDestr
     this.canScrollLeft = left;
     this.canScrollRight = right;
     return changed;
+  }
+
+  get wallPattern(): FinishPattern {
+    return findPattern('wall', this.wallPatternId);
+  }
+
+  get floorPattern(): FinishPattern {
+    return findPattern('floor', this.floorPatternId);
+  }
+
+  /** SVG fill for upholstery, or null to keep the flat fabric colour. */
+  get fabricFill(): string | null {
+    const p = findPattern('fabric', this.fabricPatternId);
+    return p.id === 'plain' ? null : `url(#fab-${p.id})`;
   }
 
   chooseWall(id: ElevationWall): void {
