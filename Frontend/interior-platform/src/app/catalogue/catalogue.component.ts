@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { RevealDirective } from '../shared/reveal.directive';
 import {
   ROOMS,
-  FEATURED_COLLECTION,
   filterProducts,
   type CatalogueProduct,
   type RoomFilter,
@@ -21,7 +20,6 @@ import { ProductDetailsComponent, type AddToCartEvent } from './product-details.
 })
 export class CatalogueComponent implements OnInit {
   rooms = ROOMS;
-  featured = FEATURED_COLLECTION;
 
   private readonly cart = inject(CartService);
   readonly productService = inject(ProductService);

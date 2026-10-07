@@ -312,18 +312,35 @@ describe('CatalogueComponent ProductService integration', () => {
     expect(requested).toBe(0);
   });
 
-  it('hides the featured banner while a search is active', async () => {
+  it('has no default featured Living Room card at the top, with or without a search', async () => {
     const { fixture, cmp, httpMock } = await setup();
     httpMock.expectOne(PRODUCTS_URL).flush(apiProducts);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.spotlight')).toBeTruthy();
+    const noCard = () => {
+      expect(el.querySelector('.spotlight')).toBeFalsy();
+      expect(el.querySelector('[aria-label="Featured collection"]')).toBeFalsy();
+      expect(el.textContent).not.toContain('Explore Living Room');
+      expect(el.textContent).not.toContain('Warm Minimal');
+    };
+    noCard();
     cmp.setSearch('sofa');
     fixture.detectChanges();
-    expect(el.querySelector('.spotlight')).toBeFalsy();
+    noCard();
     cmp.setSearch('');
     fixture.detectChanges();
-    expect(el.querySelector('.spotlight')).toBeTruthy();
+    noCard();
+  });
+
+  it('goes straight from the room filters to the product listing', async () => {
+    const { fixture, httpMock } = await setup();
+    httpMock.expectOne(PRODUCTS_URL).flush(apiProducts);
+    fixture.detectChanges();
+    const section = (fixture.nativeElement as HTMLElement).querySelector('section.showroom')!;
+    const kids = Array.from(section.children).map((c) => c.tagName.toLowerCase() + '.' + (c.classList[0] ?? ''));
+    expect(kids[0]).toBe('header.sr-head');
+    expect(kids[1]).toContain('listing-bar');
+    expect(fixture.nativeElement.querySelectorAll('.tile').length).toBeGreaterThan(0);
   });
 });
 

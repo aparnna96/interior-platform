@@ -30,6 +30,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   /** Local carousel state — text and CTAs stay fixed while this changes. */
   slideIndex = signal(0);
   private autoplay: ReturnType<typeof setInterval> | null = null;
+  /** Autoplay is held only while a hero control has keyboard focus (never for a mouse or touch). */
+  private focusPaused = false;
+  private swipeStart: { x: number; y: number } | null = null;
+  /** Smallest horizontal travel (px) that counts as a swipe. */
+  private static readonly SWIPE_MIN_PX = 40;
   private static readonly SLIDE_MS = 5000;
   spaces = SPACES;
   showcase = SHOWCASE;
@@ -79,6 +84,51 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.goToSlide(this.slideIndex() + 1);
   }
 
+  /** Left / Right arrow keys move between slides (focus is on a hero control). */
+  onHeroKey(ev: KeyboardEvent): void {
+    if (ev.key === 'ArrowLeft') {
+      ev.preventDefault();
+      this.prevSlide();
+    } else if (ev.key === 'ArrowRight') {
+      ev.preventDefault();
+      this.nextSlide();
+    }
+  }
+
+  /** Touch / pen swipe. A mouse uses the arrows and dots instead, so text selection is untouched. */
+  onHeroPointerDown(ev: PointerEvent): void {
+    this.swipeStart = ev.pointerType === 'mouse' || !ev.isPrimary ? null : { x: ev.clientX, y: ev.clientY };
+  }
+
+  onHeroPointerUp(ev: PointerEvent): void {
+    const start = this.swipeStart;
+    this.swipeStart = null;
+    if (!start || ev.pointerType === 'mouse') return;
+    const dx = ev.clientX - start.x;
+    const dy = ev.clientY - start.y;
+    // Mostly horizontal and long enough; a vertical scroll or a tap does nothing.
+    if (Math.abs(dx) < HomeComponent.SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx < 0) this.nextSlide();
+    else this.prevSlide();
+  }
+
+  onHeroPointerCancel(): void {
+    this.swipeStart = null;
+  }
+
+  onHeroFocusIn(ev: FocusEvent): void {
+    const target = ev.target as HTMLElement | null;
+    // Only keyboard focus pauses; tapping a control on a phone must not stop the slideshow for good.
+    if (!target || typeof target.matches !== 'function' || !target.matches(':focus-visible')) return;
+    this.focusPaused = true;
+    this.stopAutoplay();
+  }
+
+  onHeroFocusOut(): void {
+    this.focusPaused = false;
+    this.restartAutoplay();
+  }
+
   private prefersReducedMotion(): boolean {
     return (
       typeof window !== 'undefined' &&
@@ -102,7 +152,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   private restartAutoplay(): void {
-    if (this.prefersReducedMotion()) return;
+    if (this.focusPaused || this.prefersReducedMotion()) return;
     this.startAutoplay();
   }
 

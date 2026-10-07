@@ -22,7 +22,6 @@
  * - Kraft desk:     https://www.pexels.com/photo/373904/
  * - Milo chairs:    https://www.pexels.com/photo/8113029/
  * - Oslo wardrobe:  https://www.pexels.com/photo/7061419/
- * - Featured hero:  https://www.pexels.com/photo/1571460/
  */
 
 export type CatalogueCategory = 'Sofas' | 'Beds' | 'Tables' | 'Chairs' | 'Wardrobes';
@@ -55,36 +54,12 @@ export interface CatalogueProduct {
   description: string;
 }
 
-export interface FeaturedCollection {
-  eyebrow: string;
-  title: string;
-  standfirst: string;
-  copy: string;
-  ctaLabel: string;
-  targetRoom: Exclude<RoomFilter, 'All'>;
-  image: string;
-  imageAlt: string;
-  meta: string[];
-}
-
 /** Centralised Pexels CDN builder — keeps every demo URL in this file. */
 function px(id: number, w = 900): string {
   return `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${w}`;
 }
 
 export const ROOMS: RoomFilter[] = ['All', 'Living Room', 'Bedroom', 'Dining', 'Workspace'];
-
-export const FEATURED_COLLECTION: FeaturedCollection = {
-  eyebrow: 'New Collection',
-  title: 'Warm Minimal',
-  standfirst: 'Natural materials, soft forms and quiet tones for slow living.',
-  copy: 'Eight considered pieces in oak, bouclé and washed cotton — designed to sit together across living, sleep and work spaces.',
-  ctaLabel: 'Explore Living Room',
-  targetRoom: 'Living Room',
-  image: px(1571460, 1260),
-  imageAlt: 'Warm minimal living room with a neutral sofa and wooden staircase',
-  meta: ['8 pieces', 'Oak · Bouclé · Cotton', 'New season'],
-};
 
 /**
  * Pure product filter: matches room exactly (unless 'All') and matches

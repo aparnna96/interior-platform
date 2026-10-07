@@ -134,3 +134,190 @@ describe('HomeComponent featured products', () => {
     fixture.destroy();
   });
 });
+
+describe('HomeComponent hero carousel controls', () => {
+  let httpMock: HttpTestingController;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [HomeComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    jasmine.clock().uninstall();
+    httpMock.verify();
+  });
+
+  function setup(useClock = false) {
+    if (useClock) jasmine.clock().install();
+    const fixture = TestBed.createComponent(HomeComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(PRODUCTS_URL).flush([]);
+    fixture.detectChanges();
+    const cmp = fixture.componentInstance;
+    const hero = (fixture.nativeElement as HTMLElement).querySelector('header.hero') as HTMLElement;
+    return { fixture, cmp, hero };
+  }
+
+  function pointer(type: string, x: number, y: number, extra: PointerEventInit = {}): PointerEvent {
+    return new PointerEvent(type, { clientX: x, clientY: y, pointerType: 'touch', isPrimary: true, bubbles: true, ...extra });
+  }
+
+  function swipe(hero: HTMLElement, fromX: number, toX: number, fromY = 200, toY = 200, extra: PointerEventInit = {}) {
+    hero.dispatchEvent(pointer('pointerdown', fromX, fromY, extra));
+    hero.dispatchEvent(pointer('pointerup', toX, toY, extra));
+  }
+
+  it('the previous / next arrows and the dots change the slide', () => {
+    const { fixture, cmp, hero } = setup();
+    const n = cmp.slides.length;
+    (hero.querySelector('.hero-next') as HTMLButtonElement).click();
+    expect(cmp.slideIndex()).toBe(1);
+    (hero.querySelector('.hero-prev') as HTMLButtonElement).click();
+    (hero.querySelector('.hero-prev') as HTMLButtonElement).click();
+    expect(cmp.slideIndex()).toBe(n - 1);
+    (hero.querySelectorAll('.hero-dots button')[2] as HTMLButtonElement).click();
+    expect(cmp.slideIndex()).toBe(2);
+    fixture.destroy();
+  });
+
+  it('a swipe left shows the next slide and a swipe right the previous one', () => {
+    const { fixture, cmp, hero } = setup();
+    swipe(hero, 300, 200);
+    expect(cmp.slideIndex()).toBe(1);
+    swipe(hero, 200, 300);
+    expect(cmp.slideIndex()).toBe(0);
+    swipe(hero, 200, 300);
+    expect(cmp.slideIndex()).toBe(cmp.slides.length - 1);
+    fixture.destroy();
+  });
+
+  it('a tap, a short drag, a mostly-vertical drag and a mouse drag do not change the slide', () => {
+    const { fixture, cmp, hero } = setup();
+    swipe(hero, 200, 200);
+    swipe(hero, 200, 215);
+    swipe(hero, 200, 120, 100, 260);
+    swipe(hero, 300, 150, 200, 200, { pointerType: 'mouse' });
+    swipe(hero, 300, 150, 200, 200, { isPrimary: false });
+    expect(cmp.slideIndex()).toBe(0);
+    fixture.destroy();
+  });
+
+  it('a cancelled touch is forgotten, so a later stray pointerup does nothing', () => {
+    const { fixture, cmp, hero } = setup();
+    hero.dispatchEvent(pointer('pointerdown', 300, 200));
+    hero.dispatchEvent(pointer('pointercancel', 300, 200));
+    hero.dispatchEvent(pointer('pointerup', 100, 200));
+    expect(cmp.slideIndex()).toBe(0);
+    fixture.destroy();
+  });
+
+  it('the Left and Right arrow keys move between slides and other keys do nothing', () => {
+    const { fixture, cmp, hero } = setup();
+    hero.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    expect(cmp.slideIndex()).toBe(1);
+    hero.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    expect(cmp.slideIndex()).toBe(0);
+    hero.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    hero.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }));
+    expect(cmp.slideIndex()).toBe(0);
+    fixture.destroy();
+  });
+
+  it('keeps the automatic animation running', () => {
+    const { fixture, cmp } = setup(true);
+    jasmine.clock().tick(5001);
+    expect(cmp.slideIndex()).toBe(1);
+    jasmine.clock().tick(5000);
+    expect(cmp.slideIndex()).toBe(2);
+    fixture.destroy();
+  });
+
+  it('a manual change restarts the 5 second timer instead of skipping again at once', () => {
+    const { fixture, cmp, hero } = setup(true);
+    jasmine.clock().tick(4000);
+    (hero.querySelector('.hero-next') as HTMLButtonElement).click();
+    expect(cmp.slideIndex()).toBe(1);
+    jasmine.clock().tick(2000);
+    expect(cmp.slideIndex()).toBe(1);
+    jasmine.clock().tick(3100);
+    expect(cmp.slideIndex()).toBe(2);
+    fixture.destroy();
+  });
+
+  it('a mouse resting over the hero does not stop the animation', () => {
+    const { fixture, cmp, hero } = setup(true);
+    hero.dispatchEvent(pointer('pointerenter', 100, 100, { pointerType: 'mouse' }));
+    hero.dispatchEvent(pointer('pointermove', 120, 110, { pointerType: 'mouse' }));
+    jasmine.clock().tick(5001);
+    expect(cmp.slideIndex()).toBe(1);
+    jasmine.clock().tick(5000);
+    expect(cmp.slideIndex()).toBe(2);
+    fixture.destroy();
+  });
+
+  it('after clicking Next with the mouse the animation carries on from the new slide', () => {
+    const { fixture, cmp, hero } = setup(true);
+    (hero.querySelector('.hero-next') as HTMLButtonElement).click();
+    expect(cmp.slideIndex()).toBe(1);
+    jasmine.clock().tick(5001);
+    expect(cmp.slideIndex()).toBe(2);
+    fixture.destroy();
+  });
+
+  it('a touch on the hero does not freeze the animation', () => {
+    const { fixture, cmp, hero } = setup(true);
+    hero.dispatchEvent(pointer('pointerenter', 100, 100, { pointerType: 'touch' }));
+    jasmine.clock().tick(5001);
+    expect(cmp.slideIndex()).toBe(1);
+    fixture.destroy();
+  });
+
+  it('keyboard focus on a hero control pauses the animation and leaving it resumes', () => {
+    const { fixture, cmp } = setup(true);
+    cmp.onHeroFocusIn({ target: { matches: (s: string) => s === ':focus-visible' } } as unknown as FocusEvent);
+    jasmine.clock().tick(20000);
+    expect(cmp.slideIndex()).toBe(0);
+    cmp.onHeroFocusOut();
+    jasmine.clock().tick(5001);
+    expect(cmp.slideIndex()).toBe(1);
+    fixture.destroy();
+  });
+
+  it('a tap-focus (not keyboard) does not pause the animation', () => {
+    const { fixture, cmp } = setup(true);
+    cmp.onHeroFocusIn({ target: { matches: () => false } } as unknown as FocusEvent);
+    jasmine.clock().tick(5001);
+    expect(cmp.slideIndex()).toBe(1);
+    fixture.destroy();
+  });
+
+  it('manual controls still work while the animation is paused by keyboard focus', () => {
+    const { fixture, cmp, hero } = setup(true);
+    cmp.onHeroFocusIn({ target: { matches: (s: string) => s === ':focus-visible' } } as unknown as FocusEvent);
+    (hero.querySelector('.hero-next') as HTMLButtonElement).click();
+    expect(cmp.slideIndex()).toBe(1);
+    jasmine.clock().tick(20000);
+    expect(cmp.slideIndex()).toBe(1);
+    fixture.destroy();
+  });
+
+  it('leaves the page and stops the timer when destroyed', () => {
+    const { fixture, cmp } = setup(true);
+    fixture.destroy();
+    const at = cmp.slideIndex();
+    jasmine.clock().tick(30000);
+    expect(cmp.slideIndex()).toBe(at);
+  });
+
+  it('exposes labelled prev / next buttons and one dot per slide', () => {
+    const { fixture, cmp, hero } = setup();
+    expect(hero.querySelector('.hero-prev')!.getAttribute('aria-label')).toBe('Previous slide');
+    expect(hero.querySelector('.hero-next')!.getAttribute('aria-label')).toBe('Next slide');
+    expect(hero.querySelectorAll('.hero-dots button').length).toBe(cmp.slides.length);
+    fixture.destroy();
+  });
+});

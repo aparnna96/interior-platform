@@ -1,6 +1,14 @@
 <section class="home" aria-label="Home">
   <!-- ── 1 · Hero ─────────────────────────────────── -->
-  <header class="hero">
+  <header
+    class="hero"
+    (keydown)="onHeroKey($event)"
+    (pointerdown)="onHeroPointerDown($event)"
+    (pointerup)="onHeroPointerUp($event)"
+    (pointercancel)="onHeroPointerCancel()"
+    (focusin)="onHeroFocusIn($event)"
+    (focusout)="onHeroFocusOut()"
+  >
     <figure class="hero-media" role="group" aria-roledescription="carousel" aria-label="Featured interiors">
       @for (sl of slides; track sl.image; let i = $index) {
         <img

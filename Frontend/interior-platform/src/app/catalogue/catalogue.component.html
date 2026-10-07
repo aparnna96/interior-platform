@@ -44,29 +44,6 @@
     </nav>
   </header>
 
-  <!-- ── Featured collection ─────────────────────────── -->
-  @if (!search().trim()) {
-  <section class="spotlight" reveal aria-label="Featured collection">
-    <figure class="spotlight-media">
-      <img [src]="featured.image" [alt]="featured.imageAlt" loading="eager" />
-    </figure>
-    <div class="spotlight-copy">
-      <p class="kicker kicker-accent">{{ featured.eyebrow }}</p>
-      <h2>{{ featured.title }}</h2>
-      <p class="spotlight-standfirst">{{ featured.standfirst }}</p>
-      <p class="spotlight-text">{{ featured.copy }}</p>
-      <ul class="spotlight-meta">
-        @for (m of featured.meta; track m) {
-          <li>{{ m }}</li>
-        }
-      </ul>
-      <div class="spotlight-actions">
-        <button class="btn-outline" (click)="setRoom(featured.targetRoom)">{{ featured.ctaLabel }}</button>
-      </div>
-    </div>
-  </section>
-  }
-
   <!-- ── Listing ─────────────────────────────────────── -->
   <div class="listing-bar" reveal>
     <h2 class="listing-title">
