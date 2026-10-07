@@ -7,6 +7,7 @@ import { RoomVisualizerComponent } from './room-visualizer/room-visualizer.compo
 import { FloorPlanComponent } from './floor-plan/floor-plan.component';
 import { ElevationViewComponent } from './elevation/elevation-view.component';
 import { TextureChipsComponent } from './finishes/texture-chips.component';
+import { findFreeSpot } from './floor-plan/furniture-placement';
 import { DEFAULT_PATTERN_ID, FABRIC_PATTERNS, FLOOR_PATTERNS, WALL_PATTERNS } from './finishes/finish-patterns';
 import {
   DEFAULT_CEILING_HEIGHT_FT,
@@ -682,12 +683,18 @@ export class AppComponent {
     if (!def) return;
     this.uidCounter += 1;
     const n = this.placed().length;
-    const spotX = 6 + ((n * 13) % 60);
-    const spotY = 6 + ((n * 17) % 55);
+    // The usual spot for the n-th piece. It is kept when free; otherwise the new piece
+    // goes to the first free place in the room instead of landing on top of another piece.
+    const spot = findFreeSpot(
+      def,
+      { width: this.appliedWidth(), length: this.appliedLength() },
+      this.placed(),
+      { x: 6 + ((n * 13) % 60), y: 6 + ((n * 17) % 55) }
+    );
     const uid = `f-${defId}-${this.uidCounter}`;
     this.placed.update((items) => [
       ...items,
-      { uid, defId: def.id, name: def.name, short: def.short, w: def.w, l: def.l, x: spotX, y: spotY },
+      { uid, defId: def.id, name: def.name, short: def.short, w: def.w, l: def.l, x: spot.x, y: spot.y },
     ]);
     this.selectedItemId.set(uid);
     this.clampAllItems();

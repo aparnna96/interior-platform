@@ -1347,6 +1347,121 @@ describe('AppComponent', () => {
       });
     });
 
+    describe('new pieces do not land on top of existing ones', () => {
+      /** True when two placed pieces share floor area in the current room. */
+      function overlap(app: AppComponent, a: ReturnType<AppComponent['placed']>[number], b: ReturnType<AppComponent['placed']>[number]): boolean {
+        const rw = app.appliedWidth();
+        const rl = app.appliedLength();
+        const ax = (a.x / 100) * rw, ay = (a.y / 100) * rl, bx = (b.x / 100) * rw, by = (b.y / 100) * rl;
+        return Math.min(ax + a.w, bx + b.w) - Math.max(ax, bx) > 1e-6 && Math.min(ay + a.l, by + b.l) - Math.max(ay, by) > 1e-6;
+      }
+      function anyOverlap(app: AppComponent): boolean {
+        const list = app.placed();
+        return list.some((a, i) => list.slice(i + 1).some((b) => overlap(app, a, b)));
+      }
+
+      it('the bed that used to cover the default table now has its own spot', () => {
+        const { app } = openVisualizer();
+        app.addFurniture('bed');
+        const bed = app.placed()[app.placed().length - 1];
+        expect(bed.defId).toBe('bed');
+        expect(anyOverlap(app)).toBe(false);
+      });
+
+      it('adding several pieces in a row leaves none of them overlapping', () => {
+        // NOTE: bed, wardrobe, chair, chair is the longest such sequence here. A second
+        // 7x3 sofa cannot fit afterwards: it x-overlaps every legal bed/wardrobe position,
+        // so it would have to clear the sofa, table, bed and wardrobe in y, and the tallest
+        // free y-band in a 12x15 room is 2.4 ft < 3 ft. That overfill case is covered below.
+        const { app } = openVisualizer();
+        for (const id of ['bed', 'wardrobe', 'chair', 'chair'] as const) app.addFurniture(id);
+        expect(app.placed().length).toBe(6);
+        expect(anyOverlap(app)).toBe(false);
+      });
+
+      it('an overfilled room still adds an in-bounds piece and selects it', () => {
+        const { app } = openVisualizer();
+        for (const id of ['bed', 'wardrobe', 'chair', 'chair', 'sofa', 'table'] as const) app.addFurniture(id);
+        expect(app.placed().length).toBe(8);
+        const last = app.placed()[app.placed().length - 1];
+        expect(Number.isFinite(last.x) && Number.isFinite(last.y)).toBe(true);
+        expect(last.x).toBeGreaterThanOrEqual(1 - 1e-9);
+        expect(last.y).toBeGreaterThanOrEqual(1 - 1e-9);
+        expect(last.x + (last.w / app.appliedWidth()) * 100).toBeLessThanOrEqual(99 + 1e-6);
+        expect(last.y + (last.l / app.appliedLength()) * 100).toBeLessThanOrEqual(99 + 1e-6);
+        expect(app.selectedItemId()).toBe(last.uid);
+      });
+
+      it('every new piece stays inside the room', () => {
+        const { app } = openVisualizer();
+        for (const id of ['bed', 'wardrobe', 'chair', 'sofa', 'table', 'chair'] as const) app.addFurniture(id);
+        for (const p of app.placed()) {
+          expect(p.x).toBeGreaterThanOrEqual(1 - 1e-9);
+          expect(p.y).toBeGreaterThanOrEqual(1 - 1e-9);
+          expect(p.x + (p.w / app.appliedWidth()) * 100).toBeLessThanOrEqual(99 + 1e-6);
+          expect(p.y + (p.l / app.appliedLength()) * 100).toBeLessThanOrEqual(99 + 1e-6);
+        }
+      });
+
+      it('the first piece still goes where it always did when nothing is in the way', () => {
+        const { app } = openVisualizer();
+        app.clearFurniture();
+        app.addFurniture('chair');
+        const chair = app.placed()[0];
+        expect([chair.x, chair.y]).toEqual([6, 6]);
+      });
+
+      it('a larger room keeps new pieces apart too', () => {
+        const { app } = openVisualizer();
+        app.draftWidth.set(30);
+        app.draftLength.set(30);
+        app.generateRoom();
+        for (let i = 0; i < 10; i++) app.addFurniture('bed');
+        expect(anyOverlap(app)).toBe(false);
+      });
+
+      it('the smallest room still accepts a piece, even if it has to overlap', () => {
+        const { app } = openVisualizer();
+        app.draftWidth.set(4);
+        app.draftLength.set(4);
+        app.generateRoom();
+        const before = app.placed().length;
+        app.addFurniture('bed');
+        expect(app.placed().length).toBe(before + 1);
+        const bed = app.placed()[app.placed().length - 1];
+        expect(Number.isFinite(bed.x) && Number.isFinite(bed.y)).toBe(true);
+      });
+
+      it('Add to Visualizer from a product page also avoids overlap', () => {
+        const { app } = openVisualizer();
+        app.onVisualizerRequested('Beds');
+        expect(anyOverlap(app)).toBe(false);
+        expect(app.activeView()).toBe('visualizer');
+      });
+
+      it('the new piece is selected, and what gets saved with an estimate is unchanged', () => {
+        const { app } = openVisualizer();
+        app.addFurniture('bed');
+        const bed = app.placed()[app.placed().length - 1];
+        expect(app.selectedItemId()).toBe(bed.uid);
+        const lines = (app as unknown as { placedFurnitureLines(): { furnitureType: string; quantity: number }[] }).placedFurnitureLines();
+        expect(lines).toEqual([
+          { furnitureType: 'sofa', quantity: 1 },
+          { furnitureType: 'table', quantity: 1 },
+          { furnitureType: 'bed', quantity: 1 },
+        ]);
+      });
+
+      it('the new piece shows in the plan and in the Elevation view', () => {
+        const { fixture, app, el, tab } = openVisualizer();
+        app.addFurniture('bed');
+        fixture.detectChanges();
+        expect(el.querySelectorAll('app-floor-plan .f-item').length).toBe(3);
+        tab('Elevation').click();
+        fixture.detectChanges();
+        expect(el.querySelectorAll('app-elevation-view .piece').length).toBe(3);
+      });
+    });
     it('does not change what is saved with an estimate', () => {
       const { app } = openVisualizer();
       app.addFurniture('bed');
