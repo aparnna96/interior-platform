@@ -1131,6 +1131,157 @@ describe('AppComponent', () => {
       app.resetWorkspace();
       expect([app.wallPatternId(), app.floorPatternId(), app.fabricPatternId()]).toEqual(['plain', 'classic', 'plain']);
     });
+    describe('ceiling height', () => {
+      const INPUT = 'input[aria-label="Ceiling height in feet"]';
+
+      function type(el: HTMLElement, fixture: { detectChanges(): void }, value: string): void {
+        const input = el.querySelector<HTMLInputElement>(INPUT)!;
+        input.value = value;
+        input.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+      }
+
+      it('shows a ceiling height field that starts at 9 ft and allows 7 to 14 ft', () => {
+        const { el } = openVisualizer();
+        const input = el.querySelector<HTMLInputElement>(INPUT)!;
+        expect(input).toBeTruthy();
+        expect(Number(input.value)).toBe(9);
+        expect(input.getAttribute('min')).toBe('7');
+        expect(input.getAttribute('max')).toBe('14');
+        expect(input.getAttribute('aria-describedby')).toBe('ceiling-hint');
+        expect(el.querySelector('#ceiling-hint')!.textContent).toContain('7 to 14 ft');
+      });
+
+      it('typing a value changes nothing until Generate Room is pressed', () => {
+        const { fixture, app, el } = openVisualizer();
+        type(el, fixture, '11');
+        expect(app.draftCeiling()).toBe(11);
+        expect(app.ceilingHeight()).toBe(9);
+      });
+
+      it('Generate Room applies the ceiling to the Elevation view', () => {
+        const { fixture, app, el, tab } = openVisualizer();
+        tab('Elevation').click();
+        type(el, fixture, '11');
+        Array.from(el.querySelectorAll<HTMLButtonElement>('button'))
+          .find((b) => b.textContent?.trim() === 'Generate Room')!
+          .click();
+        fixture.detectChanges();
+        expect(app.ceilingHeight()).toBe(11);
+        expect(app.roomError()).toBe('');
+        expect(el.querySelector('app-elevation-view .dim-side')!.textContent).toContain('11 ft');
+        expect(el.querySelector('app-elevation-view .elev')!.getAttribute('aria-label')).toContain('11 feet high');
+      });
+
+      it('accepts both ends of the range', () => {
+        const { app } = openVisualizer();
+        for (const v of [7, 14]) {
+          app.draftCeiling.set(v);
+          app.generateRoom();
+          expect(app.ceilingHeight()).toBe(v);
+          expect(app.roomError()).toBe('');
+        }
+      });
+
+      it('rounds to one decimal place like the room size', () => {
+        const { app } = openVisualizer();
+        app.draftCeiling.set(9.26);
+        app.generateRoom();
+        expect(app.ceilingHeight()).toBe(9.3);
+        expect(app.draftCeiling()).toBe(9.3);
+      });
+
+      it('rejects a ceiling below 7 ft or above 14 ft with a message and applies nothing', () => {
+        const { app } = openVisualizer();
+        for (const bad of [6.9, 0, -3, 14.1, 99]) {
+          app.draftCeiling.set(bad);
+          app.generateRoom();
+          expect(app.roomError()).toBe('Ceiling height must be between 7 ft and 14 ft.');
+          expect(app.ceilingHeight()).toBe(9);
+        }
+      });
+
+      it('a bad ceiling also stops the room size from being applied', () => {
+        const { app } = openVisualizer();
+        app.onDimensionInput('width', '20');
+        app.onDimensionInput('length', '10');
+        app.draftCeiling.set(30);
+        app.generateRoom();
+        expect(app.appliedWidth()).toBe(12);
+        expect(app.appliedLength()).toBe(15);
+        expect(app.ceilingHeight()).toBe(9);
+        // fixing the ceiling lets the same press apply everything
+        app.draftCeiling.set(10);
+        app.generateRoom();
+        expect(app.appliedWidth()).toBe(20);
+        expect(app.appliedLength()).toBe(10);
+        expect(app.ceilingHeight()).toBe(10);
+      });
+
+      it('shows the error in the room setup panel and clears it after a valid press', () => {
+        const { fixture, app, el } = openVisualizer();
+        app.draftCeiling.set(2);
+        app.generateRoom();
+        fixture.detectChanges();
+        expect(el.querySelector('.err')!.textContent).toContain('Ceiling height must be between 7 ft and 14 ft.');
+        app.draftCeiling.set(8);
+        app.generateRoom();
+        fixture.detectChanges();
+        expect(el.querySelector('.err')).toBeNull();
+      });
+
+      it('ignores empty and non-numeric keystrokes, keeping the last good draft', () => {
+        const { app } = openVisualizer();
+        app.onCeilingInput('12');
+        for (const junk of ['', '   ', 'abc', 'NaN', 'Infinity', '-Infinity']) {
+          app.onCeilingInput(junk);
+          expect(app.draftCeiling()).toBe(12);
+        }
+        app.onCeilingInput(null as unknown as string);
+        expect(app.draftCeiling()).toBe(12);
+      });
+
+      it('an out-of-range typed value is kept as a draft so the message can explain it', () => {
+        const { app } = openVisualizer();
+        app.onCeilingInput('20');
+        expect(app.draftCeiling()).toBe(20);
+        expect(app.ceilingHeight()).toBe(9);
+      });
+
+      it('resetting the workspace restores 9 ft in both the draft and the applied value', () => {
+        const { app } = openVisualizer();
+        app.draftCeiling.set(13);
+        app.generateRoom();
+        expect(app.ceilingHeight()).toBe(13);
+        app.resetWorkspace();
+        expect(app.ceilingHeight()).toBe(9);
+        expect(app.draftCeiling()).toBe(9);
+      });
+
+      it('does not touch the area, the estimate or the furniture', () => {
+        const { app } = openVisualizer();
+        const area = app.area();
+        const total = app.estimateTotal();
+        const placed = JSON.stringify(app.placed());
+        app.draftCeiling.set(14);
+        app.generateRoom();
+        expect(app.area()).toBe(area);
+        expect(app.estimateTotal()).toBe(total);
+        expect(JSON.stringify(app.placed())).toBe(placed);
+      });
+
+      it('leaves the 2D plan and Perspective without a ceiling field or change', () => {
+        const { fixture, app, el, tab } = openVisualizer();
+        tab('Perspective').click();
+        fixture.detectChanges();
+        const before = el.querySelector('app-room-visualizer')!.innerHTML;
+        app.draftCeiling.set(13);
+        app.generateRoom();
+        fixture.detectChanges();
+        expect(el.querySelector('app-room-visualizer')!.innerHTML).toBe(before);
+      });
+    });
+
     it('does not change what is saved with an estimate', () => {
       const { app } = openVisualizer();
       app.addFurniture('bed');

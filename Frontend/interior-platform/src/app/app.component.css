@@ -115,6 +115,7 @@
 .sum-row em { font-style: normal; font-weight: 400; color: var(--muted); font-size: 11.5px; }
 .controls { padding: 14px; }
 .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.field-row.field-row-single { grid-template-columns: minmax(0, 1fr); margin-top: 0; }
 .field-row label { font-size: 12px; font-weight: 600; color: var(--ink-2); display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .field-row input {
   width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;

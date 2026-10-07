@@ -8,7 +8,12 @@ import { FloorPlanComponent } from './floor-plan/floor-plan.component';
 import { ElevationViewComponent } from './elevation/elevation-view.component';
 import { TextureChipsComponent } from './finishes/texture-chips.component';
 import { DEFAULT_PATTERN_ID, FABRIC_PATTERNS, FLOOR_PATTERNS, WALL_PATTERNS } from './finishes/finish-patterns';
-import { DEFAULT_CEILING_HEIGHT_FT, ElevationWall } from './elevation/elevation-geometry';
+import {
+  DEFAULT_CEILING_HEIGHT_FT,
+  ElevationWall,
+  MAX_CEILING_HEIGHT_FT,
+  MIN_CEILING_HEIGHT_FT,
+} from './elevation/elevation-geometry';
 import { LoginPageComponent } from './auth/login-page.component';
 import { RegisterPageComponent } from './auth/register-page.component';
 import { AccountPageComponent } from './auth/account-page.component';
@@ -421,8 +426,15 @@ export class AppComponent {
   canvasTab = signal<'plan' | 'elevation' | 'preview'>('plan');
   /** Wall shown in the Elevation tab. */
   elevationWall = signal<ElevationWall>('top');
-  /** Ceiling height (ft) for the Elevation tab. An editable field comes in a later step. */
+  /**
+   * Ceiling height (ft) for the Elevation tab, 7 to 14. Like the room size it is typed
+   * into a draft and applied with Generate Room. It is a drawing aid only: it is not
+   * saved with estimates and does not change the area-based price.
+   */
+  draftCeiling = signal<number>(DEFAULT_CEILING_HEIGHT_FT);
   ceilingHeight = signal(DEFAULT_CEILING_HEIGHT_FT);
+  readonly minCeiling = MIN_CEILING_HEIGHT_FT;
+  readonly maxCeiling = MAX_CEILING_HEIGHT_FT;
 
   // ── room setup (draft vs applied) ──────────
   draftWidth = signal(12);
@@ -551,6 +563,14 @@ export class AppComponent {
     else this.draftLength.set(v);
   }
 
+  // Same rule as the width and length drafts: ignore empty or non-numeric keystrokes.
+  onCeilingInput(raw: string): void {
+    if (raw == null || String(raw).trim() === '') return;
+    const v = Number(raw);
+    if (!Number.isFinite(v)) return;
+    this.draftCeiling.set(v);
+  }
+
   generateRoom(): void {
     const w = Number(this.draftWidth());
     const l = Number(this.draftLength());
@@ -562,7 +582,16 @@ export class AppComponent {
       this.roomError.set('Room dimensions must be between 4 ft and 50 ft.');
       return;
     }
+    const c = Number(this.draftCeiling());
+    if (!Number.isFinite(c) || c < MIN_CEILING_HEIGHT_FT || c > MAX_CEILING_HEIGHT_FT) {
+      // Nothing is applied when any value is invalid, same as the room size check above.
+      this.roomError.set(`Ceiling height must be between ${MIN_CEILING_HEIGHT_FT} ft and ${MAX_CEILING_HEIGHT_FT} ft.`);
+      return;
+    }
     this.roomError.set('');
+    const rc = Math.round(c * 10) / 10;
+    this.ceilingHeight.set(rc);
+    this.draftCeiling.set(rc);
     const rw = Math.round(w * 10) / 10;
     const rl = Math.round(l * 10) / 10;
     this.appliedWidth.set(rw);
@@ -579,6 +608,8 @@ export class AppComponent {
     this.appliedWidth.set(12);
     this.appliedLength.set(15);
     this.roomError.set('');
+    this.draftCeiling.set(DEFAULT_CEILING_HEIGHT_FT);
+    this.ceilingHeight.set(DEFAULT_CEILING_HEIGHT_FT);
     this.selectedWall.set(this.walls[1]);
     this.selectedFloor.set(this.floors[0]);
     this.selectedFabric.set(this.fabrics[0]);

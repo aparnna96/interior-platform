@@ -369,6 +369,18 @@
                 />
               </label>
             </div>
+            <div class="field-row field-row-single">
+              <label>Ceiling height (ft)
+                <input
+                  type="number" [attr.min]="minCeiling" [attr.max]="maxCeiling" step="0.5" inputmode="decimal"
+                  [value]="draftCeiling()"
+                  (input)="onCeilingInput($any($event.target).value)"
+                  aria-label="Ceiling height in feet"
+                  aria-describedby="ceiling-hint"
+                />
+              </label>
+              <p id="ceiling-hint" class="sub small">{{ minCeiling }} to {{ maxCeiling }} ft. Used by the Elevation view.</p>
+            </div>
             <button class="btn btn-primary btn-block" (click)="generateRoom()">Generate Room</button>
             @if (roomError()) {
               <p class="err">{{ roomError() }}</p>
