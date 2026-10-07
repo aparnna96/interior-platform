@@ -5,6 +5,8 @@ import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { RoomVisualizerComponent } from './room-visualizer/room-visualizer.component';
 import { FloorPlanComponent } from './floor-plan/floor-plan.component';
+import { ElevationViewComponent } from './elevation/elevation-view.component';
+import { DEFAULT_CEILING_HEIGHT_FT, ElevationWall } from './elevation/elevation-geometry';
 import { LoginPageComponent } from './auth/login-page.component';
 import { RegisterPageComponent } from './auth/register-page.component';
 import { AccountPageComponent } from './auth/account-page.component';
@@ -71,7 +73,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -414,7 +416,11 @@ export class AppComponent {
   closeDrawer(): void {
     this.drawerOpen.set(false);
   }
-  canvasTab = signal<'plan' | 'preview'>('plan');
+  canvasTab = signal<'plan' | 'elevation' | 'preview'>('plan');
+  /** Wall shown in the Elevation tab. */
+  elevationWall = signal<ElevationWall>('top');
+  /** Ceiling height (ft) for the Elevation tab. An editable field comes in a later step. */
+  ceilingHeight = signal(DEFAULT_CEILING_HEIGHT_FT);
 
   // ── room setup (draft vs applied) ──────────
   draftWidth = signal(12);
@@ -568,6 +574,7 @@ export class AppComponent {
     this.selectedFabric.set(this.fabrics[0]);
     this.selectedAccent.set(this.accents[0]);
     this.light.set('day');
+    this.elevationWall.set('top');
     this.placed.set([
       { uid: 'f-sofa-1', defId: 'sofa', name: 'Sofa', short: 'SF', w: 7, l: 3, x: 20, y: 8 },
       { uid: 'f-table-1', defId: 'table', name: 'Table', short: 'TB', w: 4, l: 2.5, x: 34, y: 44 },

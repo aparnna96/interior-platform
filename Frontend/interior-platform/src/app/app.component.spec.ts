@@ -955,4 +955,127 @@ describe('AppComponent', () => {
       expect(app.placed().length).toBe(n);
     });
   });
+
+  describe('Visualizer Elevation tab', () => {
+    function openVisualizer() {
+      const fixture = TestBed.createComponent(AppComponent);
+      const app = fixture.componentInstance;
+      app.activeView.set('visualizer');
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      const tab = (label: string) =>
+        Array.from(el.querySelectorAll<HTMLButtonElement>('.seg button')).find(
+          (b) => b.textContent?.trim() === label
+        )!;
+      return { fixture, app, el, tab };
+    }
+
+    it('offers 2D Plan, Elevation and Perspective, and starts on the plan', () => {
+      const { app, el } = openVisualizer();
+      const labels = Array.from(el.querySelectorAll('.seg button')).map((b) => b.textContent?.trim());
+      expect(labels).toEqual(['2D Plan', 'Elevation', 'Perspective']);
+      expect(app.canvasTab()).toBe('plan');
+      expect(el.querySelector('app-floor-plan')).toBeTruthy();
+      expect(el.querySelector('app-elevation-view')).toBeNull();
+    });
+
+    it('the Elevation tab shows the elevation and hides the plan and Perspective', () => {
+      const { fixture, app, el, tab } = openVisualizer();
+      tab('Elevation').click();
+      fixture.detectChanges();
+      expect(app.canvasTab()).toBe('elevation');
+      expect(el.querySelector('app-elevation-view')).toBeTruthy();
+      expect(el.querySelector('app-floor-plan')).toBeNull();
+      expect(el.querySelector('app-room-visualizer')).toBeNull();
+      expect(tab('Elevation').classList.contains('active')).toBe(true);
+    });
+
+    it('the plan and Perspective tabs still work after visiting Elevation', () => {
+      const { fixture, el, tab } = openVisualizer();
+      tab('Elevation').click();
+      fixture.detectChanges();
+      tab('Perspective').click();
+      fixture.detectChanges();
+      expect(el.querySelector('app-room-visualizer')).toBeTruthy();
+      expect(el.querySelector('app-elevation-view')).toBeNull();
+      tab('2D Plan').click();
+      fixture.detectChanges();
+      expect(el.querySelector('app-floor-plan')).toBeTruthy();
+    });
+
+    it('draws the default sofa and table from the same furniture the plan uses', () => {
+      const { fixture, el, tab } = openVisualizer();
+      tab('Elevation').click();
+      fixture.detectChanges();
+      const types = Array.from(el.querySelectorAll('app-elevation-view .piece')).map((p) => p.getAttribute('data-type'));
+      expect(types.sort()).toEqual(['sofa', 'table']);
+    });
+
+    it('a newly added piece appears in the elevation', () => {
+      const { fixture, app, el, tab } = openVisualizer();
+      tab('Elevation').click();
+      app.addFurniture('bed');
+      fixture.detectChanges();
+      const types = Array.from(el.querySelectorAll('app-elevation-view .piece')).map((p) => p.getAttribute('data-type'));
+      expect(types).toContain('bed');
+      expect(types.length).toBe(3);
+    });
+
+    it('Generate Room updates the wall length shown in the elevation', () => {
+      const { fixture, app, el, tab } = openVisualizer();
+      tab('Elevation').click();
+      app.onDimensionInput('width', '20');
+      app.onDimensionInput('length', '10');
+      app.generateRoom();
+      fixture.detectChanges();
+      expect(el.querySelector('app-elevation-view .dim-top')!.textContent).toContain('20 ft');
+    });
+
+    it('selecting a piece in the elevation selects it for the move controls', () => {
+      const { fixture, app, el, tab } = openVisualizer();
+      tab('Elevation').click();
+      fixture.detectChanges();
+      el.querySelector<HTMLButtonElement>('app-elevation-view .piece[data-type="table"]')!.click();
+      fixture.detectChanges();
+      expect(app.selectedItemId()).toBe('f-table-1');
+      expect(el.querySelector('.quick-move')!.textContent).toContain('Table');
+    });
+
+    it('choosing a wall changes the elevation and resetting the workspace returns to the top wall', () => {
+      const { fixture, app, el, tab } = openVisualizer();
+      tab('Elevation').click();
+      fixture.detectChanges();
+      Array.from(el.querySelectorAll<HTMLButtonElement>('app-elevation-view .wall-tab'))
+        .find((b) => b.textContent?.trim() === 'Bottom wall')!
+        .click();
+      fixture.detectChanges();
+      expect(app.elevationWall()).toBe('bottom');
+      expect(el.querySelector('app-elevation-view .opening')!.getAttribute('data-kind')).toBe('door');
+      app.resetWorkspace();
+      expect(app.elevationWall()).toBe('top');
+    });
+
+    it('uses the selected wall colour and the 9 ft default ceiling', () => {
+      const { fixture, app, el, tab } = openVisualizer();
+      tab('Elevation').click();
+      app.selectedWall.set(app.walls[5]);
+      fixture.detectChanges();
+      expect(app.ceilingHeight()).toBe(9);
+      const frame = el.querySelector<HTMLElement>('app-elevation-view .elev')!;
+      expect(frame.style.getPropertyValue('--wall')).toBe(app.walls[5].value);
+      expect(el.querySelector('app-elevation-view .dim-side')!.textContent).toContain('9 ft');
+    });
+
+    it('does not change what is saved with an estimate', () => {
+      const { app } = openVisualizer();
+      app.addFurniture('bed');
+      app.canvasTab.set('elevation');
+      app.elevationWall.set('left');
+      // the saved lines are still type + quantity only
+      const lines = (app as unknown as { placedFurnitureLines(): { furnitureType: string; quantity: number }[] })
+        .placedFurnitureLines();
+      expect(lines.every((l) => Object.keys(l).sort().join() === 'furnitureType,quantity')).toBe(true);
+      expect(lines.length).toBeGreaterThan(0);
+    });
+  });
 });

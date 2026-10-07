@@ -1,0 +1,66 @@
+:host { display: block; min-width: 0; max-width: 100%; }
+
+.elev-outer { background: var(--surface-soft); border: 1px solid var(--border-soft); border-radius: 7px; padding: 12px 12px 10px; min-width: 0; max-width: 100%; overflow: hidden; }
+
+.wall-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.wall-tab { border: 1px solid var(--border); background: #fff; color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 600; padding: 8px 12px; min-height: 40px; border-radius: 99px; cursor: pointer; }
+.wall-tab.active { background: #1c1917; border-color: #1c1917; color: #faf8f5; }
+.wall-tab:focus-visible, .piece:focus-visible { outline: 2px solid #1c1917; outline-offset: 2px; }
+
+.dim { display: flex; justify-content: center; }
+.dim-top { align-items: center; gap: 8px; margin-bottom: 8px; }
+.dim-top .dl { flex: 1; height: 1px; background: #a09a92; position: relative; }
+.dim-top .dl:first-child::before, .dim-top .dl:last-child::after { content: ""; position: absolute; top: -3.5px; width: 1px; height: 8px; background: #a09a92; }
+.dim-top .dl:first-child::before { left: 0; }
+.dim-top .dl:last-child::after { right: 0; }
+.dlab { font-size: 11.5px; font-weight: 700; color: var(--ink-2); background: #fff; border: 1px solid var(--border); border-radius: 99px; padding: 3px 10px; white-space: nowrap; }
+.elev-row { display: flex; gap: 8px; align-items: stretch; justify-content: center; }
+.dim-side { flex-direction: column; align-items: center; gap: 8px; }
+.dim-side .dl { flex: 1; min-height: 20px; width: 1px; background: #a09a92; position: relative; }
+.dim-side .dl:first-child::before, .dim-side .dl:last-child::after { content: ""; position: absolute; left: -3.5px; height: 1px; width: 8px; background: #a09a92; }
+.dim-side .dl:first-child::before { top: 0; }
+.dim-side .dl:last-child::after { bottom: 0; }
+.dim-side .dlab { writing-mode: vertical-rl; }
+
+/* The frame shrinks to fit, then scrolls inside itself instead of widening the page. */
+.elev-scroll-wrap { position: relative; isolation: isolate; flex: 1; min-width: 0; max-width: 100%; }
+.elev-scroll { min-width: 0; max-width: 100%; overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; }
+.elev-scroll:focus-visible { outline: 2px solid #1c1917; outline-offset: 2px; }
+/* Soft edge fades show which side still has more wall, and only while the drawing scrolls. */
+.elev-scroll-wrap::before, .elev-scroll-wrap::after { content: ""; position: absolute; top: 0; bottom: 14px; width: 28px; z-index: 60; pointer-events: none; opacity: 0; transition: opacity 0.2s ease; }
+.elev-scroll-wrap::before { left: 0; background: linear-gradient(90deg, var(--surface-soft), rgba(248,247,245,0)); }
+.elev-scroll-wrap::after { right: 0; background: linear-gradient(270deg, var(--surface-soft), rgba(248,247,245,0)); }
+.elev-scroll-wrap.fade-left::before, .elev-scroll-wrap.fade-right::after { opacity: 1; }
+.scroll-hint { font-weight: 600; color: var(--ink-2); }
+.elev { --wall: #e4d7c0; --floor: #c9a87c; --fabric: #ece1d1; --accent: #7c5c3e; margin: 0 auto; max-width: none; }
+.elev-wall { position: relative; width: 100%; background: var(--wall); border: 1px solid rgba(0,0,0,0.18); border-bottom: 0; border-radius: 3px 3px 0 0; overflow: hidden; transition: background 0.3s ease; }
+.elev-wall::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2.5%; min-height: 3px; background: rgba(0,0,0,0.10); border-top: 1px solid rgba(0,0,0,0.14); pointer-events: none; }
+.elev-floor { height: 14px; background: var(--floor); border: 1px solid rgba(0,0,0,0.18); border-radius: 0 0 3px 3px; box-shadow: 0 1px 3px rgba(28,25,23,0.12); transition: background 0.3s ease; }
+
+.opening { position: absolute; z-index: 1; pointer-events: none; }
+.opening.window { background: #dcecf4; border: 2px solid #fbf8f1; box-shadow: 0 0 0 1px rgba(0,0,0,0.22); }
+.opening.window span { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: #fbf8f1; }
+.opening.door { background: #b59470; border: 2px solid #fbf8f1; border-bottom: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.22); }
+.opening.door span { position: absolute; top: 48%; right: 10%; width: 4px; height: 4px; border-radius: 50%; background: #4a443c; }
+
+.piece { position: absolute; bottom: 0; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; min-width: 10px; }
+.piece svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.s-fabric { fill: var(--fabric); stroke: rgba(0,0,0,0.38); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.s-wood { fill: var(--accent); stroke: rgba(0,0,0,0.38); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.s-leg { fill: #2e2821; }
+.s-line { stroke: rgba(0,0,0,0.38); stroke-width: 1; vector-effect: non-scaling-stroke; fill: none; }
+.s-handle { stroke: rgba(255,255,255,0.75); stroke-width: 2; }
+.sel-ring { position: absolute; inset: -3px; border: 2px solid #1c1917; border-radius: 4px; pointer-events: none; opacity: 0; }
+.piece.selected .sel-ring { opacity: 1; }
+
+.elev-veil { position: absolute; inset: 0; pointer-events: none; z-index: 50; }
+.elev[data-light="evening"] .elev-veil { background: linear-gradient(180deg, rgba(255,166,88,0.16), rgba(120,70,30,0.16)); }
+.elev[data-light="night"] .elev-veil { background: linear-gradient(180deg, rgba(20,28,58,0.34), rgba(20,20,40,0.30)); }
+
+.elev-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; font-size: 12px; color: var(--ink-2); z-index: 1; pointer-events: none; }
+.elev-caption { font-size: 12.5px; color: var(--ink-2); text-align: center; margin: 10px 0 0; min-height: 1.4em; }
+.hint { font-size: 11.5px; color: var(--muted); text-align: center; margin: 6px 0 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .elev-wall, .elev-floor, .elev-scroll-wrap::before, .elev-scroll-wrap::after { transition: none; }
+}

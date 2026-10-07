@@ -451,6 +451,7 @@
           <div class="canvas-head">
             <div class="seg" role="tablist" aria-label="Canvas mode">
               <button [class.active]="canvasTab() === 'plan'" (click)="canvasTab.set('plan')">2D Plan</button>
+              <button [class.active]="canvasTab() === 'elevation'" (click)="canvasTab.set('elevation')">Elevation</button>
               <button [class.active]="canvasTab() === 'preview'" (click)="canvasTab.set('preview')">Perspective</button>
             </div>
             <div class="canvas-meta">
@@ -476,6 +477,22 @@
               [aspect]="planAspect()"
               [planStyle]="planStyle()"
               (select)="selectItem($event)"
+            />
+          } @else if (canvasTab() === 'elevation') {
+            <app-elevation-view
+              [width]="appliedWidth()"
+              [length]="appliedLength()"
+              [ceilingHeight]="ceilingHeight()"
+              [items]="placed()"
+              [selectedId]="selectedItemId()"
+              [wall]="elevationWall()"
+              [wallColor]="selectedWall().value"
+              [floorColor]="selectedFloor().value"
+              [fabric]="selectedFabric().value"
+              [accent]="selectedAccent().value"
+              [light]="light()"
+              (select)="selectItem($event)"
+              (wallChange)="elevationWall.set($event)"
             />
           } @else {
             <div class="preview-wrap">
