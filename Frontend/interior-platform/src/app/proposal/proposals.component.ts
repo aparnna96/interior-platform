@@ -20,9 +20,13 @@ import type {
  * Customer-facing token payment states for one open proposal. The backend
  * verification response alone decides success: `verified` is entered only
  * after POST /api/payments/verify reports Verified. Nothing is persisted to
- * localStorage — reopening a proposal always restarts from `idle` because
- * the open detail endpoint carries no payment state (a retry then safely
- * reuses the backend's open order or reports the verified payment).
+ * localStorage — reopening a proposal always restarts this in-session flow
+ * from `idle`. What the payment box shows for an existing proposal comes
+ * from the proposal detail instead: GET /api/proposals/{id} includes the
+ * read-only `isPaymentVerified` flag, which the template uses so a paid
+ * proposal still shows "Payment verified" (and no Pay Token) when reopened.
+ * A retry on a stale page still safely reuses the backend's open order or
+ * reports the verified payment (409).
  */
 export type ProposalPaymentState =
   | 'idle'

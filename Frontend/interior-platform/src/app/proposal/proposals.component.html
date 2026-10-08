@@ -114,7 +114,9 @@
               }
             </ul>
           }
-          <p class="sub small">A small token payment unlocks the proposal PDF.</p>
+          @if (!proposal.isPaymentVerified) {
+            <p class="sub small">A small token payment unlocks the proposal PDF.</p>
+          }
           @if (proposal.isPaymentVerified) {
             <div class="proposal-actions">
               <button
@@ -135,11 +137,13 @@
           }
           <div class="payment-box" aria-label="Token payment">
             <h2>Token payment</h2>
-            @if (paymentState() === 'verified' && verifiedPayment(); as verified) {
+            @if (proposal.isPaymentVerified || (paymentState() === 'verified' && verifiedPayment())) {
               <p class="proposal-notice" role="status">Payment verified — Your token payment has been verified successfully.</p>
-              <dl class="sum-rows">
-                <div><dt>Payment ID</dt><dd class="mono">{{ verified.paymentId }}</dd></div>
-              </dl>
+              @if (verifiedPayment(); as verified) {
+                <dl class="sum-rows">
+                  <div><dt>Payment ID</dt><dd class="mono">{{ verified.paymentId }}</dd></div>
+                </dl>
+              }
             } @else {
               <p class="sub small">A token payment is required for this proposal.</p>
               @if (paymentOrder(); as order) {

@@ -602,6 +602,122 @@ describe('ProposalsComponent token payment', () => {
     expect(saveSpy).toHaveBeenCalledTimes(1);
   });
 
+  // ── Payment box follows the backend isPaymentVerified flag ──
+
+  const REQUIRED_TEXT = 'A token payment is required for this proposal.';
+  const HINT_TEXT = 'A small token payment unlocks the proposal PDF.';
+  const PAY_BUTTON = '[aria-label="Pay token payment for proposal prop-1"]';
+  const PDF_BUTTON = '[aria-label="Download proposal PDF for prop-1"]';
+
+  function paymentBox(fixture: ReturnType<typeof TestBed.createComponent<ProposalsComponent>>): HTMLElement {
+    return (fixture.nativeElement as HTMLElement).querySelector('.payment-box') as HTMLElement;
+  }
+
+  it('an already-paid proposal shows Payment verified, no Pay action, and makes no payment calls', () => {
+    const { fixture, cmp } = setupAuthenticatedWithDetail(true);
+    const el = fixture.nativeElement as HTMLElement;
+    const box = paymentBox(fixture);
+
+    expect(box.textContent).toContain('Payment verified');
+    expect(box.textContent).toContain('Your token payment has been verified successfully.');
+    expect(el.querySelector(PAY_BUTTON)).toBeNull();
+    expect(el.textContent).not.toContain('Pay Token');
+    expect(el.textContent).not.toContain(REQUIRED_TEXT);
+    expect(el.textContent).not.toContain(HINT_TEXT);
+    // The PDF stays available, driven by the same backend flag.
+    expect(el.querySelector(PDF_BUTTON)?.textContent).toContain('Download PDF');
+    expect(el.textContent).not.toContain('PDF available after token payment');
+    // Nothing was paid in this session, so there is no payment id to show.
+    expect(cmp.paymentState()).toBe('idle');
+    expect(cmp.verifiedPayment()).toBeNull();
+    expect(box.textContent).not.toContain('Payment ID');
+    httpMock.expectNone(`${PROPOSALS_URL}/prop-1/payment`);
+    httpMock.expectNone(VERIFY_URL);
+    httpMock.expectNone(`${PROPOSALS_URL}/prop-1/pdf`);
+  });
+
+  it('an unpaid proposal still shows the required-payment text, the hint and Pay Token', () => {
+    const { fixture } = setupAuthenticatedWithDetail(false);
+    const el = fixture.nativeElement as HTMLElement;
+    const box = paymentBox(fixture);
+
+    expect(box.textContent).toContain(REQUIRED_TEXT);
+    expect(el.textContent).toContain(HINT_TEXT);
+    expect(el.querySelector(PAY_BUTTON)?.textContent).toContain('Pay Token');
+    expect(box.textContent).not.toContain('Payment verified');
+    expect(el.textContent).toContain('PDF available after token payment');
+    expect(el.querySelector(PDF_BUTTON)).toBeNull();
+  });
+
+  it('pay, verify, then reopen with isPaymentVerified keeps the verified state', async () => {
+    const { fixture, cmp } = setupAuthenticatedWithDetail(false);
+    const instance = await startPayment(cmp, fixture);
+    instance.succeed(checkoutResponse());
+    httpMock.expectOne(VERIFY_URL).flush(verified());
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1`).flush(detail({ id: 'prop-1', isPaymentVerified: true }));
+    fixture.detectChanges();
+    expect(paymentBox(fixture).textContent).toContain('Payment verified');
+
+    // Reopen: the in-session flow resets, the backend flag keeps the box verified.
+    cmp.viewDetails('prop-1');
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1`).flush(detail({ id: 'prop-1', isPaymentVerified: true }));
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(cmp.paymentState()).toBe('idle');
+    expect(paymentBox(fixture).textContent).toContain('Payment verified');
+    expect(paymentBox(fixture).textContent).toContain('Your token payment has been verified successfully.');
+    expect(el.querySelector(PAY_BUTTON)).toBeNull();
+    expect(el.textContent).not.toContain(REQUIRED_TEXT);
+    expect(el.textContent).not.toContain(HINT_TEXT);
+    expect(el.querySelector(PDF_BUTTON)?.textContent).toContain('Download PDF');
+  });
+
+  it('the Payment ID shows right after a fresh verification and not after reopening', async () => {
+    const { fixture, cmp } = setupAuthenticatedWithDetail(false);
+    const instance = await startPayment(cmp, fixture);
+    instance.succeed(checkoutResponse());
+    httpMock.expectOne(VERIFY_URL).flush(verified());
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1`).flush(detail({ id: 'prop-1', isPaymentVerified: true }));
+    fixture.detectChanges();
+
+    expect(cmp.verifiedPayment()?.paymentId).toBe('pay-local-1');
+    expect(paymentBox(fixture).textContent).toContain('Payment ID');
+    expect(paymentBox(fixture).textContent).toContain('pay-local-1');
+
+    cmp.viewDetails('prop-1');
+    httpMock.expectOne(`${PROPOSALS_URL}/prop-1`).flush(detail({ id: 'prop-1', isPaymentVerified: true }));
+    fixture.detectChanges();
+
+    // Only the flag is known now: still verified, but no payment id is invented.
+    expect(cmp.verifiedPayment()).toBeNull();
+    expect(paymentBox(fixture).textContent).toContain('Payment verified');
+    expect(paymentBox(fixture).textContent).not.toContain('Payment ID');
+    expect(paymentBox(fixture).textContent).not.toContain('pay-local-1');
+  });
+
+  it('a stale unpaid page that gets a 409 keeps its behaviour: message, no retry, PDF still locked', async () => {
+    const { fixture, cmp } = setupAuthenticatedWithDetail(false);
+    cmp.payToken();
+    httpMock
+      .expectOne(`${PROPOSALS_URL}/prop-1/payment`)
+      .flush({ title: 'This proposal already has a verified token payment.' }, { status: 409, statusText: 'Conflict' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(paymentBox(fixture).textContent).toContain('This proposal already has a verified token payment.');
+    expect(paymentBox(fixture).querySelector('.linklike')).toBeNull();
+    expect(cmp.paymentRetryAllowed()).toBeFalse();
+    // The page's own detail still says unpaid, so the PDF gate is not opened from the 409 alone.
+    expect(cmp.selected()?.isPaymentVerified).toBeFalse();
+    expect(el.textContent).toContain('PDF available after token payment');
+    expect(el.querySelector(PDF_BUTTON)).toBeNull();
+    expect(el.textContent).not.toContain('Payment verified');
+    httpMock.expectNone(`${PROPOSALS_URL}/prop-1/pdf`);
+    expect(checkout.instances.length).toBe(0);
+  });
+
   // ── Demo mode (backend Payments:Mode=Demo) ──
 
   const DEMO_CONFIRM_URL = `${environment.apiBaseUrl}/api/payments/demo/confirm`;
