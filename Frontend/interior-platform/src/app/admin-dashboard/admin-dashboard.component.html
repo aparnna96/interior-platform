@@ -1,0 +1,32 @@
+<section class="admin-dashboard" aria-label="Admin dashboard">
+  <header class="admin-dashboard-head">
+    <div>
+      <p class="kicker">Operations · Overview</p>
+      <h1>Dashboard</h1>
+    </div>
+  </header>
+
+  @if (!isAuthenticated()) {
+    <div class="admin-dashboard-empty">
+      <p>Log in to access the Admin dashboard</p>
+      <span>The dashboard is for Admin accounts. Open Account in the menu to log in.</span>
+    </div>
+  } @else if (!canAccess()) {
+    <div class="admin-dashboard-empty" role="alert">
+      <p>You don't have access to this workspace.</p>
+      <span>This workspace is for Admin accounts.</span>
+    </div>
+  } @else {
+    <section class="quick-actions" aria-label="Quick actions">
+      <h2>Quick actions</h2>
+      <div class="action-grid">
+        @for (action of actions; track action.view) {
+          <button type="button" class="action-card" (click)="open(action.view)">
+            <span class="action-title">{{ action.label }}</span>
+            <span class="action-desc">{{ action.description }}</span>
+          </button>
+        }
+      </div>
+    </section>
+  }
+</section>

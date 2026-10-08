@@ -988,6 +988,7 @@ describe('AppComponent', () => {
       expect(items).toContain('Manage orders');
       expect(items).toContain('Manage proposals');
       expect(items).toContain('Manage products');
+      expect(items).toContain('Dashboard');
       // Every sidebar entry has a unique name.
       expect(new Set(items).size).toBe(items.length);
       httpMock.verify();
@@ -1034,6 +1035,43 @@ describe('AppComponent', () => {
       expect(mobile).toContain('Manage orders');
       expect(mobile).toContain('Manage products');
       expect(mobile).toContain('Manage proposals');
+      expect(mobile).toContain('Dashboard');
+      httpMock.verify();
+    });
+
+    it('only admins get the Dashboard entry, and it opens the dashboard without any API call', () => {
+      for (const roles of [['Customer'], ['FieldStaff']]) {
+        TestBed.resetTestingModule();
+        localStorage.clear();
+        TestBed.configureTestingModule({
+          imports: [AppComponent],
+          providers: [provideHttpClient(), provideHttpClientTesting()],
+        });
+        const other = createAuthedApp(roles);
+        expect(sidebar(other.fixture).items).not.toContain('Dashboard');
+        other.httpMock.verify();
+      }
+
+      TestBed.resetTestingModule();
+      localStorage.clear();
+      TestBed.configureTestingModule({
+        imports: [AppComponent],
+        providers: [provideHttpClient(), provideHttpClientTesting()],
+      });
+      const { fixture, httpMock } = createAuthedApp(['Admin']);
+      const entry = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('#app-sidebar .nav-item')
+      ).find((b) => (b as HTMLElement).textContent?.trim() === 'Dashboard') as HTMLButtonElement;
+      entry.click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.activeView()).toBe('admin-dashboard');
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-admin-dashboard')).toBeTruthy();
+      // A dashboard shortcut moves the shell to that page.
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('app-admin-dashboard .action-card')!.click();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.activeView()).toBe('admin-products');
+      httpMock.expectOne(`${environment.apiBaseUrl}/api/products/admin`).flush([]);
       httpMock.verify();
     });
   });

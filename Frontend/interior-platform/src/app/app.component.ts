@@ -35,6 +35,7 @@ import { AdminProductsComponent } from './admin-products/admin-products.componen
 import { AdminOrdersComponent } from './admin-orders/admin-orders.component';
 import { AdminProposalsComponent } from './admin-proposals/admin-proposals.component';
 import { AdminRatesComponent } from './admin-rates/admin-rates.component';
+import { AdminDashboardComponent } from './admin-dashboard/admin-dashboard.component';
 import { EstimateRateService } from './estimate/estimate-rate.service';
 import {
   calculateEstimateTotal,
@@ -82,7 +83,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent, AdminRatesComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent, AdminRatesComponent, AdminDashboardComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })

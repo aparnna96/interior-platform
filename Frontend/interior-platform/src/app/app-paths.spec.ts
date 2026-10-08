@@ -47,7 +47,8 @@ describe('app paths', () => {
 
   it('returns null for unknown or malformed addresses', () => {
     expect(viewForPath('/nope')).toBeNull();
-    expect(viewForPath('/admin')).toBeNull();
+    expect(viewForPath('/admin/nope')).toBeNull();
+    expect(viewForPath('/administrator')).toBeNull();
     expect(viewForPath('/furniture/%E0%A4%A')).toBeNull();
   });
 
@@ -58,6 +59,11 @@ describe('app paths', () => {
     expect(accessOf('proposals')).toBe('auth');
     expect(accessOf('leads')).toBe('staff');
     expect(accessOf('admin-products')).toBe('admin');
+    expect(accessOf('admin-dashboard')).toBe('admin');
+    expect(requiresLogin('admin-dashboard')).toBeTrue();
+    expect(pathForView('admin-dashboard')).toBe('/admin');
+    expect(viewForPath('/admin')?.view).toBe('admin-dashboard');
+    expect(viewForPath('/admin/')?.view).toBe('admin-dashboard');
     expect(accessOf('admin-rates')).toBe('admin');
     expect(requiresLogin('admin-rates')).toBeTrue();
     expect(pathForView('admin-rates')).toBe('/admin/rates');

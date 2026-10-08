@@ -51,6 +51,7 @@ import type { AppView } from '../app-paths';
             <div class="acct-links">
               <button type="button" class="btn btn-secondary" (click)="navigate.emit('leads')">Leads</button>
               @if (auth.isAdmin()) {
+                <button type="button" class="btn btn-secondary" (click)="navigate.emit('admin-dashboard')">Dashboard</button>
                 <button type="button" class="btn btn-secondary" (click)="navigate.emit('admin-products')">Products</button>
                 <button type="button" class="btn btn-secondary" (click)="navigate.emit('admin-orders')">Manage orders</button>
                 <button type="button" class="btn btn-secondary" (click)="navigate.emit('admin-proposals')">Manage proposals</button>

@@ -176,6 +176,32 @@ describe('AppComponent routing', () => {
       expect(app.activeView()).toBe('home');
       await go(fixture, '/admin/orders');
       expect(app.activeView()).toBe('home');
+      await go(fixture, '/admin');
+      expect(app.activeView()).toBe('home');
+      expect(location.path()).toBe('/');
+    });
+
+    it('a visitor opening /admin is sent to /login with a return address', async () => {
+      const { fixture, app } = await setup();
+      await go(fixture, '/admin');
+      expect(app.activeView()).toBe('login');
+      expect(location.path()).toBe('/login?returnUrl=%2Fadmin');
+    });
+
+    it('field staff are kept out of /admin and land on Leads', async () => {
+      const { fixture, app } = await setup(STAFF);
+      await go(fixture, '/admin');
+      expect(app.activeView()).toBe('leads');
+      expect(location.path()).toBe('/leads');
+    });
+
+    it('/admin opens the dashboard for an admin and shows no shortcut to anyone else', async () => {
+      const { fixture, app, el } = await setup(ADMIN);
+      await go(fixture, '/admin');
+      expect(app.activeView()).toBe('admin-dashboard');
+      expect(location.path()).toBe('/admin');
+      expect(el.querySelector('app-admin-dashboard')).toBeTruthy();
+      expect(el.querySelectorAll('app-admin-dashboard .action-card').length).toBe(5);
     });
 
     it('field staff may open Leads but not admin pages', async () => {
@@ -267,6 +293,7 @@ describe('AppComponent routing', () => {
     it('an admin may open every admin page', async () => {
       const { fixture, app } = await setup(ADMIN);
       for (const [url, view] of [
+        ['/admin', 'admin-dashboard'],
         ['/admin/products', 'admin-products'],
         ['/admin/orders', 'admin-orders'],
         ['/admin/proposals', 'admin-proposals'],

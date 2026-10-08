@@ -22,6 +22,7 @@ export type AppView =
   | 'projects'
   | 'leads'
   | 'field'
+  | 'admin-dashboard'
   | 'admin-products'
   | 'admin-orders'
   | 'admin-proposals'
@@ -66,6 +67,7 @@ export const VIEW_ROUTES: readonly ViewRoute[] = [
   { view: 'account', path: 'account', title: 'Account | Confident Group', access: 'auth' },
   { view: 'leads', path: 'leads', title: 'Leads | Confident Group', access: 'staff' },
   { view: 'field', path: 'field', title: 'Field visualizer | Confident Group', access: 'fieldstaff' },
+  { view: 'admin-dashboard', path: 'admin', title: 'Admin dashboard | Confident Group', access: 'admin' },
   { view: 'admin-products', path: 'admin/products', title: 'Manage products | Confident Group', access: 'admin' },
   { view: 'admin-orders', path: 'admin/orders', title: 'Manage orders | Confident Group', access: 'admin' },
   { view: 'admin-proposals', path: 'admin/proposals', title: 'Manage proposals | Confident Group', access: 'admin' },

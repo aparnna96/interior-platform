@@ -1,0 +1,84 @@
+/* ── Admin Dashboard: same workspace language as the other admin pages ──
+   Warm-white page (app shell), white surfaces, charcoal type,
+   hairline borders, one bronze accent. System font stack only.
+   No animation. Shortcuts are wrapping cards so narrow screens stay usable. */
+
+.admin-dashboard {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+  min-width: 0;
+  max-width: 1152px;
+  width: 100%;
+  margin: 0 auto;
+  overflow-x: clip;
+}
+
+.kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+}
+
+.admin-dashboard-head h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+/* ── Empty / access states ── */
+.admin-dashboard-empty {
+  text-align: center;
+  padding: 48px 20px;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  min-width: 0;
+}
+.admin-dashboard-empty p { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.admin-dashboard-empty span { font-size: 13px; color: var(--muted); }
+
+/* ── Quick actions ── */
+.quick-actions { display: grid; gap: 12px; min-width: 0; }
+.quick-actions h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.action-card {
+  appearance: none;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  text-align: left;
+  min-height: 44px;
+  min-width: 0;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.action-card:hover { border-color: var(--accent); }
+.action-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.action-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.action-desc { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+
+@media (max-width: 480px) {
+  .admin-dashboard-head h1 { font-size: 22px; }
+  .admin-dashboard-empty { padding: 36px 16px; }
+}
