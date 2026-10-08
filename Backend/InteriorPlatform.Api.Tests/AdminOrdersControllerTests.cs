@@ -179,6 +179,81 @@ public sealed class AdminOrdersControllerTests
     }
 
     [Fact]
+    public async Task GetOrder_ShowsTheDeliveryDetailsStoredOnTheOrder()
+    {
+        using var test = new TestDb();
+        var order = await SeedOrderAsync(test.Db, UserA, DateTime.UtcNow);
+        var stored = await test.Db.Orders.SingleAsync(o => o.Id == order.Id);
+        stored.DeliveryFullName = "Asha Menon";
+        stored.DeliveryPhone = "9876543210";
+        stored.DeliveryAddressLine1 = "12 MG Road";
+        stored.DeliveryAddressLine2 = "Near City Mall";
+        stored.DeliveryCity = "Kochi";
+        stored.DeliveryState = "Kerala";
+        stored.DeliveryPincode = "682016";
+        stored.DeliveryNotes = "Call before delivery.";
+        await test.Db.SaveChangesAsync();
+
+        var detail = Assert.IsType<AdminOrderDetailResponse>(
+            Assert.IsType<OkObjectResult>((await AdminOrdersFor(test.Db, "admin-user").GetOrder(order.Id)).Result).Value);
+
+        var d = Assert.IsType<DeliveryDetailsResponse>(detail.Delivery);
+        Assert.Equal("Asha Menon", d.FullName);
+        Assert.Equal("9876543210", d.Phone);
+        Assert.Equal("12 MG Road", d.AddressLine1);
+        Assert.Equal("Near City Mall", d.AddressLine2);
+        Assert.Equal("Kochi", d.City);
+        Assert.Equal("Kerala", d.State);
+        Assert.Equal("682016", d.Pincode);
+        Assert.Equal("Call before delivery.", d.DeliveryNotes);
+    }
+
+    [Fact]
+    public async Task GetOrder_OrderWithoutDeliveryDetails_ReturnsNullDelivery()
+    {
+        using var test = new TestDb();
+        var order = await SeedOrderAsync(test.Db, UserA, DateTime.UtcNow);
+
+        var detail = Assert.IsType<AdminOrderDetailResponse>(
+            Assert.IsType<OkObjectResult>((await AdminOrdersFor(test.Db, "admin-user").GetOrder(order.Id)).Result).Value);
+        Assert.Null(detail.Delivery);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_KeepsTheDeliveryDetailsOnTheReturnedOrder()
+    {
+        using var test = new TestDb();
+        var order = await SeedOrderAsync(test.Db, UserA, DateTime.UtcNow);
+        var stored = await test.Db.Orders.SingleAsync(o => o.Id == order.Id);
+        stored.DeliveryFullName = "Asha Menon";
+        stored.DeliveryPhone = "9876543210";
+        stored.DeliveryAddressLine1 = "12 MG Road";
+        stored.DeliveryCity = "Kochi";
+        stored.DeliveryState = "Kerala";
+        stored.DeliveryPincode = "682016";
+        await test.Db.SaveChangesAsync();
+
+        var result = await AdminOrdersFor(test.Db, "admin-user")
+            .UpdateStatus(order.Id, new AdminOrderStatusUpdateRequest { Status = OrderStatus.Confirmed });
+        var detail = Assert.IsType<AdminOrderDetailResponse>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(OrderStatus.Confirmed, detail.Status);
+        Assert.Equal("Asha Menon", detail.Delivery!.FullName);
+        Assert.Equal("682016", detail.Delivery.Pincode);
+    }
+
+    [Fact]
+    public void OnlyTheAdminRoleCanReachAdminOrders_FieldStaffAndCustomerCannot()
+    {
+        // The delivery address is personal data, so the role rule must stay exactly "Admin".
+        var attribute = typeof(AdminOrdersController).GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
+            .OfType<AuthorizeAttribute>().Single();
+        Assert.Equal("Admin", attribute.Roles);
+        Assert.DoesNotContain("FieldStaff", attribute.Roles!);
+        Assert.DoesNotContain("Customer", attribute.Roles!);
+    }
+
+    [Fact]
     public async Task GetOrder_MissingOrder_Returns404()
     {
         using var test = new TestDb();

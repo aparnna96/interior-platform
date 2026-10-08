@@ -42,6 +42,16 @@ function adminRow(partial: Partial<AdminOrderSummaryDto> & { id: string }): Admi
   };
 }
 
+const DELIVERY = {
+  fullName: 'Asha Menon',
+  phone: '9876543210',
+  addressLine1: '12 MG Road',
+  addressLine2: 'Near City Mall',
+  city: 'Kochi',
+  state: 'Kerala',
+  pincode: '682016',
+  deliveryNotes: 'Call before delivery.',
+};
 function adminDetail(partial: Partial<AdminOrderDetailDto> & { id: string }): AdminOrderDetailDto {
   return {
     userId: 'user-a',
@@ -331,6 +341,48 @@ describe('AdminOrdersComponent', () => {
     expect(localSet).not.toHaveBeenCalled();
     expect(sessionSet).not.toHaveBeenCalled();
   });
+  describe('delivery details', () => {
+    function openDetail(partial: Partial<AdminOrderDetailDto> = {}) {
+      const fixture = setupAdmin([adminRow({ id: 'order-1' })]);
+      fixture.componentInstance.viewDetails('order-1');
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1`).flush(adminDetail({ id: 'order-1', ...partial }));
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('shows where the order is going in the admin detail', () => {
+      const el = openDetail({ delivery: DELIVERY });
+      const block = el.querySelector('section[aria-label="Delivery details"]') as HTMLElement;
+      expect(block).toBeTruthy();
+      expect(block.textContent).toContain('Asha Menon');
+      expect(block.textContent).toContain('9876543210');
+      expect(block.textContent).toContain('12 MG Road, Near City Mall');
+      expect(block.textContent).toContain('Kochi, Kerala 682016');
+      expect(block.textContent).toContain('Notes: Call before delivery.');
+      // the customer and status controls are still there
+      expect(el.textContent).toContain('a@test.local');
+      expect(el.querySelector('.status-box')).toBeTruthy();
+    });
+
+    it('says plainly when an older order has no delivery details', () => {
+      const el = openDetail({ delivery: null });
+      expect(el.querySelector('section[aria-label="Delivery details"]')).toBeNull();
+      expect(el.textContent).toContain('No delivery details were collected for this order.');
+    });
+
+    it('treats a missing delivery field like a null one', () => {
+      const el = openDetail();
+      expect(el.textContent).toContain('No delivery details were collected for this order.');
+    });
+
+    it('does not show delivery details in the order list', () => {
+      const fixture = setupAdmin([adminRow({ id: 'order-1' })]);
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(text).not.toContain('Delivery details');
+      expect(text).not.toContain('Kochi');
+    });
+  });
+
   describe('status changes', () => {
     function openOrder(status: number, allowed: number[]) {
       const fixture = setupAdmin([adminRow({ id: 'order-1', status })]);

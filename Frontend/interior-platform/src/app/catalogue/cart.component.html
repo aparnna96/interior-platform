@@ -36,6 +36,17 @@
         <div><dt>Items</dt><dd>{{ orderItemCount(order) }}</dd></div>
         <div class="total"><dt>Subtotal</dt><dd>₹{{ inr(order.subtotal) }}</dd></div>
       </dl>
+      @if (order.delivery; as d) {
+        <section class="delivering-to" aria-label="Delivering to">
+          <h3>Delivering to</h3>
+          <p class="d-name">{{ d.fullName }} <span class="d-phone">{{ d.phone }}</span></p>
+          <p>{{ d.addressLine1 }}@if (d.addressLine2) {, {{ d.addressLine2 }}}</p>
+          <p>{{ d.city }}, {{ d.state }} {{ d.pincode }}</p>
+          @if (d.deliveryNotes) {
+            <p class="d-notes">Notes: {{ d.deliveryNotes }}</p>
+          }
+        </section>
+      }
       <ul class="order-lines">
         @for (i of order.items; track i.id) {
           <li>{{ i.productName }} × {{ i.quantity }} — ₹{{ inr(i.lineTotal) }}</li>
@@ -67,10 +78,87 @@
     @if (orderError()) {
       <p class="cart-error" role="alert">
         {{ orderError() }}
-        <button class="linklike" (click)="placeOrder()">Try again</button>
+        <button class="linklike" (click)="confirmOrder()">Try again</button>
       </p>
     }
     <div class="cart-grid">
+      @if (checkingOut()) {
+      <form class="delivery" aria-label="Delivery details" novalidate (ngSubmit)="confirmOrder()">
+        <h2>Delivery details</h2>
+        <p class="sub">Where should we deliver your order? Fields marked * are required.</p>
+
+        <label class="f f-wide">
+          <span>Full name *</span>
+          <input name="fullName" type="text" autocomplete="name" maxlength="120" [ngModel]="delivery().fullName"
+            (ngModelChange)="setDelivery('fullName', $event)" (blur)="touch('fullName')"
+            [attr.aria-invalid]="showError('fullName') ? 'true' : null" aria-describedby="err-fullName" />
+          <em id="err-fullName" class="f-err" role="alert">{{ showError('fullName') }}</em>
+        </label>
+
+        <label class="f f-wide">
+          <span>Phone *</span>
+          <input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="10 digit mobile number"
+            [ngModel]="delivery().phone" (ngModelChange)="setDelivery('phone', $event)" (blur)="touch('phone')"
+            [attr.aria-invalid]="showError('phone') ? 'true' : null" aria-describedby="err-phone" />
+          <em id="err-phone" class="f-err" role="alert">{{ showError('phone') }}</em>
+        </label>
+
+        <label class="f f-wide">
+          <span>Address line 1 *</span>
+          <input name="addressLine1" type="text" autocomplete="address-line1" maxlength="220" [ngModel]="delivery().addressLine1"
+            (ngModelChange)="setDelivery('addressLine1', $event)" (blur)="touch('addressLine1')"
+            [attr.aria-invalid]="showError('addressLine1') ? 'true' : null" aria-describedby="err-addressLine1" />
+          <em id="err-addressLine1" class="f-err" role="alert">{{ showError('addressLine1') }}</em>
+        </label>
+
+        <label class="f f-wide">
+          <span>Address line 2 <small>(optional)</small></span>
+          <input name="addressLine2" type="text" autocomplete="address-line2" maxlength="220" [ngModel]="delivery().addressLine2"
+            (ngModelChange)="setDelivery('addressLine2', $event)" (blur)="touch('addressLine2')"
+            [attr.aria-invalid]="showError('addressLine2') ? 'true' : null" aria-describedby="err-addressLine2" />
+          <em id="err-addressLine2" class="f-err" role="alert">{{ showError('addressLine2') }}</em>
+        </label>
+
+        <label class="f">
+          <span>City *</span>
+          <input name="city" type="text" autocomplete="address-level2" maxlength="120" [ngModel]="delivery().city"
+            (ngModelChange)="setDelivery('city', $event)" (blur)="touch('city')"
+            [attr.aria-invalid]="showError('city') ? 'true' : null" aria-describedby="err-city" />
+          <em id="err-city" class="f-err" role="alert">{{ showError('city') }}</em>
+        </label>
+
+        <label class="f">
+          <span>State *</span>
+          <input name="state" type="text" autocomplete="address-level1" maxlength="120" [ngModel]="delivery().state"
+            (ngModelChange)="setDelivery('state', $event)" (blur)="touch('state')"
+            [attr.aria-invalid]="showError('state') ? 'true' : null" aria-describedby="err-state" />
+          <em id="err-state" class="f-err" role="alert">{{ showError('state') }}</em>
+        </label>
+
+        <label class="f">
+          <span>Pincode *</span>
+          <input name="pincode" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="20" placeholder="6 digits"
+            [ngModel]="delivery().pincode" (ngModelChange)="setDelivery('pincode', $event)" (blur)="touch('pincode')"
+            [attr.aria-invalid]="showError('pincode') ? 'true' : null" aria-describedby="err-pincode" />
+          <em id="err-pincode" class="f-err" role="alert">{{ showError('pincode') }}</em>
+        </label>
+
+        <label class="f f-wide">
+          <span>Delivery notes <small>(optional)</small></span>
+          <textarea name="deliveryNotes" rows="3" maxlength="600" [ngModel]="delivery().deliveryNotes"
+            (ngModelChange)="setDelivery('deliveryNotes', $event)" (blur)="touch('deliveryNotes')"
+            [attr.aria-invalid]="showError('deliveryNotes') ? 'true' : null" aria-describedby="err-deliveryNotes"></textarea>
+          <em id="err-deliveryNotes" class="f-err" role="alert">{{ showError('deliveryNotes') }}</em>
+        </label>
+
+        <div class="delivery-actions">
+          <button type="button" class="btn-secondary" (click)="backToCart()" [disabled]="placingOrder()">Back to cart</button>
+          <button type="submit" class="btn-primary confirm-order" [disabled]="!canConfirmOrder()">
+            {{ placingOrder() ? 'Placing order...' : 'Confirm order' }}
+          </button>
+        </div>
+      </form>
+      } @else {
       <div class="lines" aria-live="polite">
         @for (l of cart.lines(); track l.id) {
           <article class="line" [attr.aria-label]="l.name">
@@ -106,6 +194,7 @@
           </article>
         }
       </div>
+      }
 
       <aside class="summary" aria-label="Cart summary">
         <h2>Summary</h2>
@@ -114,7 +203,7 @@
           <div><dt>Subtotal</dt><dd>₹{{ inr(cart.subtotal()) }}</dd></div>
           <div class="total"><dt>Total</dt><dd>₹{{ inr(cart.subtotal()) }}</dd></div>
         </dl>
-        <button class="btn-primary btn-block" (click)="placeOrder()" [disabled]="!canPlaceOrder()">
+        <button class="btn-primary btn-block" (click)="placeOrder()" [disabled]="!canPlaceOrder() || checkingOut()">
           {{ placingOrder() ? 'Placing order…' : 'Place Order' }}
         </button>
         @if (hasUnavailable()) {

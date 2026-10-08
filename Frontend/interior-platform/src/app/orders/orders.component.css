@@ -153,6 +153,12 @@
   min-width: 0;
 }
 .order-detail h2 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.delivering-to { background: var(--surface-soft); border: 1px solid var(--border-soft); border-radius: 8px; padding: 12px 14px; display: grid; gap: 2px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+.delivering-to h2 { margin: 0 0 2px; }
+.delivering-to p { margin: 0; overflow-wrap: anywhere; }
+.delivering-to .d-name { color: var(--ink); font-weight: 650; }
+.delivering-to .d-phone { color: var(--ink-2); font-weight: 500; margin-left: 6px; }
+.delivering-to .d-notes { color: var(--muted); }
 .sum-rows { display: grid; }
 .sum-rows div {
   display: flex;

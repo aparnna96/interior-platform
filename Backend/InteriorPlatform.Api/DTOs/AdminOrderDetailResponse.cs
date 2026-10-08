@@ -26,6 +26,9 @@ public class AdminOrderDetailResponse
 
     public decimal Subtotal { get; set; }
 
+    /// <summary>Delivery details, or null for an order created before checkout collected them.</summary>
+    public DeliveryDetailsResponse? Delivery { get; set; }
+
     /// <summary>
     /// Statuses this order may move to next, decided server-side (empty for a
     /// Completed or Cancelled order). The admin UI only offers these.

@@ -614,6 +614,61 @@ public sealed class ProductionSecurityTests
     }
 
     [Fact]
+    public async Task PostOrders_OverRealHttp_RequiresAnAccountAndDeliveryDetails()
+    {
+        await using var api = await TestApi.StartAsync("Development");
+        await api.CreateUserAsync("customer@test.local", "Customer");
+        var token = await api.LoginAsync("customer@test.local");
+
+        // Anonymous callers are turned away before any body is read.
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await api.SendAsync(HttpMethod.Post, "/api/orders", content: JsonContent.Create(new { }))).StatusCode);
+
+        // The old client sent an empty object: that is now a 400, not a created order.
+        var empty = await api.SendAsync(HttpMethod.Post, "/api/orders", token, JsonContent.Create(new { }));
+        Assert.Equal(HttpStatusCode.BadRequest, empty.StatusCode);
+        var problem = await empty.Content.ReadFromJsonAsync<JsonElement>();
+        var errors = problem.GetProperty("errors");
+        foreach (var field in new[] { "FullName", "Phone", "AddressLine1", "City", "State", "Pincode" })
+        {
+            Assert.True(errors.TryGetProperty(field, out _), $"missing error for {field}");
+        }
+
+        // No body at all and an unparseable body are 400s too.
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await api.SendAsync(HttpMethod.Post, "/api/orders", token, new StringContent(string.Empty, Encoding.UTF8, "application/json"))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await api.SendAsync(HttpMethod.Post, "/api/orders", token, new StringContent("{not json", Encoding.UTF8, "application/json"))).StatusCode);
+
+        // A fully valid request gets past delivery validation and fails only on the empty cart.
+        var valid = await api.SendAsync(HttpMethod.Post, "/api/orders", token, JsonContent.Create(new
+        {
+            fullName = "Asha Menon",
+            phone = "9876543210",
+            addressLine1 = "12 MG Road",
+            city = "Kochi",
+            state = "Kerala",
+            pincode = "682016",
+        }));
+        Assert.Equal(HttpStatusCode.BadRequest, valid.StatusCode);
+        var cartProblem = await valid.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(cartProblem.GetProperty("errors").TryGetProperty("Cart", out _));
+        Assert.False(cartProblem.GetProperty("errors").TryGetProperty("FullName", out _));
+
+        // An oversize payload is rejected by the transport cap before field rules run.
+        var huge = await api.SendAsync(HttpMethod.Post, "/api/orders", token, JsonContent.Create(new
+        {
+            fullName = new string('a', 5000),
+            phone = "9876543210",
+            addressLine1 = "12 MG Road",
+            city = "Kochi",
+            state = "Kerala",
+            pincode = "682016",
+        }));
+        Assert.Equal(HttpStatusCode.BadRequest, huge.StatusCode);
+    }
+
+    [Fact]
     public async Task Development_IgnoresForwardedFor_SoSpoofingCannotBypassTheLimit()
     {
         await using var api = await TestApi.StartAsync("Development", s => s["RateLimiting:AuthLogin:PermitLimit"] = "2");

@@ -63,15 +63,28 @@ describe('OrderService', () => {
     localStorage.clear();
   });
 
-  it('createOrder posts an empty body with Bearer auth', () => {
+  const DELIVERY = {
+    fullName: 'Asha Menon',
+    phone: '9876543210',
+    addressLine1: '12 MG Road',
+    addressLine2: 'Near City Mall',
+    city: 'Kochi',
+    state: 'Kerala',
+    pincode: '682016',
+    deliveryNotes: 'Call before delivery.',
+  };
+
+  it('createOrder posts exactly the 8 delivery fields with Bearer auth', () => {
     setup(TOKEN);
     let received: OrderDetailDto | null = null;
-    orders.createOrder().subscribe((o) => (received = o));
+    orders.createOrder(DELIVERY).subscribe((o) => (received = o));
     const req = httpMock.expectOne(ORDERS_URL);
     expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(DELIVERY);
     // No userId, product data, prices, totals or status may leave the client.
-    expect(req.request.body).toEqual({});
-    expect(Object.keys(req.request.body)).toEqual([]);
+    expect(Object.keys(req.request.body).sort()).toEqual([
+      'addressLine1', 'addressLine2', 'city', 'deliveryNotes', 'fullName', 'phone', 'pincode', 'state',
+    ]);
     expect(req.request.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
     req.flush(detail());
     expect(received!.id).toBe('order-1');

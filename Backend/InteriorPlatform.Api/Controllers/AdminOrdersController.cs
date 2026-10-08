@@ -179,6 +179,7 @@ public class AdminOrdersController : ControllerBase
         CreatedAt = order.CreatedAt,
         UpdatedAt = order.UpdatedAt,
         Subtotal = order.Subtotal,
+        Delivery = DeliveryDetailsResponse.From(order),
         AllowedNextStatuses = OrderStatusTransitions.NextFor(order.Status).ToList(),
         Items = order.Items
             .OrderBy(i => i.ProductId)

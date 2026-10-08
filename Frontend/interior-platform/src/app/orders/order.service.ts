@@ -14,6 +14,34 @@ export interface OrderItemDto {
   lineTotal: number;
 }
 
+/** Delivery details stored on an order (null on orders placed before checkout collected them). */
+export interface DeliveryDetailsDto {
+  fullName: string;
+  /** The 10 digit mobile number. */
+  phone: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  deliveryNotes: string | null;
+}
+
+/**
+ * The delivery form sent with POST /api/orders. Exactly these 8 fields and nothing
+ * else: the server takes the user, products, prices and status from its own records.
+ */
+export interface CreateOrderRequest {
+  fullName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  pincode: string;
+  deliveryNotes: string;
+}
+
 /** Backend order detail (GET /api/orders/{id}, POST /api/orders). */
 export interface OrderDetailDto {
   id: string;
@@ -22,6 +50,8 @@ export interface OrderDetailDto {
   createdAt: string;
   updatedAt: string;
   subtotal: number;
+  /** Where the order is going; absent or null for orders placed before checkout collected it. */
+  delivery?: DeliveryDetailsDto | null;
   items: OrderItemDto[];
 }
 
@@ -56,6 +86,8 @@ export interface AdminOrderDetailDto {
   subtotal: number;
   /** Statuses the server allows this order to move to next (empty when final). */
   allowedNextStatuses?: number[];
+  /** Where the order is going; absent or null for orders placed before checkout collected it. */
+  delivery?: DeliveryDetailsDto | null;
   items: OrderItemDto[];
 }
 
@@ -74,7 +106,7 @@ export function orderStatusLabel(status: number): string {
  * Order API client. Thin like ProductService: no local state, no side
  * effects — callers own the UI state. Every call carries `Authorization:
  * Bearer` from the existing AuthService token; there is no second auth
- * system. POST sends an empty object: user, products, prices, totals and
+ * system. POST sends only the delivery form: user, products, prices, totals and
  * status all derive server-side from the authenticated user's cart.
  */
 @Injectable({ providedIn: 'root' })
@@ -82,9 +114,9 @@ export class OrderService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
 
-  /** POST /api/orders — body intentionally carries no pricing/user data. */
-  createOrder(): Observable<OrderDetailDto> {
-    return this.http.post<OrderDetailDto>(ORDERS_URL, {}, { headers: this.authHeaders() });
+  /** POST /api/orders — body carries the delivery details only, never pricing or user data. */
+  createOrder(delivery: CreateOrderRequest): Observable<OrderDetailDto> {
+    return this.http.post<OrderDetailDto>(ORDERS_URL, delivery, { headers: this.authHeaders() });
   }
 
   /** GET /api/orders — newest first, current user only (server-scoped). */

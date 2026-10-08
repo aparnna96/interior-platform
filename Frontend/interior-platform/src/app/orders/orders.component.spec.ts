@@ -24,6 +24,16 @@ function summary(partial: Partial<OrderSummaryDto> & { id: string }): OrderSumma
   };
 }
 
+const DELIVERY = {
+  fullName: 'Asha Menon',
+  phone: '9876543210',
+  addressLine1: '12 MG Road',
+  addressLine2: 'Near City Mall',
+  city: 'Kochi',
+  state: 'Kerala',
+  pincode: '682016',
+  deliveryNotes: 'Call before delivery.',
+};
 function detail(partial: Partial<OrderDetailDto> & { id: string }): OrderDetailDto {
   return {
     status: 0,
@@ -176,6 +186,49 @@ describe('OrdersComponent', () => {
     expect(el.textContent).toContain(`₹${(42999).toLocaleString('en-IN')}`);
     expect(el.textContent).toContain(`₹${(85998).toLocaleString('en-IN')}`);
     httpMock.expectNone(PRODUCTS_URL);
+  });
+
+  it('shows the delivery details on the customer\'s own order', () => {
+    const fixture = setupAuthenticated([summary({ id: 'order-1' })]);
+    fixture.componentInstance.viewDetails('order-1');
+    httpMock.expectOne(`${ORDERS_URL}/order-1`).flush(detail({ id: 'order-1', delivery: DELIVERY }));
+    fixture.detectChanges();
+
+    const block = (fixture.nativeElement as HTMLElement).querySelector('section[aria-label="Delivering to"]') as HTMLElement;
+    expect(block).toBeTruthy();
+    expect(block.textContent).toContain('Asha Menon');
+    expect(block.textContent).toContain('9876543210');
+    expect(block.textContent).toContain('12 MG Road, Near City Mall');
+    expect(block.textContent).toContain('Kochi, Kerala 682016');
+    expect(block.textContent).toContain('Notes: Call before delivery.');
+  });
+
+  it('omits optional lines and shows no block at all for an order placed before checkout', () => {
+    const fixture = setupAuthenticated([summary({ id: 'order-1' }), summary({ id: 'order-2' })]);
+    const cmp = fixture.componentInstance;
+    cmp.viewDetails('order-1');
+    httpMock.expectOne(`${ORDERS_URL}/order-1`).flush(
+      detail({ id: 'order-1', delivery: { ...DELIVERY, addressLine2: null, deliveryNotes: null } })
+    );
+    fixture.detectChanges();
+    let block = (fixture.nativeElement as HTMLElement).querySelector('section[aria-label="Delivering to"]') as HTMLElement;
+    expect(block.textContent).toContain('12 MG Road');
+    expect(block.textContent).not.toContain('Near City Mall');
+    expect(block.textContent).not.toContain('Notes:');
+
+    cmp.viewDetails('order-2');
+    httpMock.expectOne(`${ORDERS_URL}/order-2`).flush(detail({ id: 'order-2' }));
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('section[aria-label="Delivering to"]')).toBeNull();
+    block = (fixture.nativeElement as HTMLElement).querySelector('.order-detail') as HTMLElement;
+    expect(block.textContent).toContain('Aria 3-Seater Fabric Sofa');
+  });
+
+  it('the order list rows still show no address', () => {
+    const fixture = setupAuthenticated([summary({ id: 'order-1' })]);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).not.toContain('Delivering to');
+    expect(text).not.toContain('Kochi');
   });
 
   it('clears stale detail while loading another order', () => {

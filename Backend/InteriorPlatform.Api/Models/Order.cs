@@ -27,5 +27,28 @@ public class Order
     /// <summary>Sum of line totals, computed server-side. Decimal money.</summary>
     public decimal Subtotal { get; set; }
 
+    // Delivery details collected at checkout. Nullable so that orders created
+    // before checkout existed stay valid; new orders always carry them
+    // (POST /api/orders requires them).
+
+    /// <summary>Recipient name (2 to 100 characters).</summary>
+    public string? DeliveryFullName { get; set; }
+
+    /// <summary>10 digit Indian mobile number, digits only.</summary>
+    public string? DeliveryPhone { get; set; }
+
+    public string? DeliveryAddressLine1 { get; set; }
+
+    public string? DeliveryAddressLine2 { get; set; }
+
+    public string? DeliveryCity { get; set; }
+
+    public string? DeliveryState { get; set; }
+
+    /// <summary>6 digit Indian pincode.</summary>
+    public string? DeliveryPincode { get; set; }
+
+    public string? DeliveryNotes { get; set; }
+
     public List<OrderItem> Items { get; set; } = [];
 }

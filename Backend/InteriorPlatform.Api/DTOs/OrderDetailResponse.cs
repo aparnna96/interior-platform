@@ -19,5 +19,8 @@ public class OrderDetailResponse
 
     public decimal Subtotal { get; set; }
 
+    /// <summary>Delivery details, or null for an order created before checkout collected them.</summary>
+    public DeliveryDetailsResponse? Delivery { get; set; }
+
     public List<OrderItemResponse> Items { get; set; } = [];
 }

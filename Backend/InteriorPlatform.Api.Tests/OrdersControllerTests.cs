@@ -127,6 +127,36 @@ public sealed class OrdersControllerTests
             $"Expected 400, got {bad.StatusCode}.");
     }
 
+    private static CreateOrderRequest ValidDelivery() => new()
+    {
+        FullName = "Asha Menon",
+        Phone = "9876543210",
+        AddressLine1 = "12 MG Road",
+        AddressLine2 = "Near City Mall",
+        City = "Kochi",
+        State = "Kerala",
+        Pincode = "682016",
+        DeliveryNotes = "Call before delivery.",
+    };
+
+    private static CreateOrderRequest Delivery(Action<CreateOrderRequest> change)
+    {
+        var request = ValidDelivery();
+        change(request);
+        return request;
+    }
+
+    /// <summary>Asserts a 400 whose ModelState names the given request property.</summary>
+    private static void BadRequestOn(ActionResult<OrderDetailResponse> result, string property)
+    {
+        var bad = Assert.IsType<ObjectResult>(result.Result);
+        Assert.True(
+            bad.StatusCode == StatusCodes.Status400BadRequest ||
+            (bad.StatusCode is null && bad.Value is ValidationProblemDetails),
+            $"Expected 400, got {bad.StatusCode}.");
+        var problem = Assert.IsType<ValidationProblemDetails>(bad.Value);
+        Assert.Contains(property, problem.Errors.Keys);
+    }
     [Fact]
     public void OrdersController_RequiresAuthorization()
     {
@@ -135,15 +165,25 @@ public sealed class OrdersControllerTests
     }
 
     [Fact]
-    public void CreateOrder_TakesNoBody_ClientCannotInfluencePriceOrStatus()
+    public void CreateOrder_BodyCarriesOnlyDeliveryDetails_ClientCannotInfluencePriceOrStatus()
     {
-        // The action must not bind anything from the request: no prices,
-        // totals, product names, user ids, or status can reach the server.
+        // The only thing bound from the request is the delivery details: no
+        // prices, totals, product names, user ids or status can reach the server.
         var method = typeof(OrdersController).GetMethod(
             nameof(OrdersController.CreateOrder),
             BindingFlags.Public | BindingFlags.Instance);
         Assert.NotNull(method);
-        Assert.Empty(method.GetParameters());
+        var parameter = Assert.Single(method.GetParameters());
+        Assert.Equal(typeof(CreateOrderRequest), parameter.ParameterType);
+
+        var names = typeof(CreateOrderRequest).GetProperties().Select(p => p.Name).OrderBy(n => n).ToArray();
+        Assert.Equal(
+            new[]
+            {
+                "AddressLine1", "AddressLine2", "City", "DeliveryNotes",
+                "FullName", "Phone", "Pincode", "State",
+            },
+            names);
     }
 
     [Fact]
@@ -153,7 +193,7 @@ public sealed class OrdersControllerTests
         await AddToCart(test.Db, UserA, SofaId, 2);
         await AddToCart(test.Db, UserA, ChairId, 1);
 
-        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder());
+        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
 
         Assert.Equal(OrderStatus.Pending, order.Status);
         Assert.Equal(2, order.Items.Count);
@@ -179,7 +219,7 @@ public sealed class OrdersControllerTests
         using var test = new TestDb();
         await AddToCart(test.Db, UserA, SofaId, 1);
 
-        CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder());
+        CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
 
         var cartResult = await CartFor(test.Db, UserA).GetCart();
         var cart = Assert.IsType<CartResponse>(
@@ -195,12 +235,12 @@ public sealed class OrdersControllerTests
         using var test = new TestDb();
 
         // No cart at all.
-        BadRequest(await OrdersFor(test.Db, UserA).CreateOrder());
+        BadRequest(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
 
         // Existing but empty cart.
         var cartResult = await CartFor(test.Db, UserA).GetCart();
         Assert.IsType<OkObjectResult>(cartResult.Result);
-        BadRequest(await OrdersFor(test.Db, UserA).CreateOrder());
+        BadRequest(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
 
         Assert.Equal(0, await test.Db.Orders.CountAsync());
     }
@@ -214,7 +254,7 @@ public sealed class OrdersControllerTests
         test.Db.Products.Single(p => p.Id == SofaId).IsActive = false;
         await test.Db.SaveChangesAsync();
 
-        BadRequest(await OrdersFor(test.Db, UserA).CreateOrder());
+        BadRequest(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
 
         // Transactional all-or-nothing: no order, cart untouched.
         Assert.Equal(0, await test.Db.Orders.CountAsync());
@@ -246,7 +286,7 @@ public sealed class OrdersControllerTests
         await test.Db.SaveChangesAsync();
         test.Db.Database.ExecuteSqlRaw("PRAGMA foreign_keys = ON;");
 
-        BadRequest(await OrdersFor(test.Db, UserA).CreateOrder());
+        BadRequest(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
 
         Assert.Equal(0, await test.Db.Orders.CountAsync());
         Assert.Equal(1, await test.Db.CartItems.CountAsync());
@@ -262,7 +302,7 @@ public sealed class OrdersControllerTests
         test.Db.Products.Single(p => p.Id == SofaId).Price = newPrice;
         await test.Db.SaveChangesAsync();
 
-        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder());
+        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
         Assert.Equal(2 * (decimal)newPrice, order.Subtotal);
         Assert.Equal(2 * (decimal)newPrice, Assert.Single(order.Items).LineTotal);
     }
@@ -272,7 +312,7 @@ public sealed class OrdersControllerTests
     {
         using var test = new TestDb();
         await AddToCart(test.Db, UserA, SofaId, 1);
-        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder());
+        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
 
         var product = test.Db.Products.Single(p => p.Id == SofaId);
         product.Name = "Renamed Sofa";
@@ -294,13 +334,13 @@ public sealed class OrdersControllerTests
     {
         using var test = new TestDb();
         await AddToCart(test.Db, UserA, SofaId, 1);
-        var first = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder());
+        var first = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
 
         await AddToCart(test.Db, UserB, ChairId, 1);
-        CreatedOrder(await OrdersFor(test.Db, UserB).CreateOrder());
+        CreatedOrder(await OrdersFor(test.Db, UserB).CreateOrder(ValidDelivery()));
 
         await AddToCart(test.Db, UserA, ChairId, 2);
-        var second = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder());
+        var second = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
 
         var listResult = await OrdersFor(test.Db, UserA).GetOrders();
         var list = Assert.IsType<List<OrderResponse>>(
@@ -320,7 +360,7 @@ public sealed class OrdersControllerTests
     {
         using var test = new TestDb();
         await AddToCart(test.Db, UserA, SofaId, 3);
-        var created = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder());
+        var created = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
 
         var result = await OrdersFor(test.Db, UserA).GetOrder(created.Id);
         var detail = Assert.IsType<OrderDetailResponse>(
@@ -342,7 +382,7 @@ public sealed class OrdersControllerTests
     {
         using var test = new TestDb();
         await AddToCart(test.Db, UserA, SofaId, 1);
-        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder());
+        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
 
         Assert.IsType<NotFoundResult>((await OrdersFor(test.Db, UserB).GetOrder(order.Id)).Result);
         Assert.IsType<NotFoundResult>((await OrdersFor(test.Db, UserA).GetOrder(Guid.NewGuid())).Result);
@@ -355,6 +395,358 @@ public sealed class OrdersControllerTests
 
         Assert.IsType<UnauthorizedResult>((await OrdersFor(test.Db, null).GetOrders()).Result);
         Assert.IsType<UnauthorizedResult>((await OrdersFor(test.Db, null).GetOrder(Guid.NewGuid())).Result);
-        Assert.IsType<UnauthorizedResult>((await OrdersFor(test.Db, null).CreateOrder()).Result);
+        Assert.IsType<UnauthorizedResult>((await OrdersFor(test.Db, null).CreateOrder(ValidDelivery())).Result);
     }
-}
+
+    // ---------------------------------------------------------------- delivery details
+
+    [Fact]
+    public async Task CreateOrder_ValidDelivery_IsStoredOnTheOrderAndReturned()
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
+
+        var d = Assert.IsType<DeliveryDetailsResponse>(order.Delivery);
+        Assert.Equal("Asha Menon", d.FullName);
+        Assert.Equal("9876543210", d.Phone);
+        Assert.Equal("12 MG Road", d.AddressLine1);
+        Assert.Equal("Near City Mall", d.AddressLine2);
+        Assert.Equal("Kochi", d.City);
+        Assert.Equal("Kerala", d.State);
+        Assert.Equal("682016", d.Pincode);
+        Assert.Equal("Call before delivery.", d.DeliveryNotes);
+
+        // And it really is persisted on the Order row.
+        var stored = await test.Db.Orders.AsNoTracking().SingleAsync(o => o.Id == order.Id);
+        Assert.Equal("Asha Menon", stored.DeliveryFullName);
+        Assert.Equal("9876543210", stored.DeliveryPhone);
+        Assert.Equal("12 MG Road", stored.DeliveryAddressLine1);
+        Assert.Equal("Near City Mall", stored.DeliveryAddressLine2);
+        Assert.Equal("Kochi", stored.DeliveryCity);
+        Assert.Equal("Kerala", stored.DeliveryState);
+        Assert.Equal("682016", stored.DeliveryPincode);
+        Assert.Equal("Call before delivery.", stored.DeliveryNotes);
+        Assert.Equal(OrderStatus.Pending, stored.Status);
+    }
+
+    [Fact]
+    public async Task CreateOrder_OptionalFieldsMayBeOmittedOrBlank()
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        var request = Delivery(r => { r.AddressLine2 = null; r.DeliveryNotes = "   "; });
+        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(request));
+
+        Assert.Null(order.Delivery!.AddressLine2);
+        Assert.Null(order.Delivery.DeliveryNotes);
+    }
+
+    [Fact]
+    public async Task CreateOrder_TrimsEveryField()
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        var request = new CreateOrderRequest
+        {
+            FullName = "  Asha Menon  ",
+            Phone = "  9876543210 ",
+            AddressLine1 = "\t12 MG Road\n",
+            AddressLine2 = " Near City Mall ",
+            City = " Kochi ",
+            State = " Kerala ",
+            Pincode = " 682016 ",
+            DeliveryNotes = "  Call first.  ",
+        };
+        var d = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(request)).Delivery!;
+
+        Assert.Equal("Asha Menon", d.FullName);
+        Assert.Equal("9876543210", d.Phone);
+        Assert.Equal("12 MG Road", d.AddressLine1);
+        Assert.Equal("Near City Mall", d.AddressLine2);
+        Assert.Equal("Kochi", d.City);
+        Assert.Equal("Kerala", d.State);
+        Assert.Equal("682016", d.Pincode);
+        Assert.Equal("Call first.", d.DeliveryNotes);
+    }
+
+    [Theory]
+    [InlineData("FullName")]
+    [InlineData("Phone")]
+    [InlineData("AddressLine1")]
+    [InlineData("City")]
+    [InlineData("State")]
+    [InlineData("Pincode")]
+    public async Task CreateOrder_RequiredField_MissingEmptyOrBlank_Returns400(string property)
+    {
+        foreach (var bad in new string?[] { null, string.Empty, "   ", "\t\n" })
+        {
+            using var test = new TestDb();
+            await AddToCart(test.Db, UserA, SofaId, 1);
+
+            var request = Delivery(r => typeof(CreateOrderRequest).GetProperty(property)!.SetValue(r, bad));
+            BadRequestOn(await OrdersFor(test.Db, UserA).CreateOrder(request), property);
+
+            // Nothing was created and the cart is untouched.
+            Assert.Equal(0, await test.Db.Orders.CountAsync());
+            Assert.Equal(1, await test.Db.CartItems.CountAsync());
+        }
+    }
+
+    [Theory]
+    [InlineData("FullName", 1, true)]
+    [InlineData("FullName", 2, false)]
+    [InlineData("FullName", 100, false)]
+    [InlineData("FullName", 101, true)]
+    [InlineData("AddressLine1", 200, false)]
+    [InlineData("AddressLine1", 201, true)]
+    [InlineData("AddressLine2", 200, false)]
+    [InlineData("AddressLine2", 201, true)]
+    [InlineData("City", 100, false)]
+    [InlineData("City", 101, true)]
+    [InlineData("State", 100, false)]
+    [InlineData("State", 101, true)]
+    [InlineData("DeliveryNotes", 500, false)]
+    [InlineData("DeliveryNotes", 501, true)]
+    public async Task CreateOrder_TextLengths_AreEnforced(string property, int length, bool rejected)
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        var request = Delivery(r => typeof(CreateOrderRequest).GetProperty(property)!.SetValue(r, new string('a', length)));
+        var result = await OrdersFor(test.Db, UserA).CreateOrder(request);
+
+        if (rejected)
+        {
+            BadRequestOn(result, property);
+            Assert.Equal(0, await test.Db.Orders.CountAsync());
+        }
+        else
+        {
+            CreatedOrder(result);
+        }
+    }
+
+    [Fact]
+    public async Task CreateOrder_LengthsAreMeasuredAfterTrimming()
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        // 100 letters plus padding is exactly at the limit once trimmed.
+        var request = Delivery(r => r.FullName = "  " + new string('a', 100) + "  ");
+        Assert.Equal(100, CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(request)).Delivery!.FullName.Length);
+    }
+
+    [Theory]
+    [InlineData("9876543210", "9876543210")]
+    [InlineData("+919876543210", "9876543210")]
+    [InlineData("+91 98765 43210", "9876543210")]
+    [InlineData("98765-43210", "9876543210")]
+    [InlineData(" 6123456789 ", "6123456789")]
+    public async Task CreateOrder_ValidPhoneFormats_AreNormalisedToTenDigits(string input, string expected)
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(Delivery(r => r.Phone = input)));
+        Assert.Equal(expected, order.Delivery!.Phone);
+        Assert.Equal(expected, (await test.Db.Orders.AsNoTracking().SingleAsync()).DeliveryPhone);
+    }
+
+    [Theory]
+    [InlineData("987654321")]        // 9 digits
+    [InlineData("98765432101")]      // 11 digits
+    [InlineData("+91987654321")]     // 9 digits after the prefix
+    [InlineData("+9198765432101")]   // 11 digits after the prefix
+    [InlineData("98765abcde")]
+    [InlineData("98765 4321x")]
+    [InlineData("+1 9876543210")]    // not an Indian prefix
+    [InlineData("++919876543210")]
+    [InlineData("(98765) 43210")]
+    [InlineData("phone")]
+    public async Task CreateOrder_InvalidPhone_Returns400(string input)
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        BadRequestOn(await OrdersFor(test.Db, UserA).CreateOrder(Delivery(r => r.Phone = input)), "Phone");
+        Assert.Equal(0, await test.Db.Orders.CountAsync());
+    }
+
+    [Theory]
+    [InlineData("682016")]
+    [InlineData("000000")]
+    [InlineData(" 682016 ")]
+    public async Task CreateOrder_ValidPincode_IsAccepted(string input)
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(Delivery(r => r.Pincode = input)));
+        Assert.Equal(input.Trim(), order.Delivery!.Pincode);
+    }
+
+    [Theory]
+    [InlineData("68201")]      // 5 digits
+    [InlineData("6820161")]    // 7 digits
+    [InlineData("68201a")]
+    [InlineData("682 016")]
+    [InlineData("-82016")]
+    [InlineData("pincode")]
+    public async Task CreateOrder_InvalidPincode_Returns400(string input)
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        BadRequestOn(await OrdersFor(test.Db, UserA).CreateOrder(Delivery(r => r.Pincode = input)), "Pincode");
+        Assert.Equal(0, await test.Db.Orders.CountAsync());
+    }
+
+    [Fact]
+    public async Task CreateOrder_MultipleBadFields_ReportsEachOne()
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        var request = Delivery(r => { r.FullName = ""; r.Phone = "123"; r.Pincode = "1"; r.City = null; });
+        var bad = Assert.IsType<ObjectResult>((await OrdersFor(test.Db, UserA).CreateOrder(request)).Result);
+        var errors = Assert.IsType<ValidationProblemDetails>(bad.Value).Errors.Keys;
+
+        Assert.Contains("FullName", errors);
+        Assert.Contains("Phone", errors);
+        Assert.Contains("Pincode", errors);
+        Assert.Contains("City", errors);
+    }
+
+    [Fact]
+    public async Task CreateOrder_NullBody_Returns400()
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        BadRequestOn(await OrdersFor(test.Db, UserA).CreateOrder(null), "Delivery");
+        Assert.Equal(0, await test.Db.Orders.CountAsync());
+        Assert.Equal(1, await test.Db.CartItems.CountAsync());
+    }
+
+    [Fact]
+    public async Task CreateOrder_EmptyObjectBody_IsRejectedWithEveryRequiredField()
+    {
+        // The old client sent "{}". That must now fail, naming each required field.
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+
+        var bad = Assert.IsType<ObjectResult>((await OrdersFor(test.Db, UserA).CreateOrder(new CreateOrderRequest())).Result);
+        var errors = Assert.IsType<ValidationProblemDetails>(bad.Value).Errors.Keys;
+        foreach (var required in new[] { "FullName", "Phone", "AddressLine1", "City", "State", "Pincode" })
+        {
+            Assert.Contains(required, errors);
+        }
+
+        Assert.DoesNotContain("AddressLine2", errors);
+        Assert.DoesNotContain("DeliveryNotes", errors);
+        Assert.Equal(0, await test.Db.Orders.CountAsync());
+        Assert.Equal(1, await test.Db.CartItems.CountAsync());
+    }
+
+    [Fact]
+    public async Task CreateOrder_EmptyCart_WithValidDelivery_Returns400()
+    {
+        using var test = new TestDb();
+
+        BadRequestOn(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()), "Cart");
+        Assert.Equal(0, await test.Db.Orders.CountAsync());
+    }
+
+    [Fact]
+    public async Task CreateOrder_InvalidDelivery_DoesNotClearTheCart()
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 2);
+
+        BadRequestOn(await OrdersFor(test.Db, UserA).CreateOrder(Delivery(r => r.Pincode = "1")), "Pincode");
+
+        Assert.Equal(2, (await test.Db.CartItems.SingleAsync()).Quantity);
+        Assert.Equal(0, await test.Db.Orders.CountAsync());
+    }
+
+    [Fact]
+    public async Task CreateOrder_DeliveryDoesNotChangePricingOrStatus()
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 2);
+
+        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
+
+        Assert.Equal(OrderStatus.Pending, order.Status);
+        Assert.Equal(2 * (decimal)SofaPrice, order.Subtotal);
+        Assert.Equal(0, await test.Db.CartItems.CountAsync());
+        Assert.True(await test.Db.Carts.AnyAsync(c => c.UserId == UserA));
+    }
+
+    [Fact]
+    public async Task GetOrder_OwnOrder_ReturnsTheStoredDelivery()
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+        var created = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
+
+        var result = await OrdersFor(test.Db, UserA).GetOrder(created.Id);
+        var detail = Assert.IsType<OrderDetailResponse>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal("Asha Menon", detail.Delivery!.FullName);
+        Assert.Equal("682016", detail.Delivery.Pincode);
+        Assert.Equal("Call before delivery.", detail.Delivery.DeliveryNotes);
+    }
+
+    [Fact]
+    public async Task GetOrder_OtherCustomerCannotReadTheDelivery()
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+        var order = CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
+
+        // Another customer gets a plain 404: no order, so no address either.
+        Assert.IsType<NotFoundResult>((await OrdersFor(test.Db, UserB).GetOrder(order.Id)).Result);
+    }
+
+    [Fact]
+    public async Task OrderList_StillOmitsDeliveryDetails()
+    {
+        using var test = new TestDb();
+        await AddToCart(test.Db, UserA, SofaId, 1);
+        CreatedOrder(await OrdersFor(test.Db, UserA).CreateOrder(ValidDelivery()));
+
+        var list = Assert.IsType<List<OrderResponse>>(
+            Assert.IsType<OkObjectResult>((await OrdersFor(test.Db, UserA).GetOrders()).Result).Value);
+        Assert.Single(list);
+        Assert.Equal(
+            new[] { "CreatedAt", "Id", "ItemCount", "Status", "Subtotal" },
+            typeof(OrderResponse).GetProperties().Select(p => p.Name).OrderBy(n => n).ToArray());
+    }
+
+    [Fact]
+    public async Task OrderCreatedBeforeCheckout_HasNullDelivery()
+    {
+        using var test = new TestDb();
+        var now = DateTime.UtcNow;
+        test.Db.Orders.Add(new Order
+        {
+            Id = Guid.NewGuid(),
+            UserId = UserA,
+            Status = OrderStatus.Pending,
+            CreatedAt = now,
+            UpdatedAt = now,
+            Subtotal = 100m,
+        });
+        await test.Db.SaveChangesAsync();
+        var id = (await test.Db.Orders.AsNoTracking().SingleAsync()).Id;
+
+        var detail = Assert.IsType<OrderDetailResponse>(
+            Assert.IsType<OkObjectResult>((await OrdersFor(test.Db, UserA).GetOrder(id)).Result).Value);
+        Assert.Null(detail.Delivery);
+    }}

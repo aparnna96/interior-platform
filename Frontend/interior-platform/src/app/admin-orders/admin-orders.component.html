@@ -106,6 +106,19 @@
             <div><dt>Updated</dt><dd>{{ order.updatedAt | date:'medium' }}</dd></div>
             <div class="total"><dt>Subtotal</dt><dd>₹{{ inr(order.subtotal) }}</dd></div>
           </dl>
+          @if (order.delivery; as d) {
+            <section class="delivering-to" aria-label="Delivery details">
+              <h2>Delivery details</h2>
+              <p class="d-name">{{ d.fullName }} <span class="d-phone">{{ d.phone }}</span></p>
+              <p>{{ d.addressLine1 }}@if (d.addressLine2) {, {{ d.addressLine2 }}}</p>
+              <p>{{ d.city }}, {{ d.state }} {{ d.pincode }}</p>
+              @if (d.deliveryNotes) {
+                <p class="d-notes">Notes: {{ d.deliveryNotes }}</p>
+              }
+            </section>
+          } @else {
+            <p class="sub small" role="note">No delivery details were collected for this order.</p>
+          }
           <h2>Items ({{ orderItemCount(order) }})</h2>
           <ul class="order-lines">
             @for (i of order.items; track i.id) {
