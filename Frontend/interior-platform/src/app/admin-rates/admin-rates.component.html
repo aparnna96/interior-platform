@@ -1,0 +1,131 @@
+<section class="admin-rates" aria-label="Admin estimate rate workspace">
+  <header class="admin-rates-head">
+    <div>
+      <p class="kicker">Operations · Pricing</p>
+      <h1>Estimate rate</h1>
+    </div>
+  </header>
+
+  @if (!isAuthenticated()) {
+    <div class="admin-rates-empty">
+      <p>Log in to access the Estimate rate workspace</p>
+      <span>The rate is managed by Admin accounts. Open Account in the menu to log in.</span>
+    </div>
+  } @else if (!canAccess()) {
+    <div class="admin-rates-empty" role="alert">
+      <p>You don't have access to this workspace.</p>
+      <span>This workspace is for Admin accounts.</span>
+    </div>
+  } @else if (forbidden()) {
+    <div class="admin-rates-empty" role="alert">
+      <p>You don't have access to this workspace.</p>
+      <span>The server refused the rate request for this account.</span>
+      <button class="btn-primary" (click)="loadRates()">Try again</button>
+    </div>
+  } @else {
+    @if (notice()) {
+      <p class="rate-notice" role="status">{{ notice() }}</p>
+    }
+
+    @if (listLoading() && list() === null) {
+      <div class="admin-rates-empty" aria-live="polite">
+        <p>Loading rates…</p>
+        <span>Fetching the rate history.</span>
+      </div>
+    } @else if (listError()) {
+      <p class="admin-rates-error" role="alert">
+        {{ listError() }}
+        <button class="linklike" (click)="loadRates()">Try again</button>
+      </p>
+    } @else if (list() !== null) {
+      <section class="rate-current" aria-label="Current rate">
+        <p class="kicker">Current rate</p>
+        @if (active(); as current) {
+          <p class="rate-value">₹{{ inr(current.ratePerSquareFoot) }} <span>per sq ft</span></p>
+          <p class="sub">
+            Used for every new estimate.
+            Set {{ current.createdAt | date:'medium' }}{{ current.createdByEmail ? ' by ' + current.createdByEmail : ' (initial rate)' }}.
+          </p>
+        } @else {
+          <p class="rate-value rate-none">No active rate</p>
+          <p class="sub">Customers cannot save estimates until a rate is set.</p>
+        }
+      </section>
+
+      <form class="rate-form" [formGroup]="form" (ngSubmit)="requestSet()" aria-label="Set estimate rate" novalidate>
+        <h2>Set a new rate</h2>
+        <label for="rate-input">Rate per sq.ft. (₹)
+          <input
+            id="rate-input"
+            type="number"
+            formControlName="rate"
+            min="0.01"
+            [max]="maxRate"
+            step="0.01"
+            inputmode="decimal"
+            autocomplete="off"
+            [readonly]="confirming() !== null"
+            [attr.aria-invalid]="form.controls.rate.invalid && form.controls.rate.touched ? 'true' : null"
+            aria-describedby="rate-hint"
+          />
+          <span class="hint" id="rate-hint">
+            Greater than 0 and at most ₹{{ inr(maxRate) }}, with up to 2 decimals.
+          </span>
+        </label>
+        <p class="sub small">Applies to new estimates only. Existing estimates and proposals keep the rate they were created with.</p>
+
+        @if (formError()) {
+          <p class="admin-rates-error" role="alert">
+            {{ formError() }}
+            @if (confirming() !== null) {
+              <button type="button" class="linklike" (click)="confirmSet()" [disabled]="saving()">Try again</button>
+            }
+          </p>
+        }
+
+        @if (confirming() !== null) {
+          <div class="confirm-box" role="group" aria-label="Confirm new rate">
+            <p>
+              New estimates will use <strong>₹{{ inr(confirming()!) }} per sq ft</strong>.
+              Existing estimates and proposals are not changed.
+            </p>
+            <div class="form-actions">
+              <button type="button" class="btn-primary" (click)="confirmSet()" [disabled]="saving()">
+                {{ saving() ? 'Saving…' : 'Confirm new rate' }}
+              </button>
+              <button type="button" class="btn-secondary" (click)="cancelConfirm()" [disabled]="saving()">Cancel</button>
+            </div>
+          </div>
+        } @else {
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Set rate</button>
+          </div>
+        }
+      </form>
+
+      <section class="rate-history" aria-label="Rate history">
+        <h2>History</h2>
+        @if (list()!.length === 0) {
+          <p class="sub">No rates yet.</p>
+        } @else {
+          <div class="rate-rows" aria-live="polite">
+            @for (r of list()!; track r.id) {
+              <article class="rate-row" [attr.aria-label]="'Rate ' + inr(r.ratePerSquareFoot)">
+                <div class="rate-main">
+                  <p class="rate-amount">₹{{ inr(r.ratePerSquareFoot) }} <span>per sq ft</span></p>
+                  <p class="rate-meta">
+                    @if (r.isActive) {
+                      <span class="status-pill">Active</span>
+                    }
+                    <span>{{ r.createdAt | date:'medium' }}</span>
+                    <span>{{ r.createdByEmail ?? 'Initial rate' }}</span>
+                  </p>
+                </div>
+              </article>
+            }
+          </div>
+        }
+      </section>
+    }
+  }
+</section>

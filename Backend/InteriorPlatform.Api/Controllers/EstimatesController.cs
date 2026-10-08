@@ -1,4 +1,3 @@
-using InteriorPlatform.Api.Configuration;
 using InteriorPlatform.Api.Data;
 using InteriorPlatform.Api.DTOs;
 using InteriorPlatform.Api.Models;
@@ -6,7 +5,6 @@ using InteriorPlatform.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -14,8 +12,9 @@ namespace InteriorPlatform.Api.Controllers;
 
 /// <summary>
 /// Customer-owned saved room estimates. The owning user, the area, the rate
-/// and the amount are all derived server-side — the request carries only
-/// room dimensions, so the client can influence neither ownership nor money.
+/// (the active Rate Master entry) and the amount are all derived server-side —
+/// the request carries only room dimensions and furniture types, so the
+/// client can influence neither ownership nor money.
 /// Every lookup is scoped to the current user's estimates, so one customer
 /// can never see another customer's estimates.
 /// </summary>
@@ -34,17 +33,10 @@ public class EstimatesController : ControllerBase
     private const int MaxItemLines = 50;
 
     private readonly ApplicationDbContext _db;
-    private readonly decimal _demoRatePerSquareFoot;
 
-    public EstimatesController(ApplicationDbContext db, IOptions<EstimateOptions> options)
+    public EstimatesController(ApplicationDbContext db)
     {
         _db = db;
-        _demoRatePerSquareFoot = options.Value.DemoRatePerSquareFoot;
-        if (_demoRatePerSquareFoot <= 0)
-        {
-            throw new InvalidOperationException(
-                "Estimates:DemoRatePerSquareFoot must be a positive value.");
-        }
     }
 
     // POST /api/estimates — persist a server-calculated estimate.
@@ -68,6 +60,22 @@ public class EstimatesController : ControllerBase
             return Unauthorized();
         }
 
+        // The rate comes from the Admin-managed Rate Master (the single active
+        // row) and is read here, on the server, at the moment of saving. The
+        // request has no field for it. With no active rate there is nothing
+        // honest to quote, so fail instead of guessing a number.
+        var rate = await _db.EstimateRates
+            .AsNoTracking()
+            .Where(r => r.IsActive)
+            .Select(r => (decimal?)r.RatePerSquareFoot)
+            .FirstOrDefaultAsync();
+        if (rate is null)
+        {
+            return Problem(
+                title: "The estimate rate is not available right now. Please try again later.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
         var now = DateTime.UtcNow;
         var area = request.Width * request.Length;
         var estimate = new Estimate
@@ -77,8 +85,8 @@ public class EstimatesController : ControllerBase
             Width = request.Width,
             Length = request.Length,
             Area = area,
-            RatePerSquareFoot = _demoRatePerSquareFoot,
-            EstimatedAmount = area * _demoRatePerSquareFoot,
+            RatePerSquareFoot = rate.Value,
+            EstimatedAmount = area * rate.Value,
             CreatedAt = now,
         };
 

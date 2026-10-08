@@ -34,8 +34,9 @@ import { LeadsComponent } from './leads/leads.component';
 import { AdminProductsComponent } from './admin-products/admin-products.component';
 import { AdminOrdersComponent } from './admin-orders/admin-orders.component';
 import { AdminProposalsComponent } from './admin-proposals/admin-proposals.component';
+import { AdminRatesComponent } from './admin-rates/admin-rates.component';
+import { EstimateRateService } from './estimate/estimate-rate.service';
 import {
-  DEMO_RATE,
   calculateEstimateTotal,
   calculateRoomArea,
   sanitizeRoomDimension,
@@ -81,7 +82,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent, AdminRatesComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -156,6 +157,15 @@ export class AppComponent {
     // every time it is entered. Tracks only the page, so switching tabs while on it sticks.
     effect(() => {
       if (this.activeView() === 'field') untracked(() => this.canvasTab.set('elevation'));
+    });
+    // The rate is only needed where an estimate or project total is shown, so
+    // it is fetched when one of those pages opens (and again on each return,
+    // keeping the preview current) rather than at app start.
+    effect(() => {
+      const view = this.activeView();
+      if (view === 'visualizer' || view === 'field' || view === 'estimates' || view === 'projects') {
+        untracked(() => this.estimateRate.load());
+      }
     });
     // Address -> page: opening, reloading, Back/Forward and guard redirects.
     this.router.events
@@ -266,6 +276,9 @@ export class AppComponent {
         next: (estimate) => {
           this.savingEstimate.set(false);
           this.savedEstimate.set(estimate);
+          // The server priced this estimate with the live rate: show that
+          // rate if the preview was out of date.
+          this.estimateRate.adopt(estimate.ratePerSquareFoot);
           this.savedEstimates?.loadEstimates();
         },
         error: (err: unknown) => {
@@ -456,8 +469,30 @@ export class AppComponent {
   displayWidth = computed(() => sanitizeRoomDimension(this.appliedWidth()));
   displayLength = computed(() => sanitizeRoomDimension(this.appliedLength()));
   planAspect = computed(() => `${this.appliedWidth()} / ${this.appliedLength()}`);
-  estimateTotal = computed(() => calculateEstimateTotal(this.area(), DEMO_RATE));
-  demoRate = DEMO_RATE;
+
+  /**
+   * The Admin-managed rate (Rate Master). Display-only: the server prices
+   * every saved estimate itself. Null until loaded; there is no fallback
+   * number, so the preview shows a dash instead of a made-up figure.
+   */
+  private readonly estimateRate = inject(EstimateRateService);
+
+  /** Preview total; 0 while the rate is unknown (the template shows a dash then). */
+  estimateTotal = computed(() => calculateEstimateTotal(this.area(), this.estimateRate.rate() ?? 0));
+
+  /** "₹1,500", or a dash while the rate is unknown. */
+  rateAmount = computed(() => {
+    const rate = this.estimateRate.rate();
+    return rate === null ? '—' : `₹${this.money(rate)}`;
+  });
+
+  /** "₹1,500 / sq ft", or a dash while the rate is unknown. */
+  rateText = computed(() => (this.estimateRate.rate() === null ? '—' : `${this.rateAmount()} / sq ft`));
+
+  /** "₹270,000", or a dash while the rate is unknown. */
+  totalText = computed(() =>
+    this.estimateRate.rate() === null ? '—' : `₹${this.money(this.estimateTotal())}`
+  );
 
   // ── estimate persistence (server is authoritative for saved records) ──
   private readonly estimates = inject(EstimateService);
@@ -786,6 +821,14 @@ export class AppComponent {
 
   // ── projects ───────────────────────────────
   saveProject(): void {
+    // A project stores its total, so it cannot be saved while the rate is
+    // unknown (it would record 0). Say so instead of saving a wrong figure.
+    if (this.estimateRate.rate() === null) {
+      this.projectNotice.set('The estimate rate is not available yet. Please try again in a moment.');
+      window.setTimeout(() => this.projectNotice.set(''), 2600);
+      this.estimateRate.load();
+      return;
+    }
     const n = this.projects().length + 1;
     const p: SavedProject = {
       id: `p-${Date.now()}-${n}`,

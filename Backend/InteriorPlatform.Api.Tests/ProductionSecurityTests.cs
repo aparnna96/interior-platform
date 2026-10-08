@@ -669,6 +669,74 @@ public sealed class ProductionSecurityTests
     }
 
     [Fact]
+    public async Task EstimateRateMaster_OverRealHttp_AdminOnlyWritesAndPublicReadOfTheActiveRate()
+    {
+        await using var api = await TestApi.StartAsync("Development");
+        await api.CreateUserAsync("customer@test.local", "Customer");
+        await api.CreateUserAsync("staff@test.local", "FieldStaff");
+        await api.CreateUserAsync("admin@test.local", "Admin");
+        var customer = await api.LoginAsync("customer@test.local");
+        var staff = await api.LoginAsync("staff@test.local");
+        var admin = await api.LoginAsync("admin@test.local");
+
+        // Anonymous visitors may read the active rate; there is none yet, so
+        // the API says "unavailable" instead of inventing a number.
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await api.GetAsync("/api/estimate-rate")).StatusCode);
+
+        // Nobody but an Admin can read the history or set a rate.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await api.GetAsync("/api/admin/estimate-rates")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await api.SendAsync(HttpMethod.Post, "/api/admin/estimate-rates", content: JsonContent.Create(new { ratePerSquareFoot = 1 }))).StatusCode);
+        foreach (var token in new[] { customer, staff })
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, (await api.GetAsync("/api/admin/estimate-rates", token)).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden,
+                (await api.SendAsync(HttpMethod.Post, "/api/admin/estimate-rates", token, JsonContent.Create(new { ratePerSquareFoot = 1 }))).StatusCode);
+        }
+
+        // Rejected writes changed nothing.
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await api.GetAsync("/api/estimate-rate")).StatusCode);
+
+        // Admin: invalid rates are 400s, a valid one is created.
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await api.SendAsync(HttpMethod.Post, "/api/admin/estimate-rates", admin, JsonContent.Create(new { ratePerSquareFoot = 0 }))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await api.SendAsync(HttpMethod.Post, "/api/admin/estimate-rates", admin, JsonContent.Create(new { ratePerSquareFoot = 100001 }))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await api.SendAsync(HttpMethod.Post, "/api/admin/estimate-rates", admin, new StringContent("{not json", Encoding.UTF8, "application/json"))).StatusCode);
+        var created = await api.SendAsync(HttpMethod.Post, "/api/admin/estimate-rates", admin, JsonContent.Create(new { ratePerSquareFoot = 1800 }));
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        // Anyone, even logged out, now sees exactly the active rate and nothing about who set it.
+        var publicRead = await api.GetAsync("/api/estimate-rate");
+        Assert.Equal(HttpStatusCode.OK, publicRead.StatusCode);
+        var body = await publicRead.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1800m, body.GetProperty("ratePerSquareFoot").GetDecimal());
+        Assert.True(body.TryGetProperty("updatedAt", out _));
+        Assert.Equal(2, body.EnumerateObject().Count());
+
+        // The history is admin-only and holds the setter's email.
+        var history = await (await api.GetAsync("/api/admin/estimate-rates", admin)).Content.ReadFromJsonAsync<JsonElement>();
+        var row = Assert.Single(history.EnumerateArray().ToList());
+        Assert.True(row.GetProperty("isActive").GetBoolean());
+        Assert.Equal("admin@test.local", row.GetProperty("createdByEmail").GetString());
+
+        // Estimates take the active rate on the server; a rate in the body is ignored.
+        var estimate = await api.SendAsync(HttpMethod.Post, "/api/estimates", customer,
+            JsonContent.Create(new { width = 10, length = 10, ratePerSquareFoot = 1, estimatedAmount = 1 }));
+        Assert.Equal(HttpStatusCode.Created, estimate.StatusCode);
+        var saved = await estimate.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1800m, saved.GetProperty("ratePerSquareFoot").GetDecimal());
+        Assert.Equal(180000m, saved.GetProperty("estimatedAmount").GetDecimal());
+
+        // The append-only history has no edit or delete.
+        Assert.Equal(HttpStatusCode.MethodNotAllowed,
+            (await api.SendAsync(HttpMethod.Delete, "/api/admin/estimate-rates", admin)).StatusCode);
+        Assert.Equal(HttpStatusCode.MethodNotAllowed,
+            (await api.SendAsync(HttpMethod.Put, "/api/admin/estimate-rates", admin, JsonContent.Create(new { ratePerSquareFoot = 5 }))).StatusCode);
+    }
+
+    [Fact]
     public async Task Development_IgnoresForwardedFor_SoSpoofingCannotBypassTheLimit()
     {
         await using var api = await TestApi.StartAsync("Development", s => s["RateLimiting:AuthLogin:PermitLimit"] = "2");

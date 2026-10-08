@@ -59,7 +59,8 @@ TLS and the least-privilege login. Tighten it before any real client data.
   another region, update the Dockerfile URL, hash and certificate count. The
   Docker image builds and runs on Railway from `main` [verified]: the checksum, CA split, font and publish steps all ran, `/health` returns 200, and the rupee sign renders in the generated proposal PDF.
 - Production configuration in `appsettings.Production.json`: CORS origin,
-  estimate rate, token payment amount, empty Razorpay placeholders, and
+  bootstrap estimate rate (it only seeds the first Rate Master row; Admins manage
+  the rate in the app afterwards), token payment amount, empty Razorpay placeholders, and
   `REPLACE_WITH_*` placeholders for JWT issuer and audience.
 - `/health`: anonymous, constant body, no database check.
 
@@ -279,8 +280,9 @@ migration step.
 | `DOTNET_gcServer` | `0` (optional) | The published app uses Server GC, which can use more memory on small containers [memory effect not verified] |
 
 Already configured in `appsettings.Production.json`, so not needed as
-variables: `Estimates:DemoRatePerSquareFoot`, `Payments:TokenAmount`,
-`Payments:Currency`. `Jwt__Issuer` and `Jwt__Audience` placeholders there are
+variables: `Estimates:DemoRatePerSquareFoot` (bootstrap only: it seeds the first
+estimate rate when the `EstimateRates` table is empty and is ignored afterwards),
+`Payments:TokenAmount`, `Payments:Currency`. `Jwt__Issuer` and `Jwt__Audience` placeholders there are
 rejected on purpose until you override them.
 
 ### 7.3 Connection string shape (placeholders only)

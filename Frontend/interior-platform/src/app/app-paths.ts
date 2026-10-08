@@ -25,6 +25,7 @@ export type AppView =
   | 'admin-products'
   | 'admin-orders'
   | 'admin-proposals'
+  | 'admin-rates'
   | 'login'
   | 'register'
   | 'account';
@@ -68,6 +69,7 @@ export const VIEW_ROUTES: readonly ViewRoute[] = [
   { view: 'admin-products', path: 'admin/products', title: 'Manage products | Confident Group', access: 'admin' },
   { view: 'admin-orders', path: 'admin/orders', title: 'Manage orders | Confident Group', access: 'admin' },
   { view: 'admin-proposals', path: 'admin/proposals', title: 'Manage proposals | Confident Group', access: 'admin' },
+  { view: 'admin-rates', path: 'admin/rates', title: 'Manage estimate rate | Confident Group', access: 'admin' },
   { view: 'login', path: 'login', title: 'Log in | Confident Group', access: 'guest' },
   { view: 'register', path: 'register', title: 'Create account | Confident Group', access: 'guest' },
 ];

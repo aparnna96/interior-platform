@@ -270,6 +270,7 @@ describe('AppComponent routing', () => {
         ['/admin/products', 'admin-products'],
         ['/admin/orders', 'admin-orders'],
         ['/admin/proposals', 'admin-proposals'],
+        ['/admin/rates', 'admin-rates'],
         ['/leads', 'leads'],
       ] as const) {
         await go(fixture, url);

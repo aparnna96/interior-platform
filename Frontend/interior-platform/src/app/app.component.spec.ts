@@ -10,6 +10,17 @@ import { environment } from '../environments/environment';
 
 const ESTIMATES_URL = `${environment.apiBaseUrl}/api/estimates`;
 const CART_URL = `${environment.apiBaseUrl}/api/cart`;
+const RATE_URL = `${environment.apiBaseUrl}/api/estimate-rate`;
+
+/**
+ * Answers the app's estimate-rate request the way the API would (Rate Master).
+ * The app asks for the rate whenever an estimate, project or visualizer page opens.
+ */
+function flushRate(httpMock: HttpTestingController, rate = 1500): void {
+  httpMock
+    .expectOne(RATE_URL)
+    .flush({ ratePerSquareFoot: rate, updatedAt: '2026-10-01T00:00:00Z' });
+}
 
 describe('AppComponent', () => {
   beforeEach(async () => {
@@ -71,12 +82,18 @@ describe('AppComponent', () => {
   });
 
   describe('Estimates room-estimate view', () => {
-    function openEstimates() {
+    /** Opens Estimates; the Rate Master answers with `rate`, or stays unanswered with 'pending'. */
+    function openEstimates(rate: number | 'pending' = 1500) {
       const fixture = TestBed.createComponent(AppComponent);
       const app = fixture.componentInstance;
+      const httpMock = TestBed.inject(HttpTestingController);
       app.activeView.set('estimates');
       fixture.detectChanges();
-      return { fixture, app, el: fixture.nativeElement as HTMLElement };
+      if (rate !== 'pending') {
+        flushRate(httpMock, rate);
+        fixture.detectChanges();
+      }
+      return { fixture, app, httpMock, el: fixture.nativeElement as HTMLElement };
     }
 
     it('displays width, length, area, rate and estimated amount', () => {
@@ -89,10 +106,63 @@ describe('AppComponent', () => {
       expect(el.textContent).toContain(`₹${(270000).toLocaleString('en-IN')}`);
     });
 
-    it('shows the illustrative-pricing disclaimer, never a final quotation', () => {
+    it('shows the pricing disclaimer, never a final quotation or demo wording', () => {
       const { el } = openEstimates();
-      expect(el.textContent).toContain('Illustrative estimate — final pricing may vary.');
+      expect(el.textContent).toContain('Pricing is subject to confirmation.');
       expect(el.textContent).not.toContain('final quotation');
+      expect(el.textContent).not.toContain('Demo rate');
+      expect(el.textContent).not.toContain('DEMO');
+      expect(el.textContent).not.toContain('Not final pricing');
+      expect(el.textContent).toContain('Current rate');
+    });
+
+    it('uses the Admin-managed rate, not a built-in number', () => {
+      const { app, el } = openEstimates(2000);
+      expect(el.textContent).toContain(`₹${(2000).toLocaleString('en-IN')} / sq ft`);
+      expect(el.textContent).not.toContain(`₹${(1500).toLocaleString('en-IN')} / sq ft`);
+      expect(app.estimateTotal()).toBe(360000);
+      expect(el.textContent).toContain(`₹${(360000).toLocaleString('en-IN')}`);
+    });
+
+    it('shows a dash instead of a rate or total until the rate has loaded', () => {
+      const { app, el, httpMock, fixture } = openEstimates('pending');
+      const panel = el.querySelector('section[aria-label="Room estimate"]')!;
+      expect(panel.textContent).toContain('Current rate');
+      expect(panel.textContent).toContain('—');
+      expect(panel.textContent).not.toContain('₹0');
+      expect(el.textContent).not.toContain('1,500');
+      expect(app.estimateTotal()).toBe(0);
+
+      flushRate(httpMock, 1500);
+      fixture.detectChanges();
+      expect(panel.textContent).toContain(`₹${(1500).toLocaleString('en-IN')} / sq ft`);
+      expect(panel.textContent).toContain(`₹${(270000).toLocaleString('en-IN')}`);
+    });
+
+    it('keeps the dash, and never invents a rate, when the rate cannot be loaded', () => {
+      const { app, el, httpMock, fixture } = openEstimates('pending');
+      httpMock.expectOne(RATE_URL).flush(null, { status: 503, statusText: 'Service Unavailable' });
+      fixture.detectChanges();
+
+      expect(el.querySelector('section[aria-label="Room estimate"]')!.textContent).toContain('—');
+      expect(el.textContent).not.toContain('1,500');
+      expect(app.estimateTotal()).toBe(0);
+    });
+
+    it('asks the API for the rate once when the page opens, without credentials in the body', () => {
+      const { httpMock, fixture } = openEstimates('pending');
+      fixture.detectChanges();
+      const req = httpMock.expectOne(RATE_URL);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.body).toBeNull();
+      req.flush({ ratePerSquareFoot: 1500, updatedAt: '2026-10-01T00:00:00Z' });
+    });
+
+    it('does not ask for the rate on pages that show no estimate', () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      const httpMock = TestBed.inject(HttpTestingController);
+      fixture.detectChanges();
+      httpMock.expectNone(RATE_URL);
     });
 
     it('dimension changes update the estimate with no reload', () => {
@@ -179,6 +249,7 @@ describe('AppComponent', () => {
       httpMock.expectOne(CART_URL).flush({ items: [], itemCount: 0, subtotal: 0 });
       app.activeView.set('estimates');
       fixture.detectChanges();
+      flushRate(httpMock, 1500);
       httpMock.expectOne(SAVE_URL).flush([]);
       fixture.detectChanges();
       return { fixture, app, httpMock, el: fixture.nativeElement as HTMLElement };
@@ -338,6 +409,7 @@ describe('AppComponent', () => {
       const httpMock = TestBed.inject(HttpTestingController);
       app.activeView.set('estimates');
       fixture.detectChanges();
+      flushRate(httpMock, 1500);
 
       const auth = TestBed.inject(AuthService);
       auth.login('a@test.local', 'secret123').subscribe();
@@ -497,6 +569,7 @@ describe('AppComponent', () => {
       fixture.componentInstance.activeView.set('estimates');
       fixture.detectChanges();
       httpMock.expectOne(ESTIMATES_URL).flush([]);
+      flushRate(httpMock);
       fixture.detectChanges();
       const mobile = Array.from(
         (fixture.nativeElement as HTMLElement).querySelectorAll('.mnav button')
@@ -600,6 +673,7 @@ describe('AppComponent', () => {
       fixture.componentInstance.activeView.set('estimates');
       fixture.detectChanges();
       httpMock.expectOne(ESTIMATES_URL).flush([]);
+      flushRate(httpMock);
       fixture.detectChanges();
       const mobile = Array.from(
         (fixture.nativeElement as HTMLElement).querySelectorAll('.mnav button')
@@ -715,6 +789,7 @@ describe('AppComponent', () => {
       fixture.componentInstance.activeView.set('estimates');
       fixture.detectChanges();
       httpMock.expectOne(ESTIMATES_URL).flush([]);
+      flushRate(httpMock);
       fixture.detectChanges();
       const mobile = Array.from(
         (fixture.nativeElement as HTMLElement).querySelectorAll('.mnav button')
@@ -900,6 +975,7 @@ describe('AppComponent', () => {
       expect(fixture.componentInstance.activeView()).toBe('field');
       expect(fixture.componentInstance.canvasTab()).toBe('elevation');
       expect((fixture.nativeElement as HTMLElement).querySelector('app-elevation-view')).toBeTruthy();
+      flushRate(httpMock);
       httpMock.verify();
     });
 
@@ -948,6 +1024,7 @@ describe('AppComponent', () => {
       fixture.componentInstance.activeView.set('estimates');
       fixture.detectChanges();
       httpMock.expectOne(ESTIMATES_URL).flush([]);
+      flushRate(httpMock);
       fixture.detectChanges();
       const mobile = Array.from(
         (fixture.nativeElement as HTMLElement).querySelectorAll('.mnav button')

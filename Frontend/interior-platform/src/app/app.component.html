@@ -170,6 +170,18 @@
           <span>Manage proposals</span>
         </button>
       }
+      @if (auth.isAdmin()) {
+        <button
+          class="nav-item"
+          aria-label="Estimate rate"
+          [attr.title]="sidebarCollapsed() ? 'Estimate rate' : null"
+          [class.active]="activeView() === 'admin-rates'"
+          (click)="activeView.set('admin-rates'); closeDrawer()"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="5" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.4"/><line x1="5" y1="9" x2="11" y2="9" stroke="currentColor" stroke-width="1.4"/><line x1="5" y1="12" x2="8" y2="12" stroke="currentColor" stroke-width="1.4"/></svg>
+          <span>Estimate rate</span>
+        </button>
+      }
     </nav>
     }
 
@@ -187,7 +199,7 @@
         <strong>{{ displayWidth() }} × {{ displayLength() }} ft · {{ area() }} sq ft</strong>
         <span class="side-sub">{{ selectedRoom() }}</span>
       </div>
-      <span class="demo-tag">Demo pricing</span>
+      <span class="side-sub">Pricing subject to confirmation</span>
     </div>
     <button
       class="btn btn-secondary side-toggle"
@@ -322,6 +334,9 @@
         }
         @if (auth.isAdmin()) {
           <button [class.active]="activeView() === 'admin-proposals'" (click)="activeView.set('admin-proposals')">Manage proposals</button>
+        }
+        @if (auth.isAdmin()) {
+          <button [class.active]="activeView() === 'admin-rates'" (click)="activeView.set('admin-rates')">Estimate rate</button>
         }
         <button [class.active]="isAccountView()" (click)="openAccount()">Account</button>
       </nav>
@@ -631,15 +646,15 @@
           <section class="panel estimate" aria-label="Estimate">
             <div class="row-between">
               <h2>Estimate</h2>
-              <span class="demo-tag">DEMO · Not final pricing</span>
+              <span class="sub small">Pricing is subject to confirmation.</span>
             </div>
             <dl class="est-rows">
               <div><dt>Room</dt><dd>{{ displayWidth() }} × {{ displayLength() }} ft</dd></div>
               <div><dt>Area</dt><dd>{{ area() }} sq ft</dd></div>
-              <div><dt>Demo rate</dt><dd>₹{{ money(demoRate) }} / sq ft</dd></div>
-              <div class="total"><dt>Estimated total</dt><dd>₹{{ money(estimateTotal()) }}</dd></div>
+              <div><dt>Current rate</dt><dd>{{ rateText() }}</dd></div>
+              <div class="total"><dt>Estimated total</dt><dd>{{ totalText() }}</dd></div>
             </dl>
-            <p class="sub small est-note">Demo pricing. Final figures are confirmed by the design team.</p>
+            <p class="sub small est-note">Pricing is subject to confirmation. Final figures are confirmed by the design team.</p>
             <button class="btn btn-secondary btn-sm btn-block" (click)="activeView.set('estimates')">Open estimate detail</button>
           </section>
         </div>
@@ -698,7 +713,7 @@
             <h1>Estimates</h1>
             <p class="sub">Review the current project estimate and proposal details.</p>
           </div>
-          <span class="demo-tag">DEMO · Not final pricing</span>
+          <span class="sub small">Pricing is subject to confirmation.</span>
         </header>
 
         <div class="est-grid">
@@ -722,10 +737,10 @@
               <div><dt>Width</dt><dd>{{ displayWidth() }} ft</dd></div>
               <div><dt>Length</dt><dd>{{ displayLength() }} ft</dd></div>
               <div><dt>Area</dt><dd>{{ area() }} sq ft</dd></div>
-              <div><dt>Demo rate</dt><dd>₹{{ money(demoRate) }} / sq ft</dd></div>
-              <div class="total"><dt>Estimated amount</dt><dd>₹{{ money(estimateTotal()) }}</dd></div>
+              <div><dt>Current rate</dt><dd>{{ rateText() }}</dd></div>
+              <div class="total"><dt>Estimated amount</dt><dd>{{ totalText() }}</dd></div>
             </dl>
-            <p class="sub small">Illustrative estimate — final pricing may vary. Saving stores the room size and the furniture placed in the Visualizer.</p>
+            <p class="sub small">Pricing is subject to confirmation. Saving stores the room size and the furniture placed in the Visualizer.</p>
             @if (!auth.isAuthenticated()) {
               <p class="sub small" role="status">Log in to save this estimate to your account.</p>
             } @else {
@@ -767,11 +782,11 @@
           <p class="sub small">Furniture and services are quoted separately by the design team.</p>
           <table class="est-table">
             <tr><th>Item</th><th>Basis</th><th>Amount</th></tr>
-            <tr><td>Area-based estimate</td><td>{{ area() }} sq ft × ₹{{ money(demoRate) }}</td><td>₹{{ money(estimateTotal()) }}</td></tr>
-            <tr><td>Materials</td><td>Finishes in scope</td><td>Included (demo)</td></tr>
+            <tr><td>Area-based estimate</td><td>{{ area() }} sq ft × {{ rateAmount() }}</td><td>{{ totalText() }}</td></tr>
+            <tr><td>Materials</td><td>Finishes in scope</td><td>Included</td></tr>
             <tr><td>Furniture</td><td>{{ placed().length }} item(s)</td><td>To be quoted</td></tr>
             <tr><td>Services / other</td><td>—</td><td>To be quoted</td></tr>
-            <tr class="total"><td>Estimated total</td><td></td><td>₹{{ money(estimateTotal()) }}</td></tr>
+            <tr class="total"><td>Estimated total</td><td></td><td>{{ totalText() }}</td></tr>
           </table>
         </section>
 
@@ -833,7 +848,7 @@
                   <div class="proj-thumb" aria-hidden="true"><span></span></div>
                   <div class="proj-info">
                     <p class="proj-name">{{ p.name }}</p>
-                    <p class="sub small">{{ p.width }} × {{ p.length }} ft · {{ p.area }} sq ft · {{ p.scheme }} · ₹{{ money(p.total) }} demo · {{ p.created }}</p>
+                    <p class="sub small">{{ p.width }} × {{ p.length }} ft · {{ p.area }} sq ft · {{ p.scheme }} · ₹{{ money(p.total) }} · {{ p.created }}</p>
                   </div>
                   <div class="row-gap">
                     <button class="btn btn-secondary btn-sm" (click)="loadProject(p)">Open</button>
@@ -871,6 +886,12 @@
       </main>
     }
 
+    @if (activeView() === 'admin-rates') {
+      <main class="content cat-main">
+        <app-admin-rates />
+      </main>
+    }
+
     @if (activeView() === 'login') {
       <main class="content">
         <app-login-page />
@@ -890,7 +911,7 @@
     }
     <footer class="statusbar">
       <span><strong>Confident Group</strong> · Workspace</span>
-      <span class="sub small">Demo pricing</span>
+      <span class="sub small">Pricing subject to confirmation</span>
     </footer>
   </div>
 </div>

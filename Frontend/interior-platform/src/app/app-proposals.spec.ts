@@ -11,6 +11,7 @@ import { environment } from '../environments/environment';
 const TOKEN = 'test-jwt';
 const CART_URL = `${environment.apiBaseUrl}/api/cart`;
 const ESTIMATES_URL = `${environment.apiBaseUrl}/api/estimates`;
+const RATE_URL = `${environment.apiBaseUrl}/api/estimate-rate`;
 const PROPOSALS_URL = `${environment.apiBaseUrl}/api/proposals`;
 const PRODUCTS_URL = `${environment.apiBaseUrl}/api/products`;
 
@@ -88,6 +89,8 @@ describe('AppComponent proposals integration', () => {
     const app = fixture.componentInstance;
     app.activeView.set('estimates');
     fixture.detectChanges();
+    // The Estimates page asks for the Rate Master's current rate.
+    httpMock.expectOne(RATE_URL).flush({ ratePerSquareFoot: 1500, updatedAt: '2026-10-01T00:00:00Z' });
     httpMock.expectOne(ESTIMATES_URL).flush([savedRow('est-1')]);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;

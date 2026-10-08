@@ -58,6 +58,10 @@ describe('app paths', () => {
     expect(accessOf('proposals')).toBe('auth');
     expect(accessOf('leads')).toBe('staff');
     expect(accessOf('admin-products')).toBe('admin');
+    expect(accessOf('admin-rates')).toBe('admin');
+    expect(requiresLogin('admin-rates')).toBeTrue();
+    expect(pathForView('admin-rates')).toBe('/admin/rates');
+    expect(viewForPath('/admin/rates')?.view).toBe('admin-rates');
     expect(accessOf('login')).toBe('guest');
     expect(requiresLogin('orders')).toBeTrue();
     expect(requiresLogin('admin-orders')).toBeTrue();

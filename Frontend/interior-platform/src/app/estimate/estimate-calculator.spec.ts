@@ -1,25 +1,27 @@
 import {
-  DEMO_RATE,
   calculateEstimateTotal,
   calculateRoomArea,
   sanitizeRoomDimension,
 } from './estimate-calculator';
 
+/** A sample rate for the pure maths; the app itself has no built-in rate. */
+const RATE = 1500;
+
 describe('calculateEstimateTotal', () => {
   it('90 sq.ft × ₹1,500 = ₹135,000', () => {
-    expect(calculateEstimateTotal(90, DEMO_RATE)).toBe(135000);
+    expect(calculateEstimateTotal(90, RATE)).toBe(135000);
   });
 
   it('180 sq.ft × ₹1,500 = ₹270,000', () => {
-    expect(calculateEstimateTotal(180, DEMO_RATE)).toBe(270000);
+    expect(calculateEstimateTotal(180, RATE)).toBe(270000);
   });
 
   it('0 sq.ft returns ₹0', () => {
-    expect(calculateEstimateTotal(0, DEMO_RATE)).toBe(0);
+    expect(calculateEstimateTotal(0, RATE)).toBe(0);
   });
 
   it('negative area returns ₹0', () => {
-    expect(calculateEstimateTotal(-50, DEMO_RATE)).toBe(0);
+    expect(calculateEstimateTotal(-50, RATE)).toBe(0);
   });
 
   it('zero or negative rate returns ₹0', () => {
@@ -29,7 +31,7 @@ describe('calculateEstimateTotal', () => {
 
   it('NaN or Infinity inputs return ₹0, never NaN/Infinity', () => {
     for (const bad of [NaN, Infinity, -Infinity]) {
-      expect(calculateEstimateTotal(bad, DEMO_RATE)).toBe(0);
+      expect(calculateEstimateTotal(bad, RATE)).toBe(0);
       expect(calculateEstimateTotal(100, bad)).toBe(0);
     }
     expect(Number.isFinite(calculateEstimateTotal(NaN, Infinity))).toBe(true);

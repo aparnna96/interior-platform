@@ -24,8 +24,8 @@ public sealed class EstimateControllerTests
     private const string UserA = "user-a";
     private const string UserB = "user-b";
 
-    // Deliberately different from any documented default: proves the server
-    // uses the configured rate instead of a hard-coded business rule.
+    // Deliberately different from the bootstrap default (1500): proves the
+    // server uses the active Rate Master row instead of a hard-coded number.
     private const decimal TestRate = 2000m;
 
     private sealed class TestDb : IDisposable
@@ -47,6 +47,16 @@ public sealed class EstimateControllerTests
             Db.Users.AddRange(
                 new ApplicationUser { Id = UserA, UserName = "a@test.local" },
                 new ApplicationUser { Id = UserB, UserName = "b@test.local" });
+
+            // The Rate Master's single active rate, as the seeder or an Admin
+            // would have left it.
+            Db.EstimateRates.Add(new EstimateRate
+            {
+                Id = Guid.NewGuid(),
+                RatePerSquareFoot = TestRate,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+            });
             Db.SaveChanges();
         }
 
@@ -57,11 +67,9 @@ public sealed class EstimateControllerTests
         }
     }
 
-    private static EstimatesController ControllerFor(
-        ApplicationDbContext db, string? userId, decimal rate = TestRate)
+    private static EstimatesController ControllerFor(ApplicationDbContext db, string? userId)
     {
-        var controller = new EstimatesController(
-            db, Options.Create(new EstimateOptions { DemoRatePerSquareFoot = rate }));
+        var controller = new EstimatesController(db);
         ClaimsPrincipal principal = userId is null
             ? new ClaimsPrincipal(new ClaimsIdentity())
             : new ClaimsPrincipal(new ClaimsIdentity(

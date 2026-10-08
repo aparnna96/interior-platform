@@ -87,8 +87,9 @@ foreach (var origin in normalizedOrigins)
     }
 }
 
-// Illustrative estimate rate (Estimates:DemoRatePerSquareFoot). This is a
-// DEMO rate for the frontend prototype, not a permanent pricing rule.
+// Bootstrap estimate rate (Estimates:DemoRatePerSquareFoot). Since the Rate
+// Master exists this value is only used to seed the first rate when the
+// EstimateRates table is empty; after that Admins manage the rate in the app.
 // Fail fast when it is missing or not positive.
 builder.Services.Configure<EstimateOptions>(
     builder.Configuration.GetSection(EstimateOptions.SectionName));
@@ -178,6 +179,13 @@ using (var scope = app.Services.CreateScope())
 using (var scope = app.Services.CreateScope())
 {
     await ProductSeeder.SeedAsync(scope.ServiceProvider);
+}
+
+// Seed the first estimate rate from Estimates:DemoRatePerSquareFoot. Only runs
+// when the Rate Master table is empty, so an Admin-set rate is never touched.
+using (var scope = app.Services.CreateScope())
+{
+    await EstimateRateSeeder.SeedAsync(scope.ServiceProvider);
 }
 
 // Configure the HTTP request pipeline.

@@ -3,14 +3,11 @@
  *
  * Framework-free: no Angular, no signals, no services, no HTTP.
  * Pure functions of explicit inputs only — deterministic and easy to test.
+ *
+ * There is no built-in rate here. The rate is Admin-managed on the server
+ * (Rate Master) and passed in by the caller; these functions only drive the
+ * on-screen preview. Saved estimates are always priced by the server.
  */
-
-/**
- * Current demo rate in ₹ per sq.ft. Single source of truth for placeholder
- * pricing. This is intentionally a *demo* rate for the frontend prototype,
- * not a permanent business pricing rule — change it in this one place.
- */
-export const DEMO_RATE = 1500;
 
 /**
  * Dimensions must be finite and positive; anything else (zero, negative,

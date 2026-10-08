@@ -40,6 +40,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Payment> Payments => Set<Payment>();
 
+    public DbSet<EstimateRate> EstimateRates => Set<EstimateRate>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -54,5 +56,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new ProposalConfiguration());
         builder.ApplyConfiguration(new ProposalItemConfiguration());
         builder.ApplyConfiguration(new PaymentConfiguration());
+        builder.ApplyConfiguration(new EstimateRateConfiguration());
     }
 }
