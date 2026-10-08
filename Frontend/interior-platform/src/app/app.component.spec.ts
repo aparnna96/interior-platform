@@ -1039,7 +1039,7 @@ describe('AppComponent', () => {
       httpMock.verify();
     });
 
-    it('only admins get the Dashboard entry, and it opens the dashboard without any API call', () => {
+    it('only admins get the Dashboard entry, and it opens the dashboard and its shortcuts', () => {
       for (const roles of [['Customer'], ['FieldStaff']]) {
         TestBed.resetTestingModule();
         localStorage.clear();
@@ -1067,10 +1067,16 @@ describe('AppComponent', () => {
 
       expect(fixture.componentInstance.activeView()).toBe('admin-dashboard');
       expect((fixture.nativeElement as HTMLElement).querySelector('app-admin-dashboard')).toBeTruthy();
+      // Since Stage 2 the dashboard loads its five summary figures from the existing Admin APIs.
+      for (const path of ['/api/admin/orders', '/api/leads', '/api/admin/proposals', '/api/products/admin', '/api/admin/estimate-rates']) {
+        httpMock.expectOne(`${environment.apiBaseUrl}${path}`).flush([]);
+      }
+      fixture.detectChanges();
       // A dashboard shortcut moves the shell to that page.
       (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('app-admin-dashboard .action-card')!.click();
       fixture.detectChanges();
       expect(fixture.componentInstance.activeView()).toBe('admin-products');
+      // The Products page loads its own list; leaving the dashboard asks for nothing else.
       httpMock.expectOne(`${environment.apiBaseUrl}/api/products/admin`).flush([]);
       httpMock.verify();
     });

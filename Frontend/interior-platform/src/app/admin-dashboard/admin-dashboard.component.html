@@ -17,6 +17,42 @@
       <span>This workspace is for Admin accounts.</span>
     </div>
   } @else {
+    <section class="summary" aria-label="Summary">
+      <h2>Summary</h2>
+      <div class="summary-grid">
+        @for (card of cards(); track card.key) {
+          <article
+            class="summary-card"
+            [attr.data-metric]="card.key"
+            [attr.aria-label]="card.label"
+            [attr.aria-busy]="card.status === 'loading'"
+          >
+            <p class="summary-label">{{ card.label }}</p>
+            <div class="summary-body" aria-live="polite">
+              @switch (card.status) {
+                @case ('loading') {
+                  <span class="summary-loading">Loading…</span>
+                }
+                @case ('error') {
+                  <span class="summary-error" role="alert">Unable to load</span>
+                  <button
+                    type="button"
+                    class="summary-retry"
+                    (click)="retry(card.key)"
+                    [attr.aria-label]="'Retry loading ' + card.label"
+                  >Retry</button>
+                }
+                @default {
+                  <span class="summary-value" [class.summary-unavailable]="card.unavailable">{{ card.display }}</span>
+                }
+              }
+            </div>
+            <p class="summary-caption">{{ card.caption }}</p>
+          </article>
+        }
+      </div>
+    </section>
+
     <section class="quick-actions" aria-label="Quick actions">
       <h2>Quick actions</h2>
       <div class="action-grid">
