@@ -47,8 +47,8 @@
 .admin-dashboard-empty span { font-size: 13px; color: var(--muted); }
 
 /* ── Summary ── */
-.summary, .quick-actions { display: grid; gap: 12px; min-width: 0; }
-.summary h2, .quick-actions h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.summary, .recent, .quick-actions { display: grid; gap: 12px; min-width: 0; }
+.summary h2, .recent h2, .quick-actions h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
 
 .summary-grid {
   display: grid;
@@ -97,7 +97,8 @@
 .summary-unavailable { font-size: 18px; color: var(--muted); }
 .summary-loading { font-size: 13px; color: var(--muted); }
 .summary-error { font-size: 13px; font-weight: 600; color: var(--danger); }
-.summary-retry {
+.summary-retry,
+.recent-retry {
   border: 0;
   background: none;
   padding: 8px 0;
@@ -108,12 +109,80 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.summary-retry:hover { text-decoration: underline; }
-.summary-retry:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.summary-retry:hover,
+.recent-retry:hover { text-decoration: underline; }
+.summary-retry:focus-visible,
+.recent-retry:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .summary-caption { margin: 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 
-/* ── Quick actions ── */
+/* ── Recent activity ── */
+.recent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+.recent-block {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-width: 0;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+}
+.recent-block h3 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+.recent-body { min-width: 0; }
 
+/* Loading, empty and error share one row height so the block does not jump while it settles. */
+.recent-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 72px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.recent-error { font-weight: 600; color: var(--danger); }
+
+.recent-list { list-style: none; margin: 0; padding: 0; min-width: 0; }
+.recent-row {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 9px 0;
+  border-top: 1px solid var(--border-soft);
+}
+.recent-row:first-child { border-top: 0; }
+.recent-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  min-width: 0;
+}
+.recent-title { font-size: 13.5px; font-weight: 650; min-width: 0; overflow-wrap: anywhere; }
+.recent-amount { font-size: 13px; font-weight: 650; white-space: nowrap; }
+.recent-detail { font-size: 12.5px; color: var(--ink-2); min-width: 0; overflow-wrap: anywhere; }
+.recent-meta { align-items: center; }
+.recent-when { font-size: 12px; color: var(--muted); }
+.status-pill {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--surface-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  padding: 2px 9px;
+  color: var(--ink);
+}
+
+/* ── Quick actions ── */
 .action-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

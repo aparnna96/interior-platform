@@ -79,6 +79,47 @@ const COUNT_CARDS: ReadonlyArray<{ metric: Metric; label: string; rows: (n: numb
   { metric: 'products', label: 'Products', rows: products },
 ];
 
+// ── Stage 3: Recent activity - three blocks fed by the same three lists as the cards ──
+const pad = (n: number) => String(n).padStart(2, '0');
+/** A fixed time on day `d` of September 2026, so a test can choose the order rows should appear in. */
+const dayAt = (d: number) => `2026-09-${pad(d)}T10:00:00Z`;
+
+type RecentMetric = 'orders' | 'leads' | 'proposals';
+interface RecentCase {
+  readonly metric: RecentMetric;
+  readonly title: string;
+  readonly empty: string;
+  /** One row per day, in the order given. The day is written into the row's text so a test can read the order back. */
+  readonly build: (days: readonly number[]) => unknown[];
+  readonly tag: (day: number) => string;
+}
+const RECENT_CASES: readonly RecentCase[] = [
+  {
+    metric: 'orders',
+    title: 'Recent orders',
+    empty: 'No orders yet.',
+    build: (days) =>
+      days.map((d) => ({ ...orders(1)[0], id: `${pad(d)}-order-id`, customerEmail: `day${pad(d)}@test.local`, createdAt: dayAt(d), subtotal: d * 1000 })),
+    tag: (d) => `day${pad(d)}@test.local`,
+  },
+  {
+    metric: 'leads',
+    title: 'Recent leads',
+    empty: 'No leads yet.',
+    build: (days) =>
+      days.map((d) => ({ ...leadsWith([0])[0], id: `lead-${pad(d)}`, name: `Lead day${pad(d)}`, createdAt: dayAt(d) })),
+    tag: (d) => `Lead day${pad(d)}`,
+  },
+  {
+    metric: 'proposals',
+    title: 'Recent proposals',
+    empty: 'No proposals yet.',
+    build: (days) =>
+      days.map((d) => ({ ...proposals(1)[0], id: `${pad(d)}-proposal-id`, customerEmail: `day${pad(d)}@test.local`, createdAt: dayAt(d), estimatedAmount: d * 10000 })),
+    tag: (d) => `day${pad(d)}@test.local`,
+  },
+];
+
 describe('AdminDashboardComponent', () => {
   type Fixture = ComponentFixture<AdminDashboardComponent>;
 
@@ -136,6 +177,16 @@ describe('AdminDashboardComponent', () => {
   const retryBtn = (f: Fixture, m: Metric) => cardEl(f, m).querySelector<HTMLButtonElement>('.summary-retry');
   const actionCards = (f: Fixture) => Array.from(root(f).querySelectorAll<HTMLButtonElement>('.action-card'));
   const summaryCards = (f: Fixture) => root(f).querySelectorAll('.summary-card');
+
+  // Recent activity helpers
+  const blockEl = (f: Fixture, m: RecentMetric) => root(f).querySelector<HTMLElement>(`.recent-block[data-recent="${m}"]`)!;
+  const blockText = (f: Fixture, m: RecentMetric) => (blockEl(f, m).textContent ?? '').replace(/\s+/g, ' ').trim();
+  const recentRows = (f: Fixture, m: RecentMetric) =>
+    Array.from(blockEl(f, m).querySelectorAll('.recent-row')).map((r) => (r.textContent ?? '').replace(/\s+/g, ' ').trim());
+  const recentRetry = (f: Fixture, m: RecentMetric) => blockEl(f, m).querySelector<HTMLButtonElement>('.recent-retry');
+  /** Which of the days in `universe` each shown row belongs to, top to bottom. */
+  const daysShown = (f: Fixture, c: RecentCase, universe: readonly number[]) =>
+    recentRows(f, c.metric).map((t) => universe.find((d) => t.includes(c.tag(d))) ?? -1);
 
   beforeEach(() => {
     localStorage.clear();
@@ -218,8 +269,8 @@ describe('AdminDashboardComponent', () => {
     expect(labels).toEqual(['Orders', 'New leads', 'Proposals', 'Products', 'Current rate']);
     expect(summaryCards(fixture).length).toBe(5);
     expect(root(fixture).querySelector('section[aria-label="Summary"] h2')?.textContent).toContain('Summary');
-    // Stage 3 and revenue/user metrics are not part of this stage.
-    expect(text(fixture)).not.toMatch(/recent|revenue|users?\b|chart/i);
+    // Still no revenue, user-count or chart metrics. (Recent activity arrived in Stage 3 and has its own tests below.)
+    expect(text(fixture)).not.toMatch(/revenue|users?\b|chart/i);
   });
 
   it('shows the real value on every card once the responses arrive', () => {
@@ -605,6 +656,381 @@ describe('AdminDashboardComponent', () => {
     expect(valueOf(fixture, 'orders')).toBe('4');
     expect(valueOf(fixture, 'rate')).toBe('₹1,820.25');
     expect(text(fixture)).not.toContain('99');
+  });
+
+  // ── Stage 3: Recent activity ────────────────────────────────────────────
+
+  it('shows the Summary, then Recent activity, then Quick actions', () => {
+    const { fixture } = openAdmin();
+    const sections = [
+      'section[aria-label="Summary"]',
+      'section[aria-label="Recent activity"]',
+      'section[aria-label="Quick actions"]',
+    ].map((sel) => root(fixture).querySelector(sel)!);
+
+    expect(sections.every((s) => !!s)).toBeTrue();
+    for (let i = 0; i < sections.length - 1; i++) {
+      expect(sections[i].compareDocumentPosition(sections[i + 1]) & Node.DOCUMENT_POSITION_FOLLOWING)
+        .withContext(`section ${i} comes before section ${i + 1}`)
+        .toBeTruthy();
+    }
+    expect(root(fixture).querySelector('section[aria-label="Recent activity"] h2')?.textContent).toContain('Recent activity');
+  });
+
+  it('shows exactly three recent blocks - orders, leads, proposals - and no other metric', () => {
+    const { fixture } = openAdmin();
+    const titles = Array.from(root(fixture).querySelectorAll('.recent-block h3')).map((h) => h.textContent?.trim());
+
+    expect(titles).toEqual(['Recent orders', 'Recent leads', 'Recent proposals']);
+    expect(text(fixture)).not.toMatch(/revenue|users?\b|chart/i);
+  });
+
+  it('Recent activity adds no request: still exactly one GET per endpoint, five in all', () => {
+    const { httpMock } = create(ADMIN_JWT);
+    const all = httpMock.match(() => true);
+
+    expect(all.length).toBe(5);
+    expect(all.map((r) => r.request.url).sort()).toEqual(Object.values(URLS).sort());
+    expect(all.every((r) => r.request.method === 'GET')).toBeTrue();
+    all.forEach((r) => r.flush([]));
+  });
+
+  for (const c of RECENT_CASES) {
+    it(`${c.title}: shows the latest 5, newest first, when the API returns 8 oldest-first`, () => {
+      const days = [1, 2, 3, 4, 5, 6, 7, 8];
+      const { fixture } = openAdmin({ [c.metric]: c.build(days) });
+
+      expect(recentRows(fixture, c.metric).length).toBe(5);
+      expect(daysShown(fixture, c, days)).toEqual([8, 7, 6, 5, 4]);
+    });
+
+    it(`${c.title}: sorts by date itself, so an unsorted API answer still gives the latest 5 newest first`, () => {
+      const days = [3, 8, 1, 6, 2, 7, 4, 5];
+      const { fixture } = openAdmin({ [c.metric]: c.build(days) });
+
+      expect(daysShown(fixture, c, days)).toEqual([8, 7, 6, 5, 4]);
+    });
+
+    it(`${c.title}: an already newest-first answer of 9 is cut to the first 5, in the same order`, () => {
+      const days = [9, 8, 7, 6, 5, 4, 3, 2, 1];
+      const { fixture } = openAdmin({ [c.metric]: c.build(days) });
+
+      expect(recentRows(fixture, c.metric).length).toBe(5);
+      expect(daysShown(fixture, c, days)).toEqual([9, 8, 7, 6, 5]);
+    });
+
+    it(`${c.title}: with fewer than 5 records it shows just those, and no empty message`, () => {
+      const days = [1, 2];
+      const { fixture } = openAdmin({ [c.metric]: c.build(days) });
+
+      expect(daysShown(fixture, c, days)).toEqual([2, 1]);
+      expect(blockText(fixture, c.metric)).not.toContain(c.empty);
+    });
+
+    it(`${c.title}: an empty result shows "${c.empty}" - a normal state, not an error`, () => {
+      const { fixture } = openAdmin({ [c.metric]: [] });
+
+      expect(blockText(fixture, c.metric)).toContain(c.empty);
+      expect(recentRows(fixture, c.metric).length).toBe(0);
+      expect(blockText(fixture, c.metric)).not.toMatch(/Unable to load|Loading/);
+      expect(recentRetry(fixture, c.metric)).toBeNull();
+      expect(valueOf(fixture, c.metric)).toBe('0');
+    });
+
+    it(`${c.title}: shows Loading… - never the empty message, never rows - until its own response arrives`, () => {
+      const { fixture, httpMock } = create(ADMIN_JWT);
+      const reqs = take(httpMock);
+
+      expect(blockText(fixture, c.metric)).toContain('Loading…');
+      expect(blockText(fixture, c.metric)).not.toContain(c.empty);
+      expect(recentRows(fixture, c.metric).length).toBe(0);
+      expect(blockEl(fixture, c.metric).getAttribute('aria-busy')).toBe('true');
+
+      // Its own answer settles it; the other two blocks keep loading.
+      reqs[c.metric].flush(c.build([2, 1]));
+      fixture.detectChanges();
+      expect(blockEl(fixture, c.metric).getAttribute('aria-busy')).toBe('false');
+      expect(recentRows(fixture, c.metric).length).toBe(2);
+      for (const other of RECENT_CASES.filter((o) => o.metric !== c.metric)) {
+        expect(blockText(fixture, other.metric)).withContext(other.title).toContain('Loading…');
+        expect(blockText(fixture, other.metric)).withContext(other.title).not.toContain(other.empty);
+      }
+      answer(reqs, {}, METRICS.filter((m) => m !== c.metric));
+    });
+
+    it(`${c.title}: a failure shows a short message and Retry - no rows, no empty message, no raw error`, () => {
+      const { fixture } = openAdmin({ [c.metric]: 'error' });
+      const block = blockText(fixture, c.metric);
+
+      expect(block).toContain('Unable to load');
+      expect(recentRetry(fixture, c.metric)?.textContent?.trim()).toBe('Retry');
+      expect(recentRows(fixture, c.metric).length).toBe(0);
+      expect(block).not.toContain(c.empty);
+      expect(block).not.toMatch(/500|Server Error|HttpErrorResponse|Http failure/i);
+      expect(blockEl(fixture, c.metric).querySelector('[role="alert"]')).toBeTruthy();
+      // One endpoint feeds this block and its summary card, so the card reports the same failure.
+      expect(cardText(fixture, c.metric)).toContain('Unable to load');
+    });
+
+    it(`${c.title}: Retry re-requests only this endpoint, then shows the rows and updates the card`, () => {
+      const { fixture, httpMock } = openAdmin({ [c.metric]: 'error' });
+      const others = RECENT_CASES.filter((o) => o.metric !== c.metric);
+      const rowsBefore = others.map((o) => recentRows(fixture, o.metric).length);
+
+      recentRetry(fixture, c.metric)!.click();
+      fixture.detectChanges();
+      expect(blockText(fixture, c.metric)).toContain('Loading…');
+      for (const other of METRICS.filter((m) => m !== c.metric)) {
+        httpMock.expectNone(URLS[other]);
+      }
+      const req = httpMock.expectOne(URLS[c.metric]);
+      expect(req.request.method).toBe('GET');
+      req.flush(c.build([5, 4]));
+      fixture.detectChanges();
+
+      expect(daysShown(fixture, c, [5, 4])).toEqual([5, 4]);
+      expect(recentRetry(fixture, c.metric)).toBeNull();
+      expect(valueOf(fixture, c.metric)).toBe('2');
+      expect(others.map((o) => recentRows(fixture, o.metric).length)).toEqual(rowsBefore);
+    });
+
+    it(`${c.title}: still shows its rows when the other two blocks fail`, () => {
+      const others = RECENT_CASES.filter((o) => o.metric !== c.metric);
+      const days = [3, 2, 1];
+      const { fixture } = openAdmin({
+        [c.metric]: c.build(days),
+        [others[0].metric]: 'error',
+        [others[1].metric]: 'error',
+      });
+
+      expect(daysShown(fixture, c, days)).toEqual([3, 2, 1]);
+      expect(blockText(fixture, c.metric)).not.toContain('Unable to load');
+      for (const other of others) {
+        expect(blockText(fixture, other.metric)).withContext(other.title).toContain('Unable to load');
+      }
+      expect(actionCards(fixture).length).toBe(5);
+    });
+  }
+
+  it('retrying a summary card also fills its recent block - one request serves both', () => {
+    const { fixture, httpMock } = openAdmin({ orders: 'error' });
+    expect(blockText(fixture, 'orders')).toContain('Unable to load');
+
+    retryBtn(fixture, 'orders')!.click();
+    httpMock.expectOne(URLS.orders).flush(orders(3));
+    fixture.detectChanges();
+
+    expect(valueOf(fixture, 'orders')).toBe('3');
+    expect(recentRows(fixture, 'orders').length).toBe(3);
+    expect(blockText(fixture, 'orders')).not.toContain('Unable to load');
+  });
+
+  // ── what each row shows (existing API fields only) ──
+
+  it('Recent orders: each row shows a short order id, the customer, the time, the status and the subtotal', () => {
+    const rows = [{ ...orders(1)[0], id: 'abcdef12-3456', customerEmail: 'asha@test.local', status: 3, subtotal: 123456, createdAt: dayAt(5) }];
+    const { fixture } = openAdmin({ orders: rows });
+    const row = recentRows(fixture, 'orders')[0];
+
+    expect(row).toContain('Order abcdef12');
+    expect(row).not.toContain('abcdef12-3456');
+    expect(row).toContain('asha@test.local');
+    expect(row).toContain('₹1,23,456');
+    expect(row).toContain('Completed');
+    expect(row).toContain('2026');
+  });
+
+  it('Recent orders: an order without a customer email shows no "null" or "undefined"', () => {
+    const { fixture } = openAdmin({ orders: [{ ...orders(1)[0], customerEmail: null }] });
+
+    expect(recentRows(fixture, 'orders').length).toBe(1);
+    expect(blockText(fixture, 'orders')).not.toMatch(/null|undefined/i);
+  });
+
+  it('Recent leads: each row shows the name, phone and email, the time and the status - not the enquiry text', () => {
+    const rows = [{
+      ...leadsWith([1])[0], id: 'l1', name: 'Meera Nair', phone: '9876500000', email: 'meera@test.local',
+      message: 'PRIVATE-ENQUIRY-TEXT', interestedProductId: 'aria-3s-sofa', source: 'Website', createdAt: dayAt(5),
+    }];
+    const { fixture } = openAdmin({ leads: rows });
+    const row = recentRows(fixture, 'leads')[0];
+
+    expect(row).toContain('Meera Nair');
+    expect(row).toContain('9876500000');
+    expect(row).toContain('meera@test.local');
+    expect(row).toContain('In Progress');
+    expect(row).toContain('2026');
+    expect(row).not.toContain('PRIVATE-ENQUIRY-TEXT');
+    expect(row).not.toContain('aria-3s-sofa');
+    expect(row).not.toContain('Website');
+  });
+
+  it('Recent leads: a lead with only a phone shows just the phone', () => {
+    const { fixture } = openAdmin({ leads: [{ ...leadsWith([0])[0], phone: '9876500000', email: null }] });
+    const row = recentRows(fixture, 'leads')[0];
+
+    expect(row).toContain('9876500000');
+    expect(row).not.toMatch(/null|undefined|·/);
+  });
+
+  it('Recent leads: shows each lead\'s own status wording (New, In Progress, Closed)', () => {
+    const rows = [0, 1, 2].map((status, i) => ({ ...leadsWith([status])[0], id: `s${i}`, name: `Status ${status}`, createdAt: dayAt(3 - i) }));
+    const { fixture } = openAdmin({ leads: rows });
+    const shown = recentRows(fixture, 'leads');
+
+    expect(shown[0]).toContain('New');
+    expect(shown[1]).toContain('In Progress');
+    expect(shown[2]).toContain('Closed');
+  });
+
+  it('Recent proposals: each row shows a short id, the customer, the time, the amount and the payment state', () => {
+    const base = proposals(1)[0];
+    const rows = [
+      { ...base, id: '11111111-a', customerEmail: 'a@test.local', estimatedAmount: 270000, isPaymentVerified: true, paymentAttemptCount: 2, createdAt: dayAt(3) },
+      { ...base, id: '22222222-b', customerEmail: 'b@test.local', isPaymentVerified: false, paymentAttemptCount: 1, createdAt: dayAt(2) },
+      { ...base, id: '33333333-c', customerEmail: null, isPaymentVerified: false, paymentAttemptCount: 0, createdAt: dayAt(1) },
+    ];
+    const { fixture } = openAdmin({ proposals: rows });
+    const shown = recentRows(fixture, 'proposals');
+
+    expect(shown[0]).toContain('Proposal 11111111');
+    expect(shown[0]).not.toContain('11111111-a');
+    expect(shown[0]).toContain('a@test.local');
+    expect(shown[0]).toContain('₹2,70,000');
+    expect(shown[0]).toContain('Token Payment Verified');
+    expect(shown[1]).toContain('Payment Pending');
+    expect(shown[2]).toContain('No Payment Attempt');
+    expect(shown[2]).not.toMatch(/null|undefined/i);
+  });
+
+  it('a row with an unreadable date sorts last and shows no "Invalid Date"', () => {
+    const rows = [{ ...orders(1)[0], id: 'bad-date-id', customerEmail: 'bad@test.local', createdAt: 'not-a-date' }, ...RECENT_CASES[0].build([5])];
+    const { fixture } = openAdmin({ orders: rows });
+    const shown = recentRows(fixture, 'orders');
+
+    expect(shown.length).toBe(2);
+    expect(shown[0]).toContain('day05@test.local');
+    expect(shown[1]).toContain('bad@test.local');
+    expect(blockText(fixture, 'orders')).not.toMatch(/Invalid Date|NaN/);
+  });
+
+  it('records with the same time keep the server\'s order', () => {
+    const rows = [
+      { ...orders(1)[0], id: 'first-id-aaaa', createdAt: dayAt(5) },
+      { ...orders(1)[0], id: 'second-id-bbbb', createdAt: dayAt(5) },
+    ];
+    const { fixture } = openAdmin({ orders: rows });
+    const shown = recentRows(fixture, 'orders');
+
+    expect(shown[0]).toContain('Order first-id');
+    expect(shown[1]).toContain('Order second-i');
+  });
+
+  it('Recent activity never changes the Summary: counts are still of every record, not of the 5 shown', () => {
+    const { fixture } = openAdmin({ orders: RECENT_CASES[0].build([1, 2, 3, 4, 5, 6, 7, 8]) });
+
+    expect(recentRows(fixture, 'orders').length).toBe(5);
+    expect(valueOf(fixture, 'orders')).toBe('8');
+  });
+
+  // ── access, sessions ──
+
+  for (const [who, token] of [['a logged-out visitor', null], ['Field Staff', STAFF_JWT], ['a customer', CUSTOMER_JWT]] as const) {
+    it(`${who} gets no Recent activity: no section, no rows and no request`, () => {
+      const { fixture, httpMock } = create(token);
+
+      expect(root(fixture).querySelector('section[aria-label="Recent activity"]')).toBeNull();
+      expect(root(fixture).querySelectorAll('.recent-block').length).toBe(0);
+      expect(text(fixture)).not.toMatch(/Recent|Order [0-9a-z]|Proposal [0-9a-z]/);
+      for (const metric of METRICS) {
+        httpMock.expectNone(URLS[metric]);
+      }
+    });
+  }
+
+  it('logging out clears the recent rows, and a late answer from the old session never shows', () => {
+    const { fixture, httpMock } = create(ADMIN_JWT);
+    const first = take(httpMock);
+    answer(first, {}, ['leads', 'proposals', 'products', 'rate']);
+    fixture.detectChanges();
+    expect(recentRows(fixture, 'leads').length).toBe(2);
+
+    // Log out while the Orders request is still in flight.
+    TestBed.inject(AuthService).logout();
+    fixture.detectChanges();
+    first.orders.flush([{ ...orders(1)[0], id: 'old-session-order', customerEmail: 'old-session@test.local' }]);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.recent().every((b) => b.rows.length === 0)).toBeTrue();
+    expect(root(fixture).querySelectorAll('.recent-block').length).toBe(0);
+    expect(text(fixture)).not.toContain('old-session');
+
+    // A new Admin session loads again and shows only its own rows.
+    TestBed.inject(AuthService).login('admin@test.local', 'secret123').subscribe();
+    httpMock.expectOne(LOGIN_URL).flush({ Token: ADMIN_JWT });
+    fixture.detectChanges();
+    const second = take(httpMock);
+    answer(second, { orders: [{ ...orders(1)[0], id: 'new-session-order', customerEmail: 'new-session@test.local' }] });
+    fixture.detectChanges();
+
+    expect(recentRows(fixture, 'orders').length).toBe(1);
+    expect(blockText(fixture, 'orders')).toContain('new-session@test.local');
+    expect(text(fixture)).not.toContain('old-session');
+  });
+
+  it('a 401 from the leads request logs the session out and leaves no recent rows on screen', () => {
+    const { fixture, httpMock } = create(ADMIN_JWT);
+    const reqs = take(httpMock);
+
+    reqs.leads.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
+    fixture.detectChanges();
+
+    expect(TestBed.inject(AuthService).isAuthenticated()).toBeFalse();
+    expect(root(fixture).querySelectorAll('.recent-block').length).toBe(0);
+    expect(text(fixture)).toContain('Log in to access the Admin dashboard');
+    answer(reqs, {}, ['orders', 'proposals', 'products', 'rate']);
+  });
+
+  // ── layout (real component styles, measured) ──
+
+  it('a very long email wraps inside its block instead of widening it', () => {
+    const longEmail = `${'a'.repeat(60)}.${'b'.repeat(60)}.${'c'.repeat(60)}@${'d'.repeat(60)}.example`;
+    const { fixture } = openAdmin({ orders: [{ ...orders(1)[0], id: 'long-email-order', customerEmail: longEmail }] });
+    const host = root(fixture);
+    host.style.display = 'block';
+    host.style.width = '390px';
+    fixture.detectChanges();
+
+    const block = blockEl(fixture, 'orders');
+    const detail = block.querySelector<HTMLElement>('.recent-detail')!;
+    expect(detail.textContent).toContain(longEmail);
+    expect(detail.scrollWidth).toBeLessThanOrEqual(detail.clientWidth + 1);
+    expect(block.scrollWidth).toBeLessThanOrEqual(block.clientWidth + 1);
+    expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth + 1);
+  });
+
+  it('at a phone width (390px) the three blocks stack in one column inside the dashboard', () => {
+    const { fixture } = openAdmin();
+    const host = root(fixture);
+    host.style.display = 'block';
+    host.style.width = '390px';
+    fixture.detectChanges();
+
+    const rects = RECENT_CASES.map((c) => blockEl(fixture, c.metric).getBoundingClientRect());
+    const hostRect = host.getBoundingClientRect();
+    expect(new Set(rects.map((r) => Math.round(r.left))).size).toBe(1);
+    expect(rects.every((r) => r.left >= hostRect.left - 0.5 && r.right <= hostRect.right + 0.5)).toBeTrue();
+    expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth + 1);
+  });
+
+  it('on a wide screen the three blocks sit side by side', () => {
+    const { fixture } = openAdmin();
+    const host = root(fixture);
+    host.style.display = 'block';
+    host.style.width = '1200px';
+    fixture.detectChanges();
+
+    const lefts = RECENT_CASES.map((c) => Math.round(blockEl(fixture, c.metric).getBoundingClientRect().left));
+    expect(new Set(lefts).size).toBe(3);
   });
 
   // ── wording ─────────────────────────────────────────────────────────────

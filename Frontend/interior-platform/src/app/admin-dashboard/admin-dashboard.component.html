@@ -53,6 +53,65 @@
       </div>
     </section>
 
+    <section class="recent" aria-label="Recent activity">
+      <h2>Recent activity</h2>
+      <div class="recent-grid">
+        @for (block of recent(); track block.key) {
+          <article
+            class="recent-block"
+            [attr.data-recent]="block.key"
+            [attr.aria-label]="block.title"
+            [attr.aria-busy]="block.status === 'loading'"
+          >
+            <h3>{{ block.title }}</h3>
+            <div class="recent-body" aria-live="polite">
+              @switch (block.status) {
+                @case ('loading') {
+                  <p class="recent-state recent-loading">Loading…</p>
+                }
+                @case ('error') {
+                  <div class="recent-state">
+                    <span class="recent-error" role="alert">Unable to load</span>
+                    <button
+                      type="button"
+                      class="recent-retry"
+                      (click)="retry(block.key)"
+                      [attr.aria-label]="'Retry loading ' + block.title.toLowerCase()"
+                    >Retry</button>
+                  </div>
+                }
+                @default {
+                  @if (block.rows.length === 0) {
+                    <p class="recent-state recent-empty">{{ block.emptyText }}</p>
+                  } @else {
+                    <ul class="recent-list">
+                      @for (row of block.rows; track row.id) {
+                        <li class="recent-row">
+                          <div class="recent-line">
+                            <span class="recent-title">{{ row.title }}</span>
+                            @if (row.amount) {
+                              <span class="recent-amount">{{ row.amount }}</span>
+                            }
+                          </div>
+                          @if (row.detail) {
+                            <span class="recent-detail">{{ row.detail }}</span>
+                          }
+                          <div class="recent-line recent-meta">
+                            <span class="recent-when">{{ row.when }}</span>
+                            <span class="status-pill">{{ row.pill }}</span>
+                          </div>
+                        </li>
+                      }
+                    </ul>
+                  }
+                }
+              }
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+
     <section class="quick-actions" aria-label="Quick actions">
       <h2>Quick actions</h2>
       <div class="action-grid">
