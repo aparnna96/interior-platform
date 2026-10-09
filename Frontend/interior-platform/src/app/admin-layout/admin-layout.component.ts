@@ -81,7 +81,6 @@ const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = [
   },
 ];
 
-
 /** Where keyboard focus goes when the drawer closes. */
 type DrawerFocus = 'menu' | 'main' | null;
 
@@ -101,7 +100,7 @@ type DrawerFocus = 'menu' | 'main' | null;
   styleUrl: './admin-layout.component.css',
 })
 export class AdminLayoutComponent {
-  /** The page being shown: drives the active item and the header title. */
+  /** The page being shown: drives which navigation item is marked as current. */
   readonly activeView = input.required<AppView>();
   /** The user chose another page (an Admin page, or a customer page such as Home or Account). */
   readonly navigate = output<AppView>();

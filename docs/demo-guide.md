@@ -36,12 +36,22 @@ Also worth a quick look in the customer area:
 
 ## Admin demo (about 5 minutes)
 
-Log out, then log in as the admin, or open `/login` in a private window. The admin lands on **Manage orders**. The menu's **Operations** group holds the team tools.
+Log out, then log in as the admin, or open `/login` in a private window. The admin lands on the **Dashboard** (`/admin`), inside a separate Admin workspace with its own sidebar and header. The customer menus are replaced here, and the header shows an **Admin** badge with the signed-in email.
 
-1. **Manage orders:** every customer's orders with their status and totals. Open a **Pending** order (the sample customer has one; to add another, place an order from the customer side: add a piece to the cart, then **Place Order**) and move it along: **Confirm order**, then **Start processing**, then **Mark completed**. Only valid next steps are offered, and **Cancel order** asks for a second click. Completed and cancelled orders are final. The customer sees each status change in their own Orders page.
-2. **Manage proposals:** every proposal with its payment state ("Token payment verified" or "No payment attempt"). Open one to see the room details, furniture lines and payment record.
-3. **Leads:** the enquiries submitted through the site, filterable as New, In Progress and Closed. Open one to update its status.
-4. **Manage products:** the catalogue (eight pieces). Edit a price or description, or deactivate a product. A deactivated product disappears from the public store immediately.
+The Admin sidebar has three groups:
+
+- **Overview:** **Dashboard**.
+- **Manage:** **Products**, **Orders**, **Proposals**, **Leads** and **Estimate rate**.
+- **Site:** **View customer site**, **Account** and **Log out**.
+
+On a phone the sidebar becomes a drawer: open it with the menu button at the top left, and close it with the **X** button, by tapping outside it, or with the Escape key. From the customer site, the **Admin** link at the end of the top menu returns to the dashboard. It is shown to admins only.
+
+1. **Dashboard:** five summary cards (orders, new leads, proposals, products and the current estimate rate), the newest few orders, leads and proposals under **Recent activity**, and **Quick actions** that jump to each management page.
+2. **Orders:** every customer's orders with their status and totals. Open a **Pending** order (the sample customer has one; to add another, place an order from the customer side: add a piece to the cart, then **Place Order**) and move it along: **Confirm order**, then **Start processing**, then **Mark completed**. Only valid next steps are offered, and **Cancel order** asks for a second click. Completed and cancelled orders are final. The customer sees each status change in their own Orders page.
+3. **Proposals:** every proposal with its payment state ("Token payment verified" or "No payment attempt"). Open one to see the room details, furniture lines and payment record.
+4. **Leads:** the enquiries submitted through the site, filterable as New, In Progress and Closed. Open one to update its status.
+5. **Products:** the catalogue (eight pieces). Edit a price or description, or deactivate a product. A deactivated product disappears from the public store immediately.
+6. **Estimate rate:** the price per square foot used for new estimates. Setting a new rate changes the amount on estimates created afterwards.
 
 ## Field Staff demo (about 2 minutes)
 
@@ -49,7 +59,7 @@ Log out, then log in as the Field Staff user. It lands on **Leads**.
 
 - **Access:** Leads.
 - **Demonstrates:** viewing the enquiries submitted through the site, and updating a lead's status (New, In Progress, Closed).
-- The Manage orders, Manage proposals and Manage products pages are not available to this role. Opening one of those addresses returns the user to Leads.
+- The Admin pages (Dashboard, Products, Orders, Proposals and Estimate rate) are not available to this role, and Field Staff do not get the Admin workspace. Opening one of those addresses returns the user to Leads.
 
 ## Notes
 
