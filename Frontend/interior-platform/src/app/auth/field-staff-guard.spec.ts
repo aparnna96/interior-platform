@@ -52,8 +52,8 @@ describe('fieldStaffGuard', () => {
   });
 
   it('does not treat an Admin as FieldStaff: they go to their own landing page', () => {
-    expect(where(check(tokenWith('Admin')))).toBe('/admin/orders');
-    expect(where(check(tokenWith(['Admin', 'Customer'])))).toBe('/admin/orders');
+    expect(where(check(tokenWith('Admin')))).toBe('/admin');
+    expect(where(check(tokenWith(['Admin', 'Customer'])))).toBe('/admin');
   });
 
   it('treats a token with no roles, an opaque token and a malformed token as not FieldStaff', () => {

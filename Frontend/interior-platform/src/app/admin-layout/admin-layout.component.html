@@ -1,0 +1,99 @@
+<div class="admin-shell" [class.drawer-open]="drawerOpen()">
+  <aside class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation" (keydown)="onSidebarKeydown($event)">
+    <div class="admin-brand">
+      <span class="admin-logo-mark"><span class="admin-logo-window"><img class="admin-logo" src="/branding/confident-group-horizontal.png" alt="Confident Group" /></span></span>
+      <span class="admin-brand-tag">Admin workspace</span>
+      <button #closeButton type="button" class="admin-drawer-close" aria-label="Close navigation" (click)="closeDrawer('menu')">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          @for (d of icons.close; track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+      </button>
+    </div>
+
+    @for (group of groups; track group.label) {
+      <nav class="admin-nav" [attr.aria-label]="group.label">
+        <p class="admin-nav-label">{{ group.label }}</p>
+        @for (item of group.items; track item.view) {
+          <button
+            type="button"
+            class="admin-nav-item"
+            [class.active]="activeView() === item.view"
+            [attr.aria-current]="activeView() === item.view ? 'page' : null"
+            (click)="select(item.view)"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              @for (d of item.icon; track d) {
+                <path [attr.d]="d" />
+              }
+            </svg>
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      </nav>
+    }
+
+    <nav class="admin-nav admin-nav-site" aria-label="Site">
+      <p class="admin-nav-label">Site</p>
+      <button type="button" class="admin-nav-item" (click)="select('home')">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          @for (d of icons.site; track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+        <span>View customer site</span>
+      </button>
+      <button type="button" class="admin-nav-item" (click)="select('account')">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          @for (d of icons.account; track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+        <span>Account</span>
+      </button>
+      <button type="button" class="admin-nav-item" (click)="logout()">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          @for (d of icons.logout; track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+        <span>Log out</span>
+      </button>
+    </nav>
+  </aside>
+
+  @if (drawerOpen()) {
+    <div class="admin-backdrop" (click)="closeDrawer('menu')" aria-hidden="true"></div>
+  }
+
+  <div class="admin-main" [attr.inert]="drawerOpen() ? '' : null">
+    <header class="admin-topbar">
+      <button
+        #menuButton
+        type="button"
+        class="admin-menu-btn"
+        aria-label="Open navigation"
+        aria-controls="admin-sidebar"
+        [attr.aria-expanded]="drawerOpen()"
+        (click)="openDrawer()"
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          @for (d of icons.menu; track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+      </button>
+      <span class="admin-chip" [attr.title]="email()">
+        <span class="admin-sr-only">Signed in as </span>
+        <span class="admin-chip-role">Admin</span>
+        @if (email(); as address) {
+          <span class="admin-chip-email">{{ address }}</span>
+        }
+      </span>
+    </header>
+    <main #mainRegion id="admin-main" class="admin-content" tabindex="-1">
+      <ng-content />
+    </main>
+  </div>
+</div>

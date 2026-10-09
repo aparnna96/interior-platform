@@ -18,7 +18,7 @@ import {
 import { LoginPageComponent } from './auth/login-page.component';
 import { RegisterPageComponent } from './auth/register-page.component';
 import { AccountPageComponent } from './auth/account-page.component';
-import { pathForView, requiresLogin, safeReturnUrl, viewForPath, type AppView } from './app-paths';
+import { isAdminShellView, pathForView, requiresLogin, safeReturnUrl, viewForPath, type AppView } from './app-paths';
 import { CatalogueComponent } from './catalogue/catalogue.component';
 import { CartComponent } from './catalogue/cart.component';
 import { CartService } from './catalogue/cart.service';
@@ -36,6 +36,7 @@ import { AdminOrdersComponent } from './admin-orders/admin-orders.component';
 import { AdminProposalsComponent } from './admin-proposals/admin-proposals.component';
 import { AdminRatesComponent } from './admin-rates/admin-rates.component';
 import { AdminDashboardComponent } from './admin-dashboard/admin-dashboard.component';
+import { AdminLayoutComponent } from './admin-layout/admin-layout.component';
 import { EstimateRateService } from './estimate/estimate-rate.service';
 import {
   calculateEstimateTotal,
@@ -83,7 +84,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent, AdminRatesComponent, AdminDashboardComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent, AdminRatesComponent, AdminDashboardComponent, AdminLayoutComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -124,6 +125,12 @@ export class AppComponent {
       this.activeView() === 'register' ||
       this.activeView() === 'account'
   );
+
+  /**
+   * An Admin on an Admin page gets the Admin workspace shell. Everyone else, including
+   * FieldStaff on /leads and /field, keeps the existing layouts.
+   */
+  isAdminShell = computed(() => this.auth.isAdmin() && isAdminShellView(this.activeView()));
 
   /** The room controls header belongs to the design workspace views only. */
   showWorkspaceHeader = computed(

@@ -202,6 +202,23 @@ describe('AppComponent routing', () => {
       expect(location.path()).toBe('/admin');
       expect(el.querySelector('app-admin-dashboard')).toBeTruthy();
       expect(el.querySelectorAll('app-admin-dashboard .action-card').length).toBe(5);
+      // An admin sees the page inside the Admin workspace shell, not the customer layout.
+      expect(el.querySelector('app-admin-layout app-admin-dashboard')).toBeTruthy();
+      expect(el.querySelector('#app-sidebar')).toBeNull();
+    });
+
+    it('an admin gets the Admin shell on /leads, field staff keep the workspace layout', async () => {
+      const admin = await setup(ADMIN);
+      await go(admin.fixture, '/leads');
+      expect(admin.app.activeView()).toBe('leads');
+      expect(admin.el.querySelector('app-admin-layout app-leads')).toBeTruthy();
+      TestBed.resetTestingModule();
+      const staff = await setup(STAFF);
+      await go(staff.fixture, '/leads');
+      expect(staff.app.activeView()).toBe('leads');
+      expect(staff.el.querySelector('app-leads')).toBeTruthy();
+      expect(staff.el.querySelector('app-admin-layout')).toBeNull();
+      expect(staff.el.querySelector('#app-sidebar')).toBeTruthy();
     });
 
     it('field staff may open Leads but not admin pages', async () => {
@@ -230,8 +247,8 @@ describe('AppComponent routing', () => {
     it('an admin without the FieldStaff role is sent to their own landing page from /field', async () => {
       const { fixture, app } = await setup(ADMIN);
       await go(fixture, '/field');
-      expect(app.activeView()).toBe('admin-orders');
-      expect(location.path()).toBe('/admin/orders');
+      expect(app.activeView()).toBe('admin-dashboard');
+      expect(location.path()).toBe('/admin');
     });
 
     it('field staff open /field directly on the Elevation view', async () => {
@@ -316,7 +333,7 @@ describe('AppComponent routing', () => {
     it('logged-in staff are sent to their landing page from /login', async () => {
       const { fixture, app } = await setup(ADMIN);
       await go(fixture, '/login');
-      expect(app.activeView()).toBe('admin-orders');
+      expect(app.activeView()).toBe('admin-dashboard');
     });
   });
 
@@ -381,7 +398,7 @@ describe('AppComponent routing', () => {
       http.expectOne(LOGIN_URL).flush({ Token: ADMIN });
       await settle(fixture);
 
-      expect(fixture.componentInstance.activeView()).toBe('admin-orders');
+      expect(fixture.componentInstance.activeView()).toBe('admin-dashboard');
     });
 
     it('logging in with no return address goes to the role landing page', async () => {
@@ -393,7 +410,8 @@ describe('AppComponent routing', () => {
       http.expectOne(LOGIN_URL).flush({ Token: ADMIN });
       await settle(fixture);
 
-      expect(fixture.componentInstance.activeView()).toBe('admin-orders');
+      expect(fixture.componentInstance.activeView()).toBe('admin-dashboard');
+      expect(location.path()).toBe('/admin');
     });
 
     it('ignores an unsafe return address', async () => {

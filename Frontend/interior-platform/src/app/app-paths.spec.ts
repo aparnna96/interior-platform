@@ -1,6 +1,8 @@
 ﻿import {
+  ADMIN_SHELL_VIEWS,
   VIEW_ROUTES,
   accessOf,
+  isAdminShellView,
   landingPathFor,
   pathForView,
   pathOf,
@@ -120,10 +122,29 @@ describe('app paths', () => {
   });
 
   it('picks a landing page for each role', () => {
-    expect(landingPathFor(['Admin'])).toBe('/admin/orders');
-    expect(landingPathFor(['Admin', 'Customer'])).toBe('/admin/orders');
+    expect(landingPathFor(['Admin'])).toBe('/admin');
+    expect(landingPathFor(['Admin', 'Customer'])).toBe('/admin');
     expect(landingPathFor(['FieldStaff'])).toBe('/leads');
     expect(landingPathFor(['Customer'])).toBe('/');
     expect(landingPathFor([])).toBe('/');
+  });
+
+  it('marks exactly the Admin pages and Leads as Admin shell views', () => {
+    expect([...ADMIN_SHELL_VIEWS].sort()).toEqual([
+      'admin-dashboard',
+      'admin-orders',
+      'admin-products',
+      'admin-proposals',
+      'admin-rates',
+      'leads',
+    ]);
+    for (const view of ADMIN_SHELL_VIEWS) {
+      expect(isAdminShellView(view)).withContext(view).toBeTrue();
+      // Each is a page that needs a staff or admin login: the shell is never a way in.
+      expect(['staff', 'admin']).withContext(view).toContain(accessOf(view));
+    }
+    for (const view of ['home', 'account', 'orders', 'proposals', 'estimates', 'visualizer', 'field', 'login'] as const) {
+      expect(isAdminShellView(view)).withContext(view).toBeFalse();
+    }
   });
 });

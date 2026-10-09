@@ -151,9 +151,28 @@ export function safeReturnUrl(raw: string | null | undefined): string | null {
   return value;
 }
 
+/**
+ * Pages an Admin sees inside the Admin workspace shell (its own sidebar and
+ * header) instead of the customer/workspace layout. A display choice only:
+ * who may open a page is still decided by `access` above and by the API, and
+ * FieldStaff keep the existing layout on /leads and /field.
+ */
+export const ADMIN_SHELL_VIEWS: readonly AppView[] = [
+  'admin-dashboard',
+  'admin-products',
+  'admin-orders',
+  'admin-proposals',
+  'admin-rates',
+  'leads',
+];
+
+export function isAdminShellView(view: AppView): boolean {
+  return ADMIN_SHELL_VIEWS.includes(view);
+}
+
 /** Where a user lands after logging in when there is no return URL. */
 export function landingPathFor(roles: readonly string[]): string {
-  if (roles.includes('Admin')) return '/admin/orders';
+  if (roles.includes('Admin')) return '/admin';
   if (roles.includes('FieldStaff')) return '/leads';
   return '/';
 }
