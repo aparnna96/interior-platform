@@ -116,6 +116,9 @@ export class AppComponent {
   /** Product id from a /furniture/:id address; the catalogue shows its details page. */
   routeProductId = signal<string | null>(viewForPath(this.router.url)?.productId ?? null);
 
+  /** Record id from an /admin/orders/:id style address; the Admin list shows that record's page. */
+  routeRecordId = signal<string | null>(viewForPath(this.router.url)?.recordId ?? null);
+
   /** Shared frontend cart store (Pillar 2) — badge count in the navbar. */
   readonly cart = inject(CartService);
 
@@ -271,6 +274,8 @@ export class AppComponent {
     if (!resolved) return;
     if (this.activeView() !== resolved.view) this.activeView.set(resolved.view);
     if (this.routeProductId() !== resolved.productId) this.routeProductId.set(resolved.productId);
+    const recordId = resolved.recordId ?? null;
+    if (this.routeRecordId() !== recordId) this.routeRecordId.set(recordId);
     this.closeDrawer();
   }
 
@@ -936,7 +941,19 @@ export class AppComponent {
    */
   onAdminNavigate(view: AppView): void {
     if (view === 'admin-login') this.cart.clear();
+    // Choosing the page that is already open from one of its records goes back to the list.
+    if (view === this.activeView() && this.routeRecordId() !== null) {
+      this.router.navigateByUrl(pathForView(view)).catch(() => undefined);
+      return;
+    }
+    this.routeRecordId.set(null);
     this.activeView.set(view);
+  }
+
+  /** An Admin list opened or closed a record: mirror it in the address (/admin/orders/:id). */
+  onAdminRecord(view: AppView, recordId: string | null): void {
+    if (this.routeRecordId() === recordId) return;
+    this.router.navigateByUrl(pathForView(view, null, recordId)).catch(() => undefined);
   }
 
   money(n: number): string {

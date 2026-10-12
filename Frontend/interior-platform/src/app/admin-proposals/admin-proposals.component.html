@@ -1,186 +1,280 @@
-﻿<section class="admin-proposals" aria-label="Admin proposals workspace">
-  <header class="admin-proposals-head">
+﻿<section class="adm-page admin-proposals" aria-label="Admin proposals workspace">
+  <header class="adm-head">
     <div>
       <h1>Proposals</h1>
+      @if (selectedId() === null) {
+        <p class="adm-head-sub">Customer proposals and their token payments.</p>
+      }
     </div>
-    @if (isAuthenticated() && canAccess() && selectedId() !== null) {
-      <button class="linklike" (click)="backToList()">Back to proposals</button>
-    }
+    <div class="adm-head-actions">
+      @if (isAuthenticated() && canAccess() && selectedId() !== null) {
+        <button type="button" class="adm-btn adm-btn-sm" (click)="backToList()">Back to proposals</button>
+      } @else if (isAuthenticated() && canAccess() && list() !== null) {
+        <button type="button" class="adm-btn adm-btn-sm" (click)="loadProposals()" [disabled]="listLoading()">
+          {{ listLoading() ? 'Refreshing…' : 'Refresh' }}
+        </button>
+      }
+    </div>
   </header>
 
   @if (!isAuthenticated()) {
-    <div class="admin-proposals-empty">
-      <span class="empty-icon" aria-hidden="true">
-        <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
-      </span>
-      <p>Log in to access the Proposals workspace</p>
-      <span>Proposal operations are handled by Admin accounts. Open Account in the menu to log in.</span>
-    </div>
+    <app-admin-state
+      kind="login"
+      title="Log in to access the Proposals workspace"
+      message="Proposal operations are handled by Admin accounts. Use the Admin log in page."
+    />
   } @else if (!canAccess()) {
-    <div class="admin-proposals-empty" role="alert">
-      <span class="empty-icon" aria-hidden="true">
-        <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
-      </span>
-      <p>You don't have access to this workspace.</p>
-      <span>This workspace is for Admin accounts.</span>
-    </div>
+    <app-admin-state kind="denied" title="You don't have access to this workspace." message="This workspace is for Admin accounts." />
   } @else if (forbidden()) {
-    <div class="admin-proposals-empty" role="alert">
-      <p>You don't have access to this workspace.</p>
-      <span>The server refused the proposals request for this account.</span>
-      <button class="btn-primary" (click)="loadProposals()">Try again</button>
-    </div>
+    <app-admin-state
+      kind="denied"
+      title="You don't have access to this workspace."
+      message="The server refused the proposals request for this account."
+      actionLabel="Try again"
+      (action)="loadProposals()"
+    />
   } @else {
     @if (selectedId() === null) {
       @if (listLoading() && list() === null) {
-        <div class="admin-proposals-empty" aria-live="polite">
-          <p>Loading proposals…</p>
-          <span>Fetching customer proposals.</span>
-        </div>
+        <app-admin-state kind="loading" title="Loading proposals…" message="Fetching customer proposals." />
       } @else if (listError()) {
-        <p class="admin-proposals-error" role="alert">
-          {{ listError() }}
-          <button class="linklike" (click)="loadProposals()">Try again</button>
-        </p>
+        <app-admin-state kind="error" [title]="listError()!" actionLabel="Try again" (action)="loadProposals()" />
       } @else if (list() !== null && list()!.length === 0) {
-        <div class="admin-proposals-empty">
-          <span class="empty-icon" aria-hidden="true">
-            <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
-          </span>
-          <p>No proposals yet</p>
-          <span>Customer proposals will appear here.</span>
-        </div>
-      } @else {
-        <div class="proposal-rows" aria-live="polite">
-          @for (p of list()!; track p.id) {
-            <article class="proposal-row" [attr.aria-label]="'Proposal ' + shortId(p.id)">
-              <div class="proposal-main">
-                <p class="mono">{{ shortId(p.id) }}</p>
-                <p class="proposal-meta">
-                  <span class="status-pill">{{ statusLabel(p.status) }}</span>
-                  <span class="status-pill">{{ listPaymentLabel(p) }}</span>
-                  <span>{{ p.customerEmail ?? p.userId }}</span>
-                  <span>{{ p.createdAt | date:'medium' }}</span>
-                  <span>{{ p.area }} sq ft</span>
-                </p>
-              </div>
-              <div class="proposal-side">
-                <p class="proposal-sub">₹{{ inr(p.estimatedAmount) }}</p>
-                <button class="linklike" (click)="viewDetails(p.id)" [attr.aria-label]="'View details for proposal ' + shortId(p.id)">View details</button>
-              </div>
-            </article>
+        <app-admin-state kind="empty" title="No proposals yet" message="Customer proposals will appear here." />
+      } @else if (list() !== null) {
+        <div class="adm-toolbar" role="search">
+          <div class="adm-search">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 12.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z" /><path d="M11 11l3.5 3.5" /></svg>
+            <input
+              type="search"
+              aria-label="Search proposals"
+              placeholder="Search by customer or proposal ID"
+              autocomplete="off"
+              [value]="table.query()"
+              (input)="table.setQuery($any($event.target).value)"
+            />
+          </div>
+          <select class="adm-select" aria-label="Filter proposals by payment state" (change)="setPaymentFilter($any($event.target).value)">
+            @for (o of filterOptions; track o.value) {
+              <option [value]="o.value" [selected]="paymentFilter() === o.value">{{ o.label }}</option>
+            }
+          </select>
+          @if (hasFilters()) {
+            <button type="button" class="adm-link" (click)="clearFilters()">Clear filters</button>
           }
         </div>
+
+        @if (table.total() === 0) {
+          <app-admin-state
+            kind="empty"
+            title="No proposals match"
+            message="Try a different search or payment state."
+            actionLabel="Clear filters"
+            (action)="clearFilters()"
+          />
+        } @else {
+          <div class="adm-table-wrap" role="region" aria-label="Proposals table" tabindex="0">
+            <table class="adm-table proposal-rows" aria-live="polite">
+              <caption class="adm-sr-only">Proposals</caption>
+              <thead>
+                <tr>
+                  <th admSort="id" [table]="table">Proposal</th>
+                  <th admSort="customer" [table]="table">Customer</th>
+                  <th admSort="date" [table]="table">Created</th>
+                  <th admSort="area" [table]="table" class="adm-num">Area</th>
+                  <th>Status</th>
+                  <th admSort="payment" [table]="table">Payment</th>
+                  <th admSort="amount" [table]="table" class="adm-num">Estimate</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of table.pageRows(); track p.id) {
+                  <tr class="proposal-row adm-row-click" [attr.aria-label]="'Proposal ' + shortId(p.id)" (click)="viewDetails(p.id)">
+                    <td>
+                      <button
+                        type="button"
+                        class="adm-row-link adm-mono"
+                        (click)="viewDetails(p.id); $event.stopPropagation()"
+                        [attr.aria-label]="'View details for proposal ' + shortId(p.id)"
+                      >{{ shortId(p.id) }}</button>
+                    </td>
+                    <td>{{ p.customerEmail ?? p.userId }}</td>
+                    <td class="adm-nowrap">{{ p.createdAt | date:'medium' }}</td>
+                    <td class="adm-num">{{ p.area }} sq ft</td>
+                    <td><app-badge>{{ statusLabel(p.status) }}</app-badge></td>
+                    <td><app-badge [tone]="listTone(p)">{{ listPaymentLabel(p) }}</app-badge></td>
+                    <td class="adm-num adm-cell-main">₹{{ inr(p.estimatedAmount) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <app-admin-pager [table]="table" label="proposals" />
+        }
       }
     } @else {
       @if (detailLoading()) {
-        <div class="admin-proposals-empty" aria-live="polite">
-          <p>Loading proposal…</p>
-          <span>Fetching the proposal detail.</span>
-        </div>
+        <app-admin-state kind="loading" title="Loading proposal…" message="Fetching the proposal detail." />
       } @else if (detailForbidden()) {
-        <div class="admin-proposals-empty" role="alert">
-          <p>You don't have access to this workspace.</p>
-          <span>The server refused the proposal request for this account.</span>
-          <button class="btn-primary" (click)="backToList()">Back to proposals</button>
-        </div>
+        <app-admin-state
+          kind="denied"
+          title="You don't have access to this workspace."
+          message="The server refused the proposal request for this account."
+          actionLabel="Back to proposals"
+          (action)="backToList()"
+        />
       } @else if (detailNotFound()) {
-        <div class="admin-proposals-empty" role="alert">
-          <p>Proposal not found</p>
-          <span>It may have been removed or never existed.</span>
-          <button class="btn-primary" (click)="backToList()">Back to proposals</button>
-        </div>
+        <app-admin-state
+          kind="error"
+          title="Proposal not found"
+          message="It may have been removed or never existed."
+          actionLabel="Back to proposals"
+          (action)="backToList()"
+        />
       } @else if (detailError()) {
-        <p class="admin-proposals-error" role="alert">
-          {{ detailError() }}
-          <button class="linklike" (click)="retryDetail()">Try again</button>
-        </p>
-      } @else {
-        @if (selected(); as proposal) {
+        <app-admin-state kind="error" [title]="detailError()!" actionLabel="Try again" (action)="retryDetail()" />
+      } @else if (selected()) {
+        @let proposal = selected()!;
         <div class="proposal-detail" role="status">
-          <dl class="sum-rows">
-            <div><dt>Proposal ID</dt><dd class="mono">{{ proposal.id }}</dd></div>
-            <div><dt>Customer</dt><dd>{{ proposal.customerEmail ?? proposal.userId }}</dd></div>
-            <div><dt>User ID</dt><dd class="mono">{{ proposal.userId }}</dd></div>
-            <div><dt>Estimate ID</dt><dd class="mono">{{ proposal.estimateId }}</dd></div>
-            <div><dt>Status</dt><dd>{{ statusLabel(proposal.status) }}</dd></div>
-            <div><dt>Created</dt><dd>{{ proposal.createdAt | date:'medium' }}</dd></div>
-            <div><dt>Room dimensions</dt><dd>{{ proposal.width }} × {{ proposal.length }} ft</dd></div>
-            <div><dt>Area</dt><dd>{{ proposal.area }} sq ft</dd></div>
-            <div><dt>Rate per square foot</dt><dd>₹{{ inr(proposal.ratePerSquareFoot) }} / sq ft</dd></div>
-            <div class="total"><dt>Estimated amount</dt><dd>₹{{ inr(proposal.estimatedAmount) }}</dd></div>
-          </dl>
-          <h2>Furniture ({{ proposalItemCount(proposal) }})</h2>
-          @if (proposal.items.length === 0) {
-            <p class="sub small">No furniture lines — this proposal covers the room estimate only.</p>
-          } @else {
-            <ul class="proposal-lines">
-              @for (i of proposal.items; track i.id) {
-                <li>
-                  <span class="item-name">{{ i.productName }}</span>
-                  <span class="item-id mono">{{ i.productId ?? i.furnitureType }}</span>
-                  <span class="item-qty">× {{ i.quantity }}</span>
-                  @if (i.productId === null || i.productId === undefined) {
-                    @if (i.widthFt != null && i.lengthFt != null) {
-                      <span class="item-price">{{ i.widthFt }} × {{ i.lengthFt }} ft</span>
-                    }
-                    <span class="item-total">To be quoted</span>
-                  } @else {
-                    <span class="item-price">₹{{ inr(i.unitPrice) }} each</span>
-                    <span class="item-total">₹{{ inr(i.lineTotal) }}</span>
-                  }
-                </li>
-              }
-            </ul>
-          }
-          <p class="sub small">Lines are proposal-time snapshots of the estimate's visualizer furniture (or, for older proposals, catalogue items with prices).</p>
-          <h2>Token payments</h2>
-          @if (proposal.isPaymentVerified) {
-            <p class="proposal-notice" role="status">Token payment verified</p>
-          } @else {
-            <p class="proposal-locked" role="status">Token payment not verified</p>
-          }
-          @if (proposal.payments.length === 0) {
-            <p class="sub small">No payment attempts recorded for this proposal.</p>
-          } @else {
-            <ul class="payment-lines">
-              @for (pay of proposal.payments; track pay.id) {
-                <li>
-                  <span class="item-name mono">{{ pay.id }}</span>
-                  <span class="status-pill">{{ paymentStatusLabel(pay.status) }}</span>
-                  <span class="item-qty">{{ pay.provider }}</span>
-                  <span class="item-price">₹{{ inr(pay.amount) }} {{ pay.currency }}</span>
-                  <span class="sub small">Order: <span class="mono">{{ pay.providerOrderId ?? '—' }}</span></span>
-                  <span class="sub small">Payment: <span class="mono">{{ pay.providerPaymentId ?? '—' }}</span></span>
-                  <span class="sub small">Created {{ pay.createdAt | date:'medium' }}</span>
-                  @if (pay.verifiedAt) {
-                    <span class="sub small">Verified {{ pay.verifiedAt | date:'medium' }}</span>
-                  }
-                </li>
-              }
-            </ul>
-          }
-          @if (proposal.isPaymentVerified) {
-            <div class="proposal-actions">
-              <button
-                class="btn-primary btn-sm"
-                (click)="downloadPdf()"
-                [disabled]="pdfDownloading()"
-                [attr.aria-label]="'Download proposal PDF for ' + proposal.id"
-              >{{ pdfDownloading() ? 'Generating PDF…' : 'Download PDF' }}</button>
+          <div class="adm-detail-grid">
+            <section class="adm-card adm-card-pad" aria-label="Proposal summary">
+              <div class="adm-section-title">
+                <h2>Proposal summary</h2>
+                <app-badge>{{ statusLabel(proposal.status) }}</app-badge>
+              </div>
+              <dl class="adm-dl">
+                <div><dt>Proposal ID</dt><dd class="adm-mono">{{ proposal.id }}</dd></div>
+                <div><dt>Customer</dt><dd>{{ proposal.customerEmail ?? proposal.userId }}</dd></div>
+                <div><dt>User ID</dt><dd class="adm-mono">{{ proposal.userId }}</dd></div>
+                <div><dt>Estimate ID</dt><dd class="adm-mono">{{ proposal.estimateId }}</dd></div>
+                <div><dt>Status</dt><dd>{{ statusLabel(proposal.status) }}</dd></div>
+                <div><dt>Created</dt><dd>{{ proposal.createdAt | date:'medium' }}</dd></div>
+              </dl>
+            </section>
+
+            <section class="adm-card adm-card-pad" aria-label="Room and estimate">
+              <h2>Room and estimate</h2>
+              <dl class="adm-dl">
+                <div><dt>Room dimensions</dt><dd>{{ proposal.width }} × {{ proposal.length }} ft</dd></div>
+                <div><dt>Area</dt><dd>{{ proposal.area }} sq ft</dd></div>
+                <div><dt>Rate per square foot</dt><dd>₹{{ inr(proposal.ratePerSquareFoot) }} / sq ft</dd></div>
+                <div><dt>Estimated amount</dt><dd class="proposal-total">₹{{ inr(proposal.estimatedAmount) }}</dd></div>
+              </dl>
+            </section>
+          </div>
+
+          <section class="adm-card" aria-label="Furniture">
+            <div class="adm-section-title adm-card-pad proposal-section-head">
+              <h2>Furniture ({{ proposalItemCount(proposal) }})</h2>
             </div>
-            @if (pdfError()) {
-              <p class="admin-proposals-error" role="alert">
-                {{ pdfError() }}
-                <button class="linklike" (click)="retryPdf()">Try again</button>
-              </p>
+            @if (proposal.items.length === 0) {
+              <p class="adm-hint proposal-empty-note">No furniture lines — this proposal covers the room estimate only.</p>
+            } @else {
+              <div class="adm-table-wrap proposal-table-wrap" role="region" aria-label="Furniture table" tabindex="0">
+                <table class="adm-table proposal-lines">
+                  <caption class="adm-sr-only">Furniture in this proposal</caption>
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Product / type</th>
+                      <th class="adm-num">Qty</th>
+                      <th class="adm-num">Size or unit price</th>
+                      <th class="adm-num">Line total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (i of proposal.items; track i.id) {
+                      <tr>
+                        <td class="adm-cell-main">{{ i.productName }}</td>
+                        <td class="adm-mono">{{ i.productId ?? i.furnitureType }}</td>
+                        <td class="adm-num">× {{ i.quantity }}</td>
+                        @if (i.productId === null || i.productId === undefined) {
+                          <td class="adm-num">
+                            @if (i.widthFt != null && i.lengthFt != null) {
+                              {{ i.widthFt }} × {{ i.lengthFt }} ft
+                            }
+                          </td>
+                          <td class="adm-num">To be quoted</td>
+                        } @else {
+                          <td class="adm-num">₹{{ inr(i.unitPrice) }} each</td>
+                          <td class="adm-num adm-cell-main">₹{{ inr(i.lineTotal) }}</td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             }
-          } @else {
-            <p class="proposal-locked" role="status">PDF available after token payment</p>
-          }
-          <button class="linklike" (click)="backToList()">Back to proposals</button>
+            <p class="adm-hint proposal-empty-note">Lines are proposal-time snapshots of the estimate's visualizer furniture (or, for older proposals, catalogue items with prices).</p>
+          </section>
+
+          <section class="adm-card" aria-label="Token payments">
+            <div class="adm-section-title adm-card-pad proposal-section-head">
+              <h2>Token payments</h2>
+              @if (proposal.isPaymentVerified) {
+                <span class="proposal-notice" role="status"><app-badge tone="success">Token payment verified</app-badge></span>
+              } @else {
+                <span class="proposal-locked" role="status"><app-badge tone="warn">Token payment not verified</app-badge></span>
+              }
+            </div>
+            @if (proposal.payments.length === 0) {
+              <p class="adm-hint proposal-empty-note">No payment attempts recorded for this proposal.</p>
+            } @else {
+              <div class="adm-table-wrap proposal-table-wrap" role="region" aria-label="Payments table" tabindex="0">
+                <table class="adm-table payment-lines">
+                  <caption class="adm-sr-only">Payment attempts for this proposal</caption>
+                  <thead>
+                    <tr>
+                      <th>Payment</th>
+                      <th>Status</th>
+                      <th>Provider</th>
+                      <th class="adm-num">Amount</th>
+                      <th>Provider order</th>
+                      <th>Provider payment</th>
+                      <th>Created</th>
+                      <th>Verified</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (pay of proposal.payments; track pay.id) {
+                      <tr>
+                        <td class="adm-mono">{{ pay.id }}</td>
+                        <td><app-badge [tone]="paymentRowTone(pay.status)">{{ paymentStatusLabel(pay.status) }}</app-badge></td>
+                        <td>{{ pay.provider }}</td>
+                        <td class="adm-num">₹{{ inr(pay.amount) }} {{ pay.currency }}</td>
+                        <td class="adm-mono">{{ pay.providerOrderId ?? '—' }}</td>
+                        <td class="adm-mono">{{ pay.providerPaymentId ?? '—' }}</td>
+                        <td class="adm-nowrap">{{ pay.createdAt | date:'medium' }}</td>
+                        <td class="adm-nowrap">{{ pay.verifiedAt ? (pay.verifiedAt | date:'medium') : '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+            <div class="adm-card-pad proposal-pdf">
+              @if (proposal.isPaymentVerified) {
+                <div class="proposal-actions">
+                  <button
+                    type="button"
+                    class="adm-btn adm-btn-primary adm-btn-sm"
+                    (click)="downloadPdf()"
+                    [disabled]="pdfDownloading()"
+                    [attr.aria-label]="'Download proposal PDF for ' + proposal.id"
+                  >{{ pdfDownloading() ? 'Generating PDF…' : 'Download PDF' }}</button>
+                </div>
+                @if (pdfError()) {
+                  <p class="adm-alert admin-proposals-error" role="alert">
+                    {{ pdfError() }}
+                    <button type="button" class="adm-link" (click)="retryPdf()">Try again</button>
+                  </p>
+                }
+              } @else {
+                <p class="adm-hint proposal-locked" role="status">PDF available after token payment</p>
+              }
+            </div>
+          </section>
         </div>
-        }
       }
     }
   }

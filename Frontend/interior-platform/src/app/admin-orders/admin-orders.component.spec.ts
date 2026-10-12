@@ -6,6 +6,7 @@ import {
 } from '@angular/common/http/testing';
 import { AuthService, AUTH_TOKEN_KEY } from '../auth.service';
 import { AdminOrdersComponent } from './admin-orders.component';
+import { AdminAttentionService } from '../shared/admin/admin-attention.service';
 import type {
   AdminOrderDetailDto,
   AdminOrderSummaryDto,
@@ -163,7 +164,7 @@ describe('AdminOrdersComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('Something went wrong');
 
-    (el.querySelector('.admin-orders-error button') as HTMLButtonElement).click();
+    (el.querySelector('.adm-state button') as HTMLButtonElement).click();
     httpMock.expectOne(ADMIN_ORDERS_URL).flush([adminRow({ id: 'order-1' })]);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('a@test.local');
@@ -206,7 +207,7 @@ describe('AdminOrdersComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Order not found');
 
-    (el.querySelector('.admin-orders-empty .btn-primary') as HTMLButtonElement).click();
+    (el.querySelector('.adm-state button') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('a@test.local');
   });
@@ -535,6 +536,152 @@ describe('AdminOrdersComponent', () => {
       fixture.componentInstance.changeStatus(1);
       httpMock.expectNone(`${ADMIN_ORDERS_URL}/order-1/status`);
       httpMock.verify();
+    });
+  });
+
+  describe('table, search, sort, filter and paging', () => {
+    const rows = (n: number) =>
+      Array.from({ length: n }, (_, i) =>
+        adminRow({
+          id: `order-${String(i + 1).padStart(2, '0')}-xxxx`,
+          customerEmail: i % 2 === 0 ? `even${i}@test.local` : `odd${i}@test.local`,
+          status: i % 5,
+          subtotal: (i + 1) * 1000,
+          itemCount: 1 + (i % 3),
+        })
+      );
+    const bodyIds = (el: HTMLElement) =>
+      Array.from(el.querySelectorAll('tbody tr.order-row')).map((r) => r.getAttribute('aria-label'));
+    const headers = (el: HTMLElement) => Array.from(el.querySelectorAll('thead th')).map((h) => h.textContent!.replace(/[▲▼↕]/g, '').trim());
+
+    it('is a real table with column headers and a caption', () => {
+      const fixture = setupAdmin(rows(3));
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('table.adm-table caption')!.textContent).toContain('Orders');
+      expect(headers(el)).toEqual(['Order', 'Customer', 'Placed', 'Items', 'Status', 'Total']);
+      expect(el.querySelectorAll('tbody tr').length).toBe(3);
+    });
+
+    it('shows status as a coloured badge: Pending warns, Completed succeeds, Cancelled is red', () => {
+      const fixture = setupAdmin([adminRow({ id: 'a', status: 0 }), adminRow({ id: 'b', status: 3 }), adminRow({ id: 'c', status: 4 })]);
+      const tones = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tbody .adm-badge')).map((b) => b.getAttribute('data-tone'));
+      expect(tones).toEqual(['warn', 'success', 'danger']);
+    });
+
+    it('pages 25 orders as 10, 10, 5 and says which range it shows', () => {
+      const fixture = setupAdmin(rows(25));
+      const el = fixture.nativeElement as HTMLElement;
+      expect(bodyIds(el).length).toBe(10);
+      expect(el.querySelector('.adm-pager-range')!.textContent).toContain('Showing 1–10 of 25');
+      fixture.componentInstance.table.goTo(3);
+      fixture.detectChanges();
+      expect(bodyIds(el).length).toBe(5);
+      expect(el.querySelector('.adm-pager-range')!.textContent).toContain('Showing 21–25 of 25');
+    });
+
+    it('searches by customer and by order id', () => {
+      const fixture = setupAdmin(rows(12));
+      const el = fixture.nativeElement as HTMLElement;
+      const input = el.querySelector<HTMLInputElement>('input[aria-label="Search orders"]')!;
+      input.value = 'ODD3@';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(bodyIds(el)).toEqual(['Order order-04']);
+      input.value = 'order-07';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(bodyIds(el)).toEqual(['Order order-07']);
+    });
+
+    it('filters by status and offers to clear when nothing matches', () => {
+      const fixture = setupAdmin(rows(10));
+      const el = fixture.nativeElement as HTMLElement;
+      const select = el.querySelector<HTMLSelectElement>('select[aria-label="Filter orders by status"]')!;
+      select.value = '4';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      expect(bodyIds(el).length).toBe(2);
+      expect(Array.from(el.querySelectorAll('tbody .adm-badge')).every((b) => b.textContent!.trim() === 'Cancelled')).toBeTrue();
+
+      const input = el.querySelector<HTMLInputElement>('input[aria-label="Search orders"]')!;
+      input.value = 'no such customer';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(el.textContent).toContain('No orders match');
+      (Array.from(el.querySelectorAll('.adm-state button')).find((b) => b.textContent!.includes('Clear filters')) as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(bodyIds(el).length).toBe(10);
+    });
+
+    it('sorts by total when its header is chosen, and marks the column with aria-sort', () => {
+      const fixture = setupAdmin(rows(3));
+      const el = fixture.nativeElement as HTMLElement;
+      const totalHeader = Array.from(el.querySelectorAll<HTMLElement>('thead th')).find((h) => h.textContent!.includes('Total'))!;
+      totalHeader.querySelector('button')!.click();
+      totalHeader.querySelector('button')!.click();
+      fixture.detectChanges();
+      expect(totalHeader.getAttribute('aria-sort')).toBe('descending');
+      expect(bodyIds(el)).toEqual(['Order order-03', 'Order order-02', 'Order order-01']);
+    });
+
+    it('reports its pending count to the sidebar badge', () => {
+      setupAdmin([adminRow({ id: 'a', status: 0 }), adminRow({ id: 'b', status: 0 }), adminRow({ id: 'c', status: 3 })]);
+      expect(TestBed.inject(AdminAttentionService).pendingOrders()).toBe(2);
+    });
+  });
+
+  describe('order address (recordId / recordChange)', () => {
+    it('opening an order tells the shell its id, and Back tells it the list is open again', () => {
+      const fixture = setupAdmin([adminRow({ id: 'order-1' })]);
+      const changes: (string | null)[] = [];
+      fixture.componentInstance.recordChange.subscribe((id) => changes.push(id));
+
+      fixture.componentInstance.viewDetails('order-1');
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1`).flush(adminDetail({ id: 'order-1' }));
+      fixture.componentInstance.backToList();
+
+      expect(changes).toEqual(['order-1', null]);
+      expect(fixture.componentInstance.selectedId()).toBeNull();
+    });
+
+    it('shows the order the address names, and goes back to the list when the address drops it', () => {
+      const fixture = setupAdmin([adminRow({ id: 'order-1' })]);
+      const changes: (string | null)[] = [];
+      fixture.componentInstance.recordChange.subscribe((id) => changes.push(id));
+
+      fixture.componentRef.setInput('recordId', 'order-1');
+      fixture.detectChanges();
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1`).flush(adminDetail({ id: 'order-1' }));
+      fixture.detectChanges();
+      expect(fixture.componentInstance.selectedId()).toBe('order-1');
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Aria 3-Seater Fabric Sofa');
+
+      fixture.componentRef.setInput('recordId', null);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.selectedId()).toBeNull();
+      // Following the address is not a new choice: the shell is not told again.
+      expect(changes).toEqual([]);
+    });
+
+    it('opens a deep-linked order that is not in the list and shows not-found for an unknown one', () => {
+      const fixture = setupAdmin([]);
+      fixture.componentRef.setInput('recordId', 'gone');
+      fixture.detectChanges();
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/gone`).flush('missing', { status: 404, statusText: 'Not Found' });
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Order not found');
+    });
+
+    it('shows the items as a table with a subtotal row', () => {
+      const fixture = setupAdmin([adminRow({ id: 'order-1' })]);
+      fixture.componentInstance.viewDetails('order-1');
+      httpMock.expectOne(`${ADMIN_ORDERS_URL}/order-1`).flush(adminDetail({ id: 'order-1' }));
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(Array.from(el.querySelectorAll('table.order-lines thead th')).map((h) => h.textContent!.trim())).toEqual([
+        'Item', 'Product ID', 'Qty', 'Unit price', 'Line total',
+      ]);
+      expect(el.querySelector('table.order-lines tfoot')!.textContent).toContain('85,998');
     });
   });
 });

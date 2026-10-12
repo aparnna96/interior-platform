@@ -106,7 +106,7 @@ describe('AdminRatesComponent', () => {
     expect(rows[0].textContent).toContain('Active');
     expect(rows[1].textContent).toContain('₹1,500');
     expect(rows[1].textContent).toContain('Initial rate');
-    expect(el.querySelectorAll('.status-pill').length).toBe(1);
+    expect(el.querySelectorAll('.adm-badge[data-tone="success"]').length).toBe(1);
   });
 
   it('shows a loading state while fetching', () => {
@@ -129,7 +129,7 @@ describe('AdminRatesComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('Something went wrong');
 
-    (el.querySelector('.admin-rates-error button') as HTMLButtonElement).click();
+    (el.querySelector('.adm-state button') as HTMLButtonElement).click();
     httpMock.expectOne(RATES_URL).flush([ACTIVE]);
     fixture.detectChanges();
     expect(text(fixture)).toContain('₹1,800');
@@ -269,7 +269,7 @@ describe('AdminRatesComponent', () => {
     fixture.detectChanges();
 
     (fixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('.confirm-box .btn-secondary')!
+      .querySelector<HTMLButtonElement>('.confirm-box .adm-btn:not(.adm-btn-primary)')!
       .click();
     fixture.detectChanges();
 
@@ -309,7 +309,7 @@ describe('AdminRatesComponent', () => {
     );
     expect(el.querySelector('section[aria-label="Current rate"]')?.textContent).toContain('₹2,000');
     expect(el.querySelectorAll('.rate-row').length).toBe(3);
-    expect(el.querySelectorAll('.status-pill').length).toBe(1);
+    expect(el.querySelectorAll('.adm-badge[data-tone="success"]').length).toBe(1);
     expect(cmp.confirming()).toBeNull();
     expect(cmp.form.controls.rate.value).toBeNull();
     httpMock.verify();

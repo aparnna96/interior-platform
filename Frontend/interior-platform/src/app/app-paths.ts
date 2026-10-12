@@ -86,6 +86,19 @@ const BY_PATH = new Map<string, ViewRoute>(VIEW_ROUTES.map((r) => [`/${r.path}`,
 
 const PRODUCT_PATH = /^\/furniture\/([^/]+)$/;
 
+/**
+ * Admin lists whose rows open on their own address: /admin/orders/:id,
+ * /admin/proposals/:id and /admin/leads/:id. The view stays the list's view;
+ * the id rides along as `recordId`, so a refresh or a shared link reopens the record.
+ */
+export const ADMIN_RECORD_VIEWS: readonly AppView[] = ['admin-orders', 'admin-proposals', 'admin-leads'];
+const ADMIN_RECORD_PATH = /^\/admin\/(orders|proposals|leads)\/([^/]+)$/;
+const ADMIN_RECORD_VIEW: Record<string, AppView> = {
+  orders: 'admin-orders',
+  proposals: 'admin-proposals',
+  leads: 'admin-leads',
+};
+
 /** Access rule for a view. */
 export function accessOf(view: AppView): ViewAccess {
   return BY_VIEW.get(view)?.access ?? 'public';
@@ -108,9 +121,13 @@ export function pathOf(url: string): string {
  * URL path for a view. The furniture view can carry a product id, giving the
  * product details page its own address (/furniture/:id).
  */
-export function pathForView(view: AppView, productId: string | null = null): string {
+export function pathForView(view: AppView, productId: string | null = null, recordId: string | null = null): string {
   if (view === 'catalogue' && productId) {
     return `/furniture/${encodeURIComponent(productId)}`;
+  }
+  if (recordId && ADMIN_RECORD_VIEWS.includes(view)) {
+    const base = BY_VIEW.get(view)?.path ?? 'admin';
+    return `/${base}/${encodeURIComponent(recordId)}`;
   }
   const route = BY_VIEW.get(view);
   return route ? (route.path === '' ? '/' : `/${route.path}`) : '/';
@@ -119,6 +136,8 @@ export function pathForView(view: AppView, productId: string | null = null): str
 export interface ResolvedPath {
   readonly view: AppView;
   readonly productId: string | null;
+  /** Record id of an Admin detail address (/admin/orders/:id and the like), else null. */
+  readonly recordId?: string | null;
 }
 
 /** The view a URL path stands for, or null when the path is unknown. */
@@ -131,6 +150,14 @@ export function viewForPath(url: string): ResolvedPath | null {
   if (product) {
     try {
       return { view: 'catalogue', productId: decodeURIComponent(product[1]) };
+    } catch {
+      return null;
+    }
+  }
+  const record = ADMIN_RECORD_PATH.exec(path);
+  if (record) {
+    try {
+      return { view: ADMIN_RECORD_VIEW[record[1]], productId: null, recordId: decodeURIComponent(record[2]) };
     } catch {
       return null;
     }

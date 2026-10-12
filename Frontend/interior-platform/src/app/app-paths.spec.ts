@@ -196,4 +196,30 @@ describe('app paths', () => {
       expect(isAdminShellView(view)).withContext(view).toBeFalse();
     }
   });
+
+  it('gives Admin orders, proposals and leads an address per record', () => {
+    expect(pathForView('admin-orders', null, 'o-1')).toBe('/admin/orders/o-1');
+    expect(pathForView('admin-proposals', null, 'p 2')).toBe('/admin/proposals/p%202');
+    expect(pathForView('admin-leads', null, 'l-3')).toBe('/admin/leads/l-3');
+    // Views that have no records ignore the id, and a missing id gives the list.
+    expect(pathForView('admin-products', null, 'x')).toBe('/admin/products');
+    expect(pathForView('admin-orders')).toBe('/admin/orders');
+  });
+
+  it('reads a record address back as the list view plus the record id', () => {
+    expect(viewForPath('/admin/orders/o-1')).toEqual({ view: 'admin-orders', productId: null, recordId: 'o-1' });
+    expect(viewForPath('/admin/proposals/p%202')?.recordId).toBe('p 2');
+    expect(viewForPath('/admin/leads/l-3/')?.view).toBe('admin-leads');
+    expect(viewForPath('/admin/orders')?.recordId ?? null).toBeNull();
+    // Only the three lists have records.
+    expect(viewForPath('/admin/products/x')).toBeNull();
+    expect(viewForPath('/admin/rates/x')).toBeNull();
+    expect(viewForPath('/admin/orders/a/b')).toBeNull();
+    expect(viewForPath('/admin/orders/%E0%A4%A')).toBeNull();
+  });
+
+  it('keeps a record address inside the Admin area for return addresses', () => {
+    expect(safeAdminReturnUrl('/admin/orders/o-1')).toBe('/admin/orders/o-1');
+    expect(isAdminPath('/admin/leads/l-3')).toBeTrue();
+  });
 });

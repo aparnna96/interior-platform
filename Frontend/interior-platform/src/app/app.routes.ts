@@ -1,5 +1,5 @@
 ﻿import { CanActivateFn, Route, Routes } from '@angular/router';
-import { VIEW_ROUTES, type ViewAccess } from './app-paths';
+import { ADMIN_RECORD_VIEWS, VIEW_ROUTES, type ViewAccess } from './app-paths';
 import { adminGuard, adminLoginGuard, authGuard, fieldStaffGuard, guestGuard, staffGuard } from './auth/auth.guards';
 
 /**
@@ -31,6 +31,17 @@ export const routes: Routes = [
   ),
   // Product details page: /furniture/:id
   { path: 'furniture/:id', pathMatch: 'full', title: 'Furniture | Confident Group', children: [] },
+  // Admin record pages: /admin/orders/:id, /admin/proposals/:id, /admin/leads/:id
+  ...ADMIN_RECORD_VIEWS.map((view): Route => {
+    const list = VIEW_ROUTES.find((r) => r.view === view)!;
+    return {
+      path: `${list.path}/:id`,
+      pathMatch: 'full',
+      title: list.title,
+      canActivate: GUARDS.admin,
+      children: [],
+    };
+  }),
   // An unknown address under /admin stays inside the Admin area: it goes to the
   // dashboard, and the admin guard asks visitors to log in first.
   { path: 'admin', children: [{ path: '**', redirectTo: '/admin' }] },

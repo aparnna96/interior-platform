@@ -138,7 +138,7 @@ describe('LeadsComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('Something went wrong');
 
-    (el.querySelector('.leads-error button') as HTMLButtonElement).click();
+    (el.querySelector('.adm-state button') as HTMLButtonElement).click();
     httpMock.expectOne(LEADS_URL).flush([leadRow({ id: 'lead-1' })]);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Asha Rao');
@@ -210,7 +210,7 @@ describe('LeadsComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Lead not found');
 
-    (el.querySelector('.leads-empty .btn-primary') as HTMLButtonElement).click();
+    (el.querySelector('.adm-state button') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Asha Rao');
   });

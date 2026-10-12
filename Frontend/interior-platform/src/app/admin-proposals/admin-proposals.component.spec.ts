@@ -188,7 +188,7 @@ describe('AdminProposalsComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('Something went wrong');
 
-    (el.querySelector('.admin-proposals-error button') as HTMLButtonElement).click();
+    (el.querySelector('.adm-state button') as HTMLButtonElement).click();
     httpMock.expectOne(ADMIN_PROPOSALS_URL).flush([adminRow({ id: 'prop-1' })]);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('a@test.local');
@@ -348,7 +348,7 @@ describe('AdminProposalsComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Proposal not found');
 
-    (el.querySelector('.admin-proposals-empty .btn-primary') as HTMLButtonElement).click();
+    (el.querySelector('.adm-state button') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('a@test.local');
   });
@@ -483,5 +483,58 @@ describe('AdminProposalsComponent', () => {
 
     expect(localSet).not.toHaveBeenCalled();
     expect(sessionSet).not.toHaveBeenCalled();
+  });
+
+  describe('table, search and payment filter', () => {
+    const rows = () => [
+      adminRow({ id: 'prop-verified', customerEmail: 'v@test.local', isPaymentVerified: true, paymentAttemptCount: 1 }),
+      adminRow({ id: 'prop-pending', customerEmail: 'p@test.local', isPaymentVerified: false, paymentAttemptCount: 2 }),
+      adminRow({ id: 'prop-none', customerEmail: 'n@test.local', isPaymentVerified: false, paymentAttemptCount: 0 }),
+    ];
+    const ids = (el: HTMLElement) => Array.from(el.querySelectorAll('tbody tr.proposal-row')).map((r) => r.getAttribute('aria-label'));
+
+    it('is a table with payment shown as a toned badge', () => {
+      const el = setupAdmin(rows()).nativeElement as HTMLElement;
+      expect(Array.from(el.querySelectorAll('thead th')).map((h) => h.textContent!.replace(/[▲▼↕]/g, '').trim())).toEqual([
+        'Proposal', 'Customer', 'Created', 'Area', 'Status', 'Payment', 'Estimate',
+      ]);
+      const payment = Array.from(el.querySelectorAll('tbody tr')).map((r) => r.querySelectorAll('.adm-badge')[1].getAttribute('data-tone'));
+      expect(payment).toEqual(['success', 'warn', 'neutral']);
+    });
+
+    it('filters by payment state and searches by customer', () => {
+      const fixture = setupAdmin(rows());
+      const el = fixture.nativeElement as HTMLElement;
+      const select = el.querySelector<HTMLSelectElement>('select[aria-label="Filter proposals by payment state"]')!;
+      select.value = 'pending';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      expect(ids(el)).toEqual(['Proposal prop-pen']);
+
+      select.value = 'all';
+      select.dispatchEvent(new Event('change'));
+      const input = el.querySelector<HTMLInputElement>('input[aria-label="Search proposals"]')!;
+      input.value = 'n@test';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(ids(el)).toEqual(['Proposal prop-non']);
+    });
+
+    it('opens a proposal by its address and tells the shell when it is chosen from the list', () => {
+      const fixture = setupAdmin(rows());
+      const changes: (string | null)[] = [];
+      fixture.componentInstance.recordChange.subscribe((id) => changes.push(id));
+      fixture.componentInstance.viewDetails('prop-pending');
+      httpMock.expectOne(`${ADMIN_PROPOSALS_URL}/prop-pending`).flush(adminDetail({ id: 'prop-pending' }));
+      expect(changes).toEqual(['prop-pending']);
+      fixture.componentInstance.backToList();
+      expect(changes).toEqual(['prop-pending', null]);
+
+      fixture.componentRef.setInput('recordId', 'prop-verified');
+      fixture.detectChanges();
+      httpMock.expectOne(`${ADMIN_PROPOSALS_URL}/prop-verified`).flush(adminDetail({ id: 'prop-verified' }));
+      expect(fixture.componentInstance.selectedId()).toBe('prop-verified');
+      expect(changes).toEqual(['prop-pending', null]);
+    });
   });
 });

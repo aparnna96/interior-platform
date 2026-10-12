@@ -1,5 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../auth.service';
 import {
@@ -9,6 +8,14 @@ import {
   type AdminProductDto,
   type ProductUpsertRequest,
 } from '../catalogue/product.service';
+import { AdminPagerComponent } from '../shared/admin/admin-pager.component';
+import { AdminStateComponent } from '../shared/admin/admin-state.component';
+import { BadgeComponent } from '../shared/admin/badge.component';
+import { SortHeaderComponent } from '../shared/admin/sort-header.component';
+import { TableState } from '../shared/admin/table-state';
+
+/** Which products the table shows by their active flag. */
+export type ProductActiveFilter = 'all' | 'active' | 'inactive';
 
 /** Slug rule mirrors the backend Id pattern (lowercase, numbers, hyphens). */
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
@@ -24,7 +31,7 @@ const SLUG_PATTERN = /^[a-z0-9-]+$/;
 @Component({
   selector: 'app-admin-products',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [ReactiveFormsModule, AdminPagerComponent, AdminStateComponent, BadgeComponent, SortHeaderComponent],
   templateUrl: './admin-products.component.html',
   styleUrl: './admin-products.component.css',
 })
@@ -32,6 +39,9 @@ export class AdminProductsComponent {
   private readonly auth = inject(AuthService);
   private readonly products = inject(ProductService);
   private readonly fb = inject(FormBuilder);
+  private readonly drawer = viewChild<ElementRef<HTMLElement>>('drawer');
+  /** The control that opened the drawer, so focus can go back to it. */
+  private opener: HTMLElement | null = null;
 
   /** Admin-only gate; anyone else never loads admin data. */
   readonly canAccess = computed(() => this.auth.isAdmin());
@@ -42,6 +52,34 @@ export class AdminProductsComponent {
   readonly listError = signal<string | null>(null);
   readonly forbidden = signal(false);
   readonly notice = signal<string | null>(null);
+
+  readonly categoryFilter = signal<string>('all');
+  readonly roomFilter = signal<string>('all');
+  readonly activeFilter = signal<ProductActiveFilter>('all');
+
+  readonly table = new TableState<AdminProductDto>(() => this.list() ?? [], {
+    searchText: (p) => `${p.name} ${p.id} ${p.category} ${p.room} ${p.material} ${p.finish}`,
+    filter: () => {
+      const category = this.categoryFilter();
+      const room = this.roomFilter();
+      const active = this.activeFilter();
+      if (category === 'all' && room === 'all' && active === 'all') return null;
+      return (p) =>
+        (category === 'all' || p.category === category) &&
+        (room === 'all' || p.room === room) &&
+        (active === 'all' || p.isActive === (active === 'active'));
+    },
+    sorters: {
+      name: (p) => p.name.toLowerCase(),
+      category: (p) => p.category,
+      room: (p) => p.room,
+      price: (p) => p.price,
+      status: (p) => (p.isActive ? 0 : 1),
+    },
+  });
+
+  /** Image URL whose preview failed to load, so the drawer says so instead of showing a broken image. */
+  readonly previewFailedFor = signal<string | null>(null);
 
   readonly formOpen = signal(false);
   readonly editingId = signal<string | null>(null);
@@ -131,6 +169,7 @@ export class AdminProductsComponent {
     this.formError.set(null);
     this.notice.set(null);
     this.formOpen.set(true);
+    this.focusDrawer();
   }
 
   openEdit(product: AdminProductDto): void {
@@ -156,13 +195,89 @@ export class AdminProductsComponent {
     this.formError.set(null);
     this.notice.set(null);
     this.formOpen.set(true);
+    this.focusDrawer();
   }
 
   closeForm(): void {
+    const wasOpen = this.formOpen();
     this.formOpen.set(false);
     this.editingId.set(null);
     this.formError.set(null);
     this.form.get('id')?.enable();
+    if (wasOpen) {
+      this.opener?.focus();
+      this.opener = null;
+    }
+  }
+
+  /** Remembers what opened the drawer, then puts focus on its first field once it is drawn. */
+  private focusDrawer(): void {
+    this.opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    this.previewFailedFor.set(null);
+    setTimeout(() => this.drawer()?.nativeElement.querySelector<HTMLElement>('input:not([disabled]), select, textarea')?.focus());
+  }
+
+  /** Escape closes the drawer, and Tab stays inside it while it is open. */
+  onDrawerKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      if (!this.saving()) {
+        event.stopPropagation();
+        this.closeForm();
+      }
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const controls = Array.from(
+      (event.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('input:not([disabled]), select, textarea, button:not([disabled])')
+    );
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  /** The image URL typed in the form, when it is a usable http(s) address. */
+  previewUrl(): string | null {
+    const url = String(this.form.controls.imageUrl.value ?? '').trim();
+    return /^https?:\/\/.+/.test(url) ? url : null;
+  }
+
+  setCategoryFilter(value: string): void {
+    this.categoryFilter.set(value);
+    this.table.resetPage();
+  }
+
+  setRoomFilter(value: string): void {
+    this.roomFilter.set(value);
+    this.table.resetPage();
+  }
+
+  setActiveFilter(value: string): void {
+    this.activeFilter.set(value as ProductActiveFilter);
+    this.table.resetPage();
+  }
+
+  clearFilters(): void {
+    this.categoryFilter.set('all');
+    this.roomFilter.set('all');
+    this.activeFilter.set('all');
+    this.table.reset();
+  }
+
+  /** True when a search or a filter is narrowing the list. */
+  hasFilters(): boolean {
+    return (
+      this.categoryFilter() !== 'all' ||
+      this.roomFilter() !== 'all' ||
+      this.activeFilter() !== 'all' ||
+      this.table.query().trim() !== ''
+    );
   }
 
   /** POST for create, PUT to the editing route id for edits. */
@@ -299,6 +414,7 @@ export class AdminProductsComponent {
     this.forbidden.set(false);
     this.notice.set(null);
     this.closeForm();
+    this.clearFilters();
     this.confirmingDeactivateId.set(null);
     this.deactivatingId.set(null);
     this.deactivateError.set(null);

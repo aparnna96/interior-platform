@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { AuthService } from '../auth.service';
 import {
@@ -7,6 +7,8 @@ import {
   MAX_ESTIMATE_RATE,
   type AdminEstimateRateDto,
 } from '../estimate/estimate-rate.service';
+import { AdminStateComponent } from '../shared/admin/admin-state.component';
+import { BadgeComponent } from '../shared/admin/badge.component';
 
 /** Accepts whole rupees or up to two decimals, matching the server rule. */
 function twoDecimals(control: AbstractControl): ValidationErrors | null {
@@ -29,7 +31,7 @@ function twoDecimals(control: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'app-admin-rates',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [DatePipe, ReactiveFormsModule, AdminStateComponent, BadgeComponent],
   templateUrl: './admin-rates.component.html',
   styleUrl: './admin-rates.component.css',
 })

@@ -1,5 +1,5 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { AuthService } from '../auth.service';
 import {
   LeadService,
@@ -10,6 +10,12 @@ import {
   type LeadResponse,
 } from './lead.service';
 import { ProductService } from '../catalogue/product.service';
+import { AdminAttentionService } from '../shared/admin/admin-attention.service';
+import { AdminPagerComponent } from '../shared/admin/admin-pager.component';
+import { AdminStateComponent } from '../shared/admin/admin-state.component';
+import { BadgeComponent, leadTone } from '../shared/admin/badge.component';
+import { SortHeaderComponent } from '../shared/admin/sort-header.component';
+import { TableState } from '../shared/admin/table-state';
 
 /** Lead list filter: all records or one backend status number. */
 export type LeadFilter = 'all' | number;
@@ -31,7 +37,7 @@ export const LEAD_FILTER_ALL = 'all' as const;
 @Component({
   selector: 'app-leads',
   standalone: true,
-  imports: [CommonModule],
+  imports: [DatePipe, AdminPagerComponent, AdminStateComponent, BadgeComponent, SortHeaderComponent],
   templateUrl: './leads.component.html',
   styleUrl: './leads.component.css',
 })
@@ -39,6 +45,12 @@ export class LeadsComponent {
   private readonly auth = inject(AuthService);
   private readonly leads = inject(LeadService);
   private readonly products = inject(ProductService);
+  private readonly attention = inject(AdminAttentionService);
+
+  /** The lead the address names (/admin/leads/:id), or null on the list. Staff pages pass nothing. */
+  readonly recordId = input<string | null>(null);
+  /** The user opened (id) or closed (null) a lead: the Admin shell mirrors it in the address. */
+  readonly recordChange = output<string | null>();
 
   /** Staff-only gate; customers and anonymous visitors never load data. */
   readonly canAccess = computed(() => this.auth.isStaff());
@@ -72,6 +84,17 @@ export class LeadsComponent {
     return leads.filter((l) => l.status === filter);
   });
 
+  readonly table = new TableState<LeadResponse>(() => this.filteredLeads(), {
+    searchText: (l) =>
+      `${l.name} ${l.phone} ${l.email ?? ''} ${l.source ?? ''} ${l.interestedProductId ?? ''} ${leadStatusLabel(l.status)}`,
+    sorters: {
+      name: (l) => l.name.toLowerCase(),
+      date: (l) => Date.parse(l.createdAt),
+      source: (l) => l.source?.toLowerCase() ?? null,
+      status: (l) => l.status,
+    },
+  });
+
   /** Product display name for the open detail (slug fallback while loading). */
   readonly detailProductName = computed(() => {
     const id = this.selected()?.interestedProductId;
@@ -103,14 +126,38 @@ export class LeadsComponent {
         this.loadLeads();
       }
     });
+    // The address names a lead (or no longer does): show it.
+    effect(() => {
+      const id = this.recordId();
+      untracked(() => {
+        if (!this.auth.isStaff() || id === this.selectedId()) return;
+        if (id) this.openRecord(id);
+        else this.closeRecord();
+      });
+    });
   }
 
   statusLabel(status: number): string {
     return leadStatusLabel(status);
   }
 
+  tone(status: number) {
+    return leadTone(status);
+  }
+
   setFilter(filter: LeadFilter): void {
     this.filter.set(filter);
+    this.table.resetPage();
+  }
+
+  clearFilters(): void {
+    this.filter.set(LEAD_FILTER_ALL);
+    this.table.reset();
+  }
+
+  /** True when a search or a status filter is narrowing the list. */
+  hasFilters(): boolean {
+    return this.filter() !== LEAD_FILTER_ALL || this.table.query().trim() !== '';
   }
 
   /** GET /api/leads — staff only; no-op otherwise or while loading. */
@@ -123,6 +170,7 @@ export class LeadsComponent {
       next: (leads) => {
         this.list.set(leads ?? []);
         this.listLoading.set(false);
+        this.attention.reportLeads(this.list() ?? []);
       },
       error: (err: unknown) => {
         this.listLoading.set(false);
@@ -131,9 +179,15 @@ export class LeadsComponent {
     });
   }
 
-  /** GET /api/leads/{id} — staff only; clears the previous detail first. */
+  /** The user chose a lead in the list: open it and let the Admin shell put it in the address. */
   viewDetails(id: string): void {
     if (!this.auth.isStaff()) return;
+    this.openRecord(id);
+    this.recordChange.emit(id);
+  }
+
+  /** GET /api/leads/{id} — staff only; clears the previous detail first. */
+  private openRecord(id: string): void {
     this.selectedId.set(id);
     this.selected.set(null);
     this.detailNotFound.set(false);
@@ -143,11 +197,13 @@ export class LeadsComponent {
     this.detailLoading.set(true);
     this.leads.getLead(id).subscribe({
       next: (lead) => {
+        if (this.selectedId() !== id) return;
         this.selected.set(lead);
         this.detailLoading.set(false);
         this.maybeLoadProducts(lead.interestedProductId);
       },
       error: (err: unknown) => {
+        if (this.selectedId() !== id) return;
         this.detailLoading.set(false);
         this.handleDetailError(err);
       },
@@ -155,6 +211,11 @@ export class LeadsComponent {
   }
 
   backToList(): void {
+    this.closeRecord();
+    this.recordChange.emit(null);
+  }
+
+  private closeRecord(): void {
     this.selectedId.set(null);
     this.selected.set(null);
     this.detailNotFound.set(false);
@@ -167,7 +228,7 @@ export class LeadsComponent {
   retryDetail(): void {
     const id = this.selectedId();
     if (id) {
-      this.viewDetails(id);
+      this.openRecord(id);
     }
   }
 
@@ -194,6 +255,7 @@ export class LeadsComponent {
         this.list.update((rows) =>
           rows === null ? rows : rows.map((r) => (r.id === updated.id ? updated : r))
         );
+        this.attention.reportLeads(this.list() ?? []);
         this.saveNotice.set(`Status updated to ${this.statusLabel(updated.status)}.`);
       },
       error: (err: unknown) => {
@@ -233,6 +295,7 @@ export class LeadsComponent {
     this.listError.set(null);
     this.forbidden.set(false);
     this.filter.set(LEAD_FILTER_ALL);
+    this.table.reset();
     this.selectedId.set(null);
     this.selected.set(null);
     this.detailLoading.set(false);

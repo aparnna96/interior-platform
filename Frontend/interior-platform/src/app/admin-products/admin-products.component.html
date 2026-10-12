@@ -1,191 +1,263 @@
-﻿<section class="admin-products" aria-label="Admin products workspace">
-  <header class="admin-products-head">
+﻿<section class="adm-page admin-products" aria-label="Admin products workspace">
+  <header class="adm-head">
     <div>
       <h1>Products</h1>
+      <p class="adm-head-sub">The furniture catalogue customers browse.</p>
     </div>
     @if (isAuthenticated() && canAccess() && !formOpen()) {
-      <button class="btn-primary" (click)="openCreate()">Add Product</button>
+      <div class="adm-head-actions">
+        <button type="button" class="adm-btn adm-btn-primary" (click)="openCreate()">Add Product</button>
+      </div>
     }
   </header>
 
   @if (!isAuthenticated()) {
-    <div class="admin-products-empty">
-      <span class="empty-icon" aria-hidden="true">
-        <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
-      </span>
-      <p>Log in to access the Products workspace</p>
-      <span>Product management is handled by Admin accounts. Open Account in the menu to log in.</span>
-    </div>
+    <app-admin-state
+      kind="login"
+      title="Log in to access the Products workspace"
+      message="Product management is handled by Admin accounts. Use the Admin log in page."
+    />
   } @else if (!canAccess()) {
-    <div class="admin-products-empty" role="alert">
-      <span class="empty-icon" aria-hidden="true">
-        <svg viewBox="0 0 16 16"><rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="8.5" x2="10.5" y2="8.5" stroke="currentColor" stroke-width="1.2"/></svg>
-      </span>
-      <p>You don't have access to this workspace.</p>
-      <span>This workspace is for Admin accounts.</span>
-    </div>
+    <app-admin-state kind="denied" title="You don't have access to this workspace." message="This workspace is for Admin accounts." />
   } @else if (forbidden()) {
-    <div class="admin-products-empty" role="alert">
-      <p>You don't have access to this workspace.</p>
-      <span>The server refused the products request for this account.</span>
-      <button class="btn-primary" (click)="loadProducts()">Try again</button>
-    </div>
+    <app-admin-state
+      kind="denied"
+      title="You don't have access to this workspace."
+      message="The server refused the products request for this account."
+      actionLabel="Try again"
+      (action)="loadProducts()"
+    />
   } @else {
     @if (notice()) {
-      <p class="product-notice" role="status">{{ notice() }}</p>
+      <p class="adm-notice product-notice" role="status">{{ notice() }}</p>
     }
+
     @if (formOpen()) {
-      <form class="product-form" [formGroup]="form" (ngSubmit)="submitForm()" aria-label="Product form" novalidate>
-        <h2>{{ editingId() === null ? 'Add Product' : 'Edit Product' }}</h2>
-        @if (editingId() === null) {
-          <label>Slug (required)
-            <input type="text" formControlName="id" autocomplete="off"
-              placeholder="aria-3s-sofa" aria-label="Product slug" />
-            <span class="hint">Lowercase letters, numbers and hyphens only. Cannot be changed later.</span>
+      <div class="adm-drawer-backdrop" aria-hidden="true" (click)="form.pristine && !saving() && closeForm()"></div>
+      <form
+        #drawer
+        class="adm-drawer product-form"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Product form"
+        [formGroup]="form"
+        (ngSubmit)="submitForm()"
+        (keydown)="onDrawerKeydown($event)"
+        novalidate
+      >
+        <div class="adm-drawer-head">
+          <h2>{{ editingId() === null ? 'Add Product' : 'Edit Product' }}</h2>
+          <button type="button" class="adm-link" (click)="closeForm()" [disabled]="saving()" aria-label="Close product form">Close</button>
+        </div>
+        <div class="adm-drawer-body">
+          @if (editingId() === null) {
+            <label class="adm-field">Slug *
+              <input type="text" formControlName="id" autocomplete="off"
+                placeholder="aria-3s-sofa" aria-label="Product slug" aria-required="true" />
+              <span class="adm-hint">Lowercase letters, numbers and hyphens only. Cannot be changed later.</span>
+            </label>
+          } @else {
+            <p class="adm-hint">Slug: <span class="adm-mono">{{ editingId() }}</span> (immutable)</p>
+          }
+          <label class="adm-field">Name *
+            <input type="text" formControlName="name" aria-label="Product name" aria-required="true" />
           </label>
-        } @else {
-          <p class="sub small">Slug: <span class="mono">{{ editingId() }}</span> (immutable)</p>
-        }
-        <label>Name (required)
-          <input type="text" formControlName="name" aria-label="Product name" />
-        </label>
-        <div class="field-row">
-          <label>Category (required)
-            <select formControlName="category" aria-label="Product category">
-              @for (c of categories; track c) {
-                <option [value]="c">{{ c }}</option>
+          <div class="adm-field-row">
+            <label class="adm-field">Category *
+              <select formControlName="category" aria-label="Product category" aria-required="true">
+                @for (c of categories; track c) {
+                  <option [value]="c">{{ c }}</option>
+                }
+              </select>
+            </label>
+            <label class="adm-field">Room *
+              <select formControlName="room" aria-label="Product room" aria-required="true">
+                @for (r of rooms; track r) {
+                  <option [value]="r">{{ r }}</option>
+                }
+              </select>
+            </label>
+          </div>
+          <div class="adm-field-row">
+            <label class="adm-field">Price (₹) *
+              <input type="number" formControlName="price" min="1" step="1" aria-label="Product price" aria-required="true" />
+              <span class="adm-hint">Whole number greater than 0.</span>
+            </label>
+            <label class="adm-field product-active">
+              <span>Visibility</span>
+              <span class="product-active-row">
+                <input type="checkbox" formControlName="isActive" aria-label="Product active" />
+                <span>Active (shown to customers)</span>
+              </span>
+            </label>
+          </div>
+          <div class="adm-field-row">
+            <label class="adm-field">Material *
+              <input type="text" formControlName="material" aria-label="Product material" aria-required="true" />
+            </label>
+            <label class="adm-field">Finish *
+              <input type="text" formControlName="finish" aria-label="Product finish" aria-required="true" />
+            </label>
+          </div>
+          <label class="adm-field">Blurb *
+            <input type="text" formControlName="blurb" aria-label="Product blurb" aria-required="true" />
+          </label>
+          <label class="adm-field">Description *
+            <textarea formControlName="description" rows="3" aria-label="Product description" aria-required="true"></textarea>
+          </label>
+          <label class="adm-field">Dimensions *
+            <input type="text" formControlName="dimensions" placeholder="220 × 92 × 82 cm" aria-label="Product dimensions" aria-required="true" />
+          </label>
+          <label class="adm-field">Image URL *
+            <input type="url" formControlName="imageUrl" placeholder="https://…" aria-label="Product image URL" aria-required="true" />
+            <span class="adm-hint">Absolute HTTP/HTTPS URL.</span>
+          </label>
+          @if (previewUrl(); as url) {
+            <div class="product-preview" aria-live="polite">
+              @if (previewFailedFor() === url) {
+                <p class="adm-hint">Preview unavailable for this address. Check the URL.</p>
+              } @else {
+                <img [src]="url" alt="Preview of the product image" (error)="previewFailedFor.set(url)" />
               }
-            </select>
+            </div>
+          }
+          <label class="adm-field">Details *
+            <textarea formControlName="details" rows="3" aria-label="Product details" aria-required="true"></textarea>
+            <span class="adm-hint">One bullet per line, at least one.</span>
           </label>
-          <label>Room (required)
-            <select formControlName="room" aria-label="Product room">
-              @for (r of rooms; track r) {
-                <option [value]="r">{{ r }}</option>
-              }
-            </select>
-          </label>
+          @if (formError()) {
+            <p class="adm-alert admin-products-error" role="alert">
+              {{ formError() }}
+              <button type="button" class="adm-link" (click)="submitForm()" [disabled]="saving()">Try again</button>
+            </p>
+          }
         </div>
-        <div class="field-row">
-          <label>Price in ₹ (required)
-            <input type="number" formControlName="price" min="1" step="1" aria-label="Product price" />
-            <span class="hint">Whole number greater than 0.</span>
-          </label>
-          <label class="check-row">Active
-            <input type="checkbox" formControlName="isActive" aria-label="Product active" />
-          </label>
-        </div>
-        <div class="field-row">
-          <label>Material (required)
-            <input type="text" formControlName="material" aria-label="Product material" />
-          </label>
-          <label>Finish (required)
-            <input type="text" formControlName="finish" aria-label="Product finish" />
-          </label>
-        </div>
-        <label>Blurb (required)
-          <input type="text" formControlName="blurb" aria-label="Product blurb" />
-        </label>
-        <label>Description (required)
-          <textarea formControlName="description" rows="3" aria-label="Product description"></textarea>
-        </label>
-        <label>Dimensions (required)
-          <input type="text" formControlName="dimensions" placeholder="220 × 92 × 82 cm" aria-label="Product dimensions" />
-        </label>
-        <label>Image URL (required)
-          <input type="url" formControlName="imageUrl" placeholder="https://…" aria-label="Product image URL" />
-          <span class="hint">Absolute HTTP/HTTPS URL.</span>
-        </label>
-        <label>Details (required)
-          <textarea formControlName="details" rows="3" aria-label="Product details"></textarea>
-          <span class="hint">One bullet per line, at least one.</span>
-        </label>
-        @if (formError()) {
-          <p class="admin-products-error" role="alert">
-            {{ formError() }}
-            <button type="button" class="linklike" (click)="submitForm()" [disabled]="saving()">Try again</button>
-          </p>
-        }
-        <div class="form-actions">
-          <button type="submit" class="btn-primary" [disabled]="saving()">
+        <div class="adm-drawer-foot form-actions">
+          <button type="submit" class="adm-btn adm-btn-primary" [disabled]="saving()">
             {{ saving() ? 'Saving…' : (editingId() === null ? 'Create Product' : 'Save Changes') }}
           </button>
-          <button type="button" class="btn-secondary" (click)="closeForm()" [disabled]="saving()">Cancel</button>
+          <button type="button" class="adm-btn" (click)="closeForm()" [disabled]="saving()">Cancel</button>
         </div>
       </form>
     }
+
     @if (listLoading() && list() === null) {
-      <div class="admin-products-empty" aria-live="polite">
-        <p>Loading products…</p>
-        <span>Fetching the admin catalogue.</span>
-      </div>
+      <app-admin-state kind="loading" title="Loading products…" message="Fetching the admin catalogue." />
     } @else if (listError()) {
-      <p class="admin-products-error" role="alert">
-        {{ listError() }}
-        <button class="linklike" (click)="loadProducts()">Try again</button>
-      </p>
+      <app-admin-state kind="error" [title]="listError()!" actionLabel="Try again" (action)="loadProducts()" />
     } @else if (list() !== null && list()!.length === 0) {
-      <div class="admin-products-empty">
-        <span class="empty-icon" aria-hidden="true">
-          <svg viewBox="0 0 16 16"><path d="M2.5 5.5h11l-0.8 7a1.5 1.5 0 0 1-1.5 1.3H4.8a1.5 1.5 0 0 1-1.5-1.3z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
-        </span>
-        <p>No products yet</p>
-        <span>Use Add Product to create the first catalogue entry.</span>
-      </div>
+      <app-admin-state kind="empty" title="No products yet" message="Use Add Product to create the first catalogue entry." />
     } @else if (list() !== null) {
-      <div class="product-rows" aria-live="polite">
-        @for (p of list()!; track p.id) {
-          <article class="product-row" [attr.aria-label]="'Product ' + p.name">
-            <div class="product-main">
-              <p class="product-name">{{ p.name }}</p>
-              <p class="product-meta">
-                <span class="status-pill">{{ p.isActive ? 'Active' : 'Inactive' }}</span>
-                <span>{{ p.category }}</span>
-                <span>{{ p.room }}</span>
-                <span class="mono">{{ p.id }}</span>
-              </p>
-              <p class="product-sub">
-                <span>₹{{ p.price.toLocaleString('en-IN') }}</span>
-                <span>{{ p.material }}</span>
-                <span>{{ p.finish }}</span>
-              </p>
-            </div>
-            <div class="product-side">
-              <button class="linklike" (click)="openEdit(p)" [attr.aria-label]="'Edit product ' + p.name">Edit</button>
-              @if (p.isActive) {
-                @if (confirmingDeactivateId() === p.id) {
-                  <span class="confirm-inline" role="group" aria-label="Confirm deactivation">
-                    <span>Deactivate this product?</span>
-                    <button
-                      class="btn-primary btn-sm"
-                      (click)="confirmDeactivate()"
-                      [disabled]="deactivatingId() !== null"
-                      [attr.aria-label]="'Confirm deactivate ' + p.name"
-                    >{{ deactivatingId() === p.id ? 'Deactivating…' : 'Confirm' }}</button>
-                    <button
-                      class="linklike"
-                      (click)="cancelDeactivate()"
-                      [disabled]="deactivatingId() !== null"
-                    >Cancel</button>
-                  </span>
-                } @else {
-                  <button
-                    class="linklike danger"
-                    (click)="requestDeactivate(p.id)"
-                    [disabled]="deactivatingId() !== null"
-                    [attr.aria-label]="'Deactivate product ' + p.name"
-                  >Deactivate</button>
-                }
-              }
-            </div>
-            @if (deactivateError() && confirmingDeactivateId() === p.id) {
-              <p class="admin-products-error" role="alert">
-                {{ deactivateError() }}
-                <button class="linklike" (click)="confirmDeactivate()" [disabled]="deactivatingId() !== null">Try again</button>
-              </p>
-            }
-          </article>
+      <div class="adm-toolbar" role="search">
+        <div class="adm-search">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 12.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z" /><path d="M11 11l3.5 3.5" /></svg>
+          <input
+            type="search"
+            aria-label="Search products"
+            placeholder="Search by name or slug"
+            autocomplete="off"
+            [value]="table.query()"
+            (input)="table.setQuery($any($event.target).value)"
+          />
+        </div>
+        <select class="adm-select" aria-label="Filter products by category" (change)="setCategoryFilter($any($event.target).value)">
+          <option value="all" [selected]="categoryFilter() === 'all'">All categories</option>
+          @for (c of categories; track c) {
+            <option [value]="c" [selected]="categoryFilter() === c">{{ c }}</option>
+          }
+        </select>
+        <select class="adm-select" aria-label="Filter products by room" (change)="setRoomFilter($any($event.target).value)">
+          <option value="all" [selected]="roomFilter() === 'all'">All rooms</option>
+          @for (r of rooms; track r) {
+            <option [value]="r" [selected]="roomFilter() === r">{{ r }}</option>
+          }
+        </select>
+        <select class="adm-select" aria-label="Filter products by status" (change)="setActiveFilter($any($event.target).value)">
+          <option value="all" [selected]="activeFilter() === 'all'">Active and inactive</option>
+          <option value="active" [selected]="activeFilter() === 'active'">Active only</option>
+          <option value="inactive" [selected]="activeFilter() === 'inactive'">Inactive only</option>
+        </select>
+        @if (hasFilters()) {
+          <button type="button" class="adm-link" (click)="clearFilters()">Clear filters</button>
         }
       </div>
+
+      @if (deactivateError() && confirmingDeactivateId()) {
+        <p class="adm-alert admin-products-error" role="alert">
+          {{ deactivateError() }}
+          <button type="button" class="adm-link" (click)="confirmDeactivate()" [disabled]="deactivatingId() !== null">Try again</button>
+        </p>
+      }
+
+      @if (table.total() === 0) {
+        <app-admin-state
+          kind="empty"
+          title="No products match"
+          message="Try a different search or filter."
+          actionLabel="Clear filters"
+          (action)="clearFilters()"
+        />
+      } @else {
+        <div class="adm-table-wrap" role="region" aria-label="Products table" tabindex="0">
+          <table class="adm-table product-rows" aria-live="polite">
+            <caption class="adm-sr-only">Products</caption>
+            <thead>
+              <tr>
+                <th><span class="adm-sr-only">Image</span></th>
+                <th admSort="name" [table]="table">Product</th>
+                <th admSort="category" [table]="table">Category</th>
+                <th admSort="room" [table]="table">Room</th>
+                <th admSort="price" [table]="table" class="adm-num">Price</th>
+                <th admSort="status" [table]="table">Status</th>
+                <th class="adm-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of table.pageRows(); track p.id) {
+                <tr class="product-row" [attr.aria-label]="'Product ' + p.name">
+                  <td class="product-thumb-cell"><img class="adm-thumb" [src]="p.image" alt="" loading="lazy" /></td>
+                  <td>
+                    <span class="adm-cell-main product-name">{{ p.name }}</span>
+                    <span class="adm-cell-sub adm-mono">{{ p.id }}</span>
+                    <span class="adm-cell-sub">{{ p.material }} · {{ p.finish }}</span>
+                  </td>
+                  <td>{{ p.category }}</td>
+                  <td>{{ p.room }}</td>
+                  <td class="adm-num adm-cell-main">₹{{ p.price.toLocaleString('en-IN') }}</td>
+                  <td><app-badge [tone]="p.isActive ? 'success' : 'neutral'">{{ p.isActive ? 'Active' : 'Inactive' }}</app-badge></td>
+                  <td class="adm-actions"><div class="product-actions">
+                    <button type="button" class="adm-link" (click)="openEdit(p)" [attr.aria-label]="'Edit product ' + p.name">Edit</button>
+                    @if (p.isActive) {
+                      @if (confirmingDeactivateId() === p.id) {
+                        <span class="confirm-inline" role="group" aria-label="Confirm deactivation">
+                          <span>Deactivate this product?</span>
+                          <button
+                            type="button"
+                            class="adm-btn adm-btn-primary adm-btn-sm"
+                            (click)="confirmDeactivate()"
+                            [disabled]="deactivatingId() !== null"
+                            [attr.aria-label]="'Confirm deactivate ' + p.name"
+                          >{{ deactivatingId() === p.id ? 'Deactivating…' : 'Confirm' }}</button>
+                          <button type="button" class="adm-link" (click)="cancelDeactivate()" [disabled]="deactivatingId() !== null">Cancel</button>
+                        </span>
+                      } @else {
+                        <button
+                          type="button"
+                          class="adm-link adm-link-danger"
+                          (click)="requestDeactivate(p.id)"
+                          [disabled]="deactivatingId() !== null"
+                          [attr.aria-label]="'Deactivate product ' + p.name"
+                        >Deactivate</button>
+                      }
+                    }
+                  </div></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-admin-pager [table]="table" label="products" />
+      }
     }
   }
 </section>

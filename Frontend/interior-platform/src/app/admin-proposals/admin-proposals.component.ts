@@ -1,5 +1,5 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { AuthService } from '../auth.service';
 import {
   ProposalService,
@@ -8,6 +8,21 @@ import {
   type AdminProposalDetailDto,
   type AdminProposalSummaryDto,
 } from '../proposal/proposal.service';
+import { AdminAttentionService } from '../shared/admin/admin-attention.service';
+import { AdminPagerComponent } from '../shared/admin/admin-pager.component';
+import { AdminStateComponent } from '../shared/admin/admin-state.component';
+import { BadgeComponent, paymentTone, proposalPaymentTone } from '../shared/admin/badge.component';
+import { SortHeaderComponent } from '../shared/admin/sort-header.component';
+import { TableState } from '../shared/admin/table-state';
+
+/** Payment filter: every proposal, or one payment state worked out from the list flags. */
+export type ProposalFilter = 'all' | 'verified' | 'pending' | 'none';
+
+/** The payment state shown in a list row (display only, derived from the backend flags). */
+function paymentState(p: AdminProposalSummaryDto): Exclude<ProposalFilter, 'all'> {
+  if (p.isPaymentVerified) return 'verified';
+  return p.paymentAttemptCount > 0 ? 'pending' : 'none';
+}
 
 /**
  * Internal Admin-only proposal and payment operations over
@@ -30,13 +45,19 @@ import {
 @Component({
   selector: 'app-admin-proposals',
   standalone: true,
-  imports: [CommonModule],
+  imports: [DatePipe, AdminPagerComponent, AdminStateComponent, BadgeComponent, SortHeaderComponent],
   templateUrl: './admin-proposals.component.html',
   styleUrl: './admin-proposals.component.css',
 })
 export class AdminProposalsComponent {
   private readonly auth = inject(AuthService);
   private readonly proposals = inject(ProposalService);
+  private readonly attention = inject(AdminAttentionService);
+
+  /** The proposal the address names (/admin/proposals/:id), or null on the list. */
+  readonly recordId = input<string | null>(null);
+  /** The Admin opened (id) or closed (null) a proposal: the shell mirrors it in the address. */
+  readonly recordChange = output<string | null>();
 
   /** Admin-only gate; anyone else never loads admin data. */
   readonly canAccess = computed(() => this.auth.isAdmin());
@@ -46,6 +67,30 @@ export class AdminProposalsComponent {
   readonly listLoading = signal(false);
   readonly listError = signal<string | null>(null);
   readonly forbidden = signal(false);
+
+  readonly paymentFilter = signal<ProposalFilter>('all');
+  readonly filterOptions: readonly { value: ProposalFilter; label: string }[] = [
+    { value: 'all', label: 'All payment states' },
+    { value: 'verified', label: 'Token Payment Verified' },
+    { value: 'pending', label: 'Payment Pending' },
+    { value: 'none', label: 'No Payment Attempt' },
+  ];
+
+  readonly table = new TableState<AdminProposalSummaryDto>(() => this.list() ?? [], {
+    searchText: (p) => `${p.id} ${p.customerEmail ?? ''} ${p.userId} ${this.listPaymentLabel(p)}`,
+    filter: () => {
+      const f = this.paymentFilter();
+      return f === 'all' ? null : (p) => paymentState(p) === f;
+    },
+    sorters: {
+      id: (p) => p.id,
+      customer: (p) => (p.customerEmail ?? p.userId).toLowerCase(),
+      date: (p) => Date.parse(p.createdAt),
+      area: (p) => p.area,
+      payment: (p) => (p.isPaymentVerified ? 2 : p.paymentAttemptCount > 0 ? 1 : 0),
+      amount: (p) => p.estimatedAmount,
+    },
+  });
 
   readonly selectedId = signal<string | null>(null);
   readonly selected = signal<AdminProposalDetailDto | null>(null);
@@ -76,6 +121,15 @@ export class AdminProposalsComponent {
         this.loadProposals();
       }
     });
+    // The address names a proposal (or no longer does): show it.
+    effect(() => {
+      const id = this.recordId();
+      untracked(() => {
+        if (!this.auth.isAdmin() || id === this.selectedId()) return;
+        if (id) this.openRecord(id);
+        else this.closeRecord();
+      });
+    });
   }
 
   statusLabel(status: number): string {
@@ -84,6 +138,29 @@ export class AdminProposalsComponent {
 
   paymentStatusLabel(status: number): string {
     return proposalPaymentStatusLabel(status);
+  }
+
+  listTone(proposal: AdminProposalSummaryDto) {
+    return proposalPaymentTone(proposal);
+  }
+
+  paymentRowTone(status: number) {
+    return paymentTone(status);
+  }
+
+  setPaymentFilter(value: string): void {
+    this.paymentFilter.set(value as ProposalFilter);
+    this.table.resetPage();
+  }
+
+  clearFilters(): void {
+    this.paymentFilter.set('all');
+    this.table.reset();
+  }
+
+  /** True when a search or a payment filter is narrowing the list. */
+  hasFilters(): boolean {
+    return this.paymentFilter() !== 'all' || this.table.query().trim() !== '';
   }
 
   /** List-row payment state derived from the backend flags (display only). */
@@ -125,6 +202,7 @@ export class AdminProposalsComponent {
       next: (proposals) => {
         this.list.set(proposals ?? []);
         this.listLoading.set(false);
+        this.attention.reportProposals(this.list() ?? []);
       },
       error: (err: unknown) => {
         this.listLoading.set(false);
@@ -133,9 +211,15 @@ export class AdminProposalsComponent {
     });
   }
 
-  /** GET /api/admin/proposals/{id} — Admin only; clears the previous detail first. */
+  /** The Admin chose a proposal in the list: open it and let the shell put it in the address. */
   viewDetails(id: string): void {
     if (!this.auth.isAdmin()) return;
+    this.openRecord(id);
+    this.recordChange.emit(id);
+  }
+
+  /** GET /api/admin/proposals/{id} — Admin only; clears the previous detail first. */
+  private openRecord(id: string): void {
     this.selectedId.set(id);
     this.selected.set(null);
     this.detailNotFound.set(false);
@@ -146,10 +230,12 @@ export class AdminProposalsComponent {
     this.pdfError.set(null);
     this.proposals.getAdminProposal(id).subscribe({
       next: (proposal) => {
+        if (this.selectedId() !== id) return;
         this.selected.set(proposal);
         this.detailLoading.set(false);
       },
       error: (err: unknown) => {
+        if (this.selectedId() !== id) return;
         this.detailLoading.set(false);
         this.handleDetailError(err);
       },
@@ -157,6 +243,11 @@ export class AdminProposalsComponent {
   }
 
   backToList(): void {
+    this.closeRecord();
+    this.recordChange.emit(null);
+  }
+
+  private closeRecord(): void {
     this.selectedId.set(null);
     this.selected.set(null);
     this.detailNotFound.set(false);
@@ -170,7 +261,7 @@ export class AdminProposalsComponent {
   retryDetail(): void {
     const id = this.selectedId();
     if (id) {
-      this.viewDetails(id);
+      this.openRecord(id);
     }
   }
 
@@ -228,6 +319,8 @@ export class AdminProposalsComponent {
     this.detailForbidden.set(false);
     this.pdfDownloading.set(false);
     this.pdfError.set(null);
+    this.paymentFilter.set('all');
+    this.table.reset();
   }
 
   private handleListError(err: unknown): void {

@@ -2,21 +2,21 @@
   @if (showAdminLogin()) {
     <app-admin-login />
   } @else {
-    <app-admin-layout [activeView]="activeView()" (navigate)="onAdminNavigate($event)">
+    <app-admin-layout [activeView]="activeView()" [recordId]="routeRecordId()" (navigate)="onAdminNavigate($event)">
       @if (activeView() === 'admin-leads') {
-        <app-leads />
+        <app-leads [recordId]="routeRecordId()" (recordChange)="onAdminRecord('admin-leads', $event)" />
       }
       @if (activeView() === 'admin-dashboard') {
-        <app-admin-dashboard (navigate)="activeView.set($event)" />
+        <app-admin-dashboard (navigate)="onAdminNavigate($event)" />
       }
       @if (activeView() === 'admin-products') {
         <app-admin-products />
       }
       @if (activeView() === 'admin-orders') {
-        <app-admin-orders />
+        <app-admin-orders [recordId]="routeRecordId()" (recordChange)="onAdminRecord('admin-orders', $event)" />
       }
       @if (activeView() === 'admin-proposals') {
-        <app-admin-proposals />
+        <app-admin-proposals [recordId]="routeRecordId()" (recordChange)="onAdminRecord('admin-proposals', $event)" />
       }
       @if (activeView() === 'admin-rates') {
         <app-admin-rates />

@@ -197,16 +197,52 @@ describe('AppComponent routing', () => {
       expect(location.path()).toBe('/admin/login');
     });
 
-    it('/admin opens the dashboard for an admin and shows no shortcut to anyone else', async () => {
+    it('/admin opens the dashboard for an admin and shows nothing of it to anyone else', async () => {
       const { fixture, app, el } = await setup(ADMIN);
       await go(fixture, '/admin');
       expect(app.activeView()).toBe('admin-dashboard');
       expect(location.path()).toBe('/admin');
       expect(el.querySelector('app-admin-dashboard')).toBeTruthy();
-      expect(el.querySelectorAll('app-admin-dashboard .action-card').length).toBe(5);
+      expect(el.querySelectorAll('app-admin-dashboard .summary-card').length).toBe(6);
       // An admin sees the page inside the Admin workspace shell, not the customer layout.
       expect(el.querySelector('app-admin-layout app-admin-dashboard')).toBeTruthy();
       expect(el.querySelector('#app-sidebar')).toBeNull();
+    });
+
+    it('/admin/orders/:id opens that order inside the Admin shell and keeps the id in the address', async () => {
+      const { fixture, app, el } = await setup(ADMIN);
+      await go(fixture, '/admin/orders/order-42');
+      expect(app.activeView()).toBe('admin-orders');
+      expect(app.routeRecordId()).toBe('order-42');
+      expect(location.path()).toBe('/admin/orders/order-42');
+      expect(el.querySelector('app-admin-layout app-admin-orders')).toBeTruthy();
+      expect(el.querySelector('.admin-crumbs')!.textContent).toContain('order-42');
+    });
+
+    it('going back from a record to its list clears the record and keeps the list page', async () => {
+      const { fixture, app } = await setup(ADMIN);
+      await go(fixture, '/admin/proposals/p-1');
+      expect(app.routeRecordId()).toBe('p-1');
+      await go(fixture, '/admin/proposals');
+      expect(app.activeView()).toBe('admin-proposals');
+      expect(app.routeRecordId()).toBeNull();
+    });
+
+    it('choosing the open page in the Admin sidebar returns from a record to the list', async () => {
+      const { fixture, app } = await setup(ADMIN);
+      await go(fixture, '/admin/leads/l-1');
+      expect(app.routeRecordId()).toBe('l-1');
+      app.onAdminNavigate('admin-leads');
+      await fixture.whenStable();
+      expect(location.path()).toBe('/admin/leads');
+      expect(app.routeRecordId()).toBeNull();
+    });
+
+    it('a visitor opening an Admin record is sent to the Admin login and brought back to it', async () => {
+      const { fixture, app } = await setup();
+      await go(fixture, '/admin/orders/order-42');
+      expect(app.activeView()).toBe('admin-login');
+      expect(location.path()).toBe('/admin/login?returnUrl=%2Fadmin%2Forders%2Forder-42');
     });
 
     it('an admin is moved from /leads to /admin/leads in the Admin shell, field staff keep the workspace layout', async () => {

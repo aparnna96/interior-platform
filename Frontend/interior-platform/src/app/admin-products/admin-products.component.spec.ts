@@ -140,7 +140,7 @@ describe('AdminProductsComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('Something went wrong');
 
-    (el.querySelector('.admin-products-error button') as HTMLButtonElement).click();
+    (el.querySelector('.adm-state button') as HTMLButtonElement).click();
     httpMock.expectOne(ADMIN_URL).flush([adminRow({ id: 'aria-3s-sofa' })]);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Aria 3-Seater Fabric Sofa');
@@ -480,5 +480,94 @@ describe('AdminProductsComponent', () => {
 
     expect(localSet).not.toHaveBeenCalled();
     expect(sessionSet).not.toHaveBeenCalled();
+  });
+
+  describe('table, filters and the product drawer', () => {
+    const catalogue = () => [
+      adminRow({ id: 'aria-3s-sofa' }),
+      adminRow({ id: 'oslo-bed', name: 'Oslo Bed', category: 'Beds', room: 'Bedroom', price: 30000 }),
+      adminRow({ id: 'retired-chair', name: 'Retired Chair', category: 'Chairs', isActive: false }),
+    ];
+    const names = (el: HTMLElement) => Array.from(el.querySelectorAll('tbody .product-name')).map((n) => n.textContent!.trim());
+    const choose = (fixture: { detectChanges(): void }, el: HTMLElement, label: string, value: string) => {
+      const select = el.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`)!;
+      select.value = value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    };
+
+    it('is a table with an image, status badge and actions column', () => {
+      const el = setupAdmin(catalogue()).nativeElement as HTMLElement;
+      expect(Array.from(el.querySelectorAll('thead th')).map((h) => h.textContent!.replace(/[▲▼↕]/g, '').trim())).toEqual([
+        'Image', 'Product', 'Category', 'Room', 'Price', 'Status', 'Actions',
+      ]);
+      expect(el.querySelectorAll('tbody img.adm-thumb').length).toBe(3);
+      expect(Array.from(el.querySelectorAll('tbody .adm-badge')).map((b) => b.getAttribute('data-tone'))).toEqual(['success', 'success', 'neutral']);
+    });
+
+    it('filters by category, room and active state, and searches by name', () => {
+      const fixture = setupAdmin(catalogue());
+      const el = fixture.nativeElement as HTMLElement;
+      choose(fixture, el, 'Filter products by category', 'Beds');
+      expect(names(el)).toEqual(['Oslo Bed']);
+      choose(fixture, el, 'Filter products by category', 'all');
+      choose(fixture, el, 'Filter products by status', 'inactive');
+      expect(names(el)).toEqual(['Retired Chair']);
+      choose(fixture, el, 'Filter products by status', 'all');
+      choose(fixture, el, 'Filter products by room', 'Bedroom');
+      expect(names(el)).toEqual(['Oslo Bed']);
+      choose(fixture, el, 'Filter products by room', 'all');
+      const input = el.querySelector<HTMLInputElement>('input[aria-label="Search products"]')!;
+      input.value = 'retired';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(names(el)).toEqual(['Retired Chair']);
+    });
+
+    it('opens the form as a modal drawer, closes it on Escape and Close, and keeps the table behind it', () => {
+      const fixture = setupAdmin(catalogue());
+      const el = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.openCreate();
+      fixture.detectChanges();
+      const form = el.querySelector('form[aria-label="Product form"]')!;
+      expect(form.getAttribute('role')).toBe('dialog');
+      expect(form.getAttribute('aria-modal')).toBe('true');
+      expect(form.classList.contains('adm-drawer')).toBeTrue();
+      expect(el.querySelector('.adm-drawer-backdrop')).toBeTruthy();
+      expect(el.querySelector('table.product-rows')).toBeTruthy();
+
+      form.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+      expect(el.querySelector('form[aria-label="Product form"]')).toBeNull();
+
+      fixture.componentInstance.openCreate();
+      fixture.detectChanges();
+      (el.querySelector('button[aria-label="Close product form"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(el.querySelector('form[aria-label="Product form"]')).toBeNull();
+    });
+
+    it('previews the image for a valid URL and says so when it cannot be loaded', () => {
+      const fixture = setupAdmin(catalogue());
+      const el = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.openCreate();
+      fixture.detectChanges();
+      expect(el.querySelector('.product-preview')).toBeNull();
+
+      const url = 'https://example.invalid/sofa.jpg';
+      fixture.componentInstance.form.controls.imageUrl.setValue(url);
+      fixture.detectChanges();
+      const img = el.querySelector<HTMLImageElement>('.product-preview img')!;
+      expect(img.getAttribute('src')).toBe(url);
+
+      img.dispatchEvent(new Event('error'));
+      fixture.detectChanges();
+      expect(el.querySelector('.product-preview img')).toBeNull();
+      expect(el.querySelector('.product-preview')!.textContent).toContain('Preview unavailable');
+
+      fixture.componentInstance.form.controls.imageUrl.setValue('not a url');
+      fixture.detectChanges();
+      expect(el.querySelector('.product-preview')).toBeNull();
+    });
   });
 });
