@@ -64,11 +64,52 @@
 }
 .admin-chip {
   display: inline-flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0;
-  margin-left: auto;
-  max-width: 340px;
+  max-width: 340px; font: inherit; cursor: pointer; color: var(--ink);
   border: 1px solid var(--border); border-radius: 99px; background: var(--surface-soft);
-  padding: 3px 12px 3px 3px; font-size: 13px;
+  padding: 3px 10px 3px 3px; font-size: 13px;
 }
+.admin-chip:hover { border-color: var(--accent); }
+.admin-chip:focus-visible { outline: 2px solid var(--btn-bg); outline-offset: 2px; }
+.admin-chip-caret { width: 12px; height: 12px; flex: none; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Breadcrumb: where the Admin is. Not a heading - each page keeps its own h1. */
+.admin-crumbs { min-width: 0; flex: 0 1 auto; }
+.admin-crumbs ol { display: flex; align-items: center; flex-wrap: nowrap; gap: 0; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); min-width: 0; }
+.admin-crumbs li { display: inline-flex; align-items: center; min-width: 0; white-space: nowrap; }
+.admin-crumbs li + li::before { content: "/"; margin: 0 8px; color: var(--border); }
+.admin-crumbs li:last-child { color: var(--ink); font-weight: 650; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.admin-crumb-link { border: 0; background: none; padding: 6px 0; font: inherit; color: var(--accent-ink); cursor: pointer; }
+.admin-crumb-link:hover { text-decoration: underline; }
+.admin-crumb-link:focus-visible { outline: 2px solid var(--btn-bg); outline-offset: 2px; }
+.admin-crumb-id { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12.5px; }
+
+/* Header search: jumps to a page. */
+.admin-jump { position: relative; flex: 1 1 220px; max-width: 320px; margin-left: 16px; min-width: 0; }
+.admin-jump > svg { position: absolute; left: 11px; top: 50%; width: 15px; height: 15px; transform: translateY(-50%); fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linecap: round; pointer-events: none; }
+.admin-jump-input {
+  width: 100%; min-height: 38px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface-soft);
+  color: var(--ink); font: inherit; font-size: 13px; padding: 6px 14px 6px 34px;
+}
+.admin-jump-input:focus-visible { outline: 2px solid var(--btn-bg); outline-offset: 1px; background: #fff; }
+.admin-jump-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 40; margin: 0; padding: 4px; list-style: none;
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(11, 26, 48, 0.14);
+}
+.admin-jump-results button { width: 100%; min-height: 38px; text-align: left; border: 0; background: none; border-radius: 6px; padding: 6px 10px; font: inherit; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+.admin-jump-results button:hover, .admin-jump-results button:focus-visible { background: var(--surface-soft); }
+.admin-jump-none { padding: 8px 10px; font-size: 13px; color: var(--muted); }
+
+/* Signed-in menu */
+.admin-user { position: relative; margin-left: auto; min-width: 0; }
+.admin-user-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; min-width: 220px; padding: 6px;
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(11, 26, 48, 0.14);
+  display: grid;
+}
+.admin-user-menu-email { margin: 0; padding: 8px 10px 10px; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; border-bottom: 1px solid var(--border-soft); margin-bottom: 4px; }
+.admin-user-menu button { min-height: 40px; text-align: left; border: 0; background: none; border-radius: 6px; padding: 8px 10px; font: inherit; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+.admin-user-menu button:hover, .admin-user-menu button:focus-visible { background: var(--surface-soft); }
+.admin-user-menu-out { color: var(--danger) !important; }
 .admin-chip-role {
   flex: none;
   background: var(--nav-bg); color: var(--nav-gold); border-radius: 99px;
@@ -114,6 +155,8 @@
   .admin-drawer-close { display: inline-flex; position: absolute; top: 12px; right: 12px; }
   .admin-topbar { padding: 8px 14px; gap: 10px; }
   .admin-chip { max-width: 190px; }
+  .admin-jump { display: none; }
+  .admin-crumbs { flex: 1 1 auto; }
   .admin-content { padding: 16px 14px 28px; }
 }
 

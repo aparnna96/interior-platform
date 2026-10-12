@@ -29,6 +29,10 @@
               }
             </svg>
             <span>{{ item.label }}</span>
+            @if (badgeFor(item.view); as count) {
+              <span class="adm-count-badge" aria-hidden="true">{{ count }}</span>
+              <span class="admin-sr-only">, {{ count }} need attention</span>
+            }
           </button>
         }
       </nav>
@@ -76,13 +80,80 @@
           }
         </svg>
       </button>
-      <span class="admin-chip" [attr.title]="email()">
-        <span class="admin-sr-only">Signed in as </span>
-        <span class="admin-chip-role">Admin</span>
-        @if (email(); as address) {
-          <span class="admin-chip-email">{{ address }}</span>
+      <nav class="admin-crumbs" aria-label="Breadcrumb">
+        <ol>
+          @for (crumb of crumbs(); track $index; let last = $last) {
+            <li>
+              @if (crumb.view; as target) {
+                <button type="button" class="admin-crumb-link" (click)="select(target)">{{ crumb.label }}</button>
+              } @else {
+                <span [class.admin-crumb-id]="crumb.mono" [attr.aria-current]="last ? 'page' : null">{{ crumb.label }}</span>
+              }
+            </li>
+          }
+        </ol>
+      </nav>
+
+      <div class="admin-jump">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          @for (d of icons.search; track d) {
+            <path [attr.d]="d" />
+          }
+        </svg>
+        <input
+          #jumpInput
+          type="search"
+          class="admin-jump-input"
+          placeholder="Jump to page  ( / )"
+          aria-label="Jump to a page"
+          autocomplete="off"
+          [value]="jumpQuery()"
+          (input)="onJumpInput($event)"
+          (keydown.enter)="jumpToFirst()"
+        />
+        @if (jumpQuery().trim() !== '') {
+          <ul class="admin-jump-results" aria-label="Matching pages">
+            @for (target of jumpResults(); track target.view) {
+              <li><button type="button" (click)="jumpTo(target.view)">{{ target.label }}</button></li>
+            } @empty {
+              <li class="admin-jump-none">No page matches</li>
+            }
+          </ul>
         }
-      </span>
+      </div>
+
+      <div class="admin-user">
+        <button
+          #userButton
+          type="button"
+          class="admin-chip"
+          [attr.title]="email()"
+          aria-haspopup="true"
+          aria-controls="admin-user-menu"
+          [attr.aria-expanded]="userMenuOpen()"
+          (click)="toggleUserMenu()"
+        >
+          <span class="admin-sr-only">Signed in as </span>
+          <span class="admin-chip-role">Admin</span>
+          @if (email(); as address) {
+            <span class="admin-chip-email">{{ address }}</span>
+          }
+          <svg class="admin-chip-caret" viewBox="0 0 16 16" aria-hidden="true">
+            @for (d of icons.chevron; track d) {
+              <path [attr.d]="d" />
+            }
+          </svg>
+        </button>
+        @if (userMenuOpen()) {
+          <div class="admin-user-menu" id="admin-user-menu" role="group" aria-label="Account">
+            @if (email(); as address) {
+              <p class="admin-user-menu-email">{{ address }}</p>
+            }
+            <button type="button" (click)="select('home')">View customer site</button>
+            <button type="button" class="admin-user-menu-out" (click)="logout()">Log out</button>
+          </div>
+        }
+      </div>
     </header>
     <main #mainRegion id="admin-main" class="admin-content" tabindex="-1">
       <ng-content />

@@ -5,6 +5,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { AdminLayoutComponent } from './admin-layout.component';
 import { AUTH_TOKEN_KEY, AuthService } from '../auth.service';
 import type { AppView } from '../app-paths';
+import { AdminAttentionService } from '../shared/admin/admin-attention.service';
 
 const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
 
@@ -22,13 +23,14 @@ const ADMIN_NO_EMAIL = jwt({ [ROLE_CLAIM]: 'Admin' });
   standalone: true,
   imports: [AdminLayoutComponent],
   template: `
-    <app-admin-layout [activeView]="view()" (navigate)="picked.push($event)">
+    <app-admin-layout [activeView]="view()" [recordId]="record()" (navigate)="picked.push($event)">
       <p class="projected">Page body</p>
     </app-admin-layout>
   `,
 })
 class HostComponent {
   readonly view = signal<AppView>('admin-dashboard');
+  readonly record = signal<string | null>(null);
   readonly picked: AppView[] = [];
 }
 
@@ -91,9 +93,9 @@ describe('AdminLayoutComponent', () => {
       await setup();
       const groups = Array.from(el.querySelectorAll('.admin-nav-label')).map((e) => e.textContent?.trim());
       expect(groups).toEqual(['Overview', 'Manage', 'Site']);
-      // Each group is its own labelled navigation landmark.
+      // Each group is its own labelled navigation landmark; the header adds the breadcrumb.
       const landmarks = Array.from(el.querySelectorAll('nav')).map((n) => n.getAttribute('aria-label'));
-      expect(landmarks).toEqual(['Overview', 'Manage', 'Site']);
+      expect(landmarks).toEqual(['Overview', 'Manage', 'Site', 'Breadcrumb']);
       expect(q('aside')!.getAttribute('aria-label')).toBe('Admin navigation');
     });
 
@@ -125,10 +127,28 @@ describe('AdminLayoutComponent', () => {
   });
 
   describe('active state and header', () => {
-    it('does not repeat the page title in the header: each page shows its own heading', async () => {
+    it('shows where you are as a breadcrumb, not as a second heading: each page shows its own h1', async () => {
       await setup();
       expect(q('.admin-topbar-title')).toBeNull();
-      expect(q('.admin-topbar')!.textContent).not.toContain('Dashboard');
+      expect(q('.admin-topbar h1, .admin-topbar h2')).toBeNull();
+      const steps = Array.from(el.querySelectorAll('.admin-crumbs li')).map((li) => li.textContent?.trim());
+      expect(steps).toEqual(['Admin', 'Dashboard']);
+      expect(q('.admin-crumbs [aria-current="page"]')!.textContent?.trim()).toBe('Dashboard');
+    });
+
+    it('adds the open record to the breadcrumb and links back to the list', async () => {
+      const host = await setup(ADMIN_WITH_EMAIL, 'admin-orders');
+      host.record.set('3fa85f64-1111-2222');
+      fixture.detectChanges();
+      const steps = Array.from(el.querySelectorAll('.admin-crumbs li')).map((li) => li.textContent?.trim());
+      expect(steps).toEqual(['Admin', 'Orders', '3fa85f64']);
+      // The list step is a link back; the record is the current page.
+      const back = q<HTMLButtonElement>('.admin-crumbs .admin-crumb-link:last-of-type');
+      expect(Array.from(el.querySelectorAll('.admin-crumb-link')).map((b) => b.textContent?.trim())).toEqual(['Admin', 'Orders']);
+      expect(back).toBeTruthy();
+      expect(q('.admin-crumbs [aria-current="page"]')!.textContent?.trim()).toBe('3fa85f64');
+      (el.querySelectorAll('.admin-crumb-link')[1] as HTMLButtonElement).click();
+      expect(host.picked).toEqual(['admin-orders']);
     });
 
     it('keeps the identity chip at the right edge of the header', async () => {
@@ -362,6 +382,87 @@ describe('AdminLayoutComponent', () => {
       }
       expect(isOpen()).toBeFalse();
       expect(q('.admin-main')!.getAttribute('inert')).toBeNull();
+    });
+  });
+
+  describe('sidebar badges, user menu and jump search', () => {
+    it('shows a count only where something is waiting, and says so to screen readers', async () => {
+      await setup();
+      const attention = TestBed.inject(AdminAttentionService);
+      expect(el.querySelectorAll('.adm-count-badge').length).toBe(0);
+
+      attention.reportOrders([{ status: 0 }, { status: 0 }, { status: 3 }]);
+      attention.reportLeads([{ status: 0 }]);
+      attention.reportProposals([{ isPaymentVerified: false, paymentAttemptCount: 0 }]);
+      fixture.detectChanges();
+
+      const text = (view: string) => items().find((b) => b.textContent!.trim().startsWith(view))!.textContent!.replace(/\s+/g, ' ').trim();
+      expect(text('Orders')).toBe('Orders2, 2 need attention');
+      expect(text('Leads')).toBe('Leads1, 1 need attention');
+      // A proposal with no payment attempt is not waiting on anything.
+      expect(text('Proposals')).toBe('Proposals');
+    });
+
+    it('opens the user menu, which offers the customer site and Log out, and closes on Escape', async () => {
+      const host = await setup();
+      const chip = q<HTMLButtonElement>('.admin-chip')!;
+      expect(chip.getAttribute('aria-expanded')).toBe('false');
+      expect(q('.admin-user-menu')).toBeNull();
+
+      chip.click();
+      fixture.detectChanges();
+      expect(chip.getAttribute('aria-expanded')).toBe('true');
+      const buttons = Array.from(el.querySelectorAll('.admin-user-menu button')).map((b) => b.textContent!.trim());
+      expect(buttons).toEqual(['View customer site', 'Log out']);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+      expect(q('.admin-user-menu')).toBeNull();
+      expect(document.activeElement).toBe(chip);
+
+      chip.click();
+      fixture.detectChanges();
+      (el.querySelector('.admin-user-menu button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(host.picked).toEqual(['home']);
+      expect(q('.admin-user-menu')).toBeNull();
+    });
+
+    it('Log out from the user menu ends the session and asks for the Admin login page', async () => {
+      const host = await setup();
+      q<HTMLButtonElement>('.admin-chip')!.click();
+      fixture.detectChanges();
+      (el.querySelector('.admin-user-menu-out') as HTMLButtonElement).click();
+      expect(TestBed.inject(AuthService).isAuthenticated()).toBeFalse();
+      expect(host.picked).toEqual(['admin-login']);
+    });
+
+    it('closes the user menu on a click elsewhere', async () => {
+      await setup();
+      q<HTMLButtonElement>('.admin-chip')!.click();
+      fixture.detectChanges();
+      document.body.click();
+      fixture.detectChanges();
+      expect(q('.admin-user-menu')).toBeNull();
+    });
+
+    it('jumps to a page from the header search: matches by name and opens the first match on Enter', async () => {
+      const host = await setup();
+      const input = q<HTMLInputElement>('.admin-jump-input')!;
+      input.value = 'ord';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(Array.from(el.querySelectorAll('.admin-jump-results button')).map((b) => b.textContent!.trim())).toEqual(['Orders']);
+
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      fixture.detectChanges();
+      expect(host.picked).toEqual(['admin-orders']);
+      expect(q('.admin-jump-results')).toBeNull();
+
+      input.value = 'zzz';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(q('.admin-jump-none')!.textContent).toContain('No page matches');
     });
   });
 });
