@@ -2,7 +2,7 @@
   @if (selected(); as s) {
     <app-product-details
       [product]="s"
-      [cartQty]="qtyOf(s.id)"
+      [cartQty]="qtyOf(s.id)" [catalogue]="productService.products()" (openProduct)="viewDetails($event)"
       (back)="closeDetails()"
       (addToCart)="addToCartQty($event)"
       (addToVisualizer)="requestVisualizer($event)"

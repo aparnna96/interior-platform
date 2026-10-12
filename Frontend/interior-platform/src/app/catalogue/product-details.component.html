@@ -1,13 +1,26 @@
 <section class="pd" [attr.aria-label]="product.name + ' details'">
-  <button class="pd-back" (click)="goBack()" aria-label="Back to Furniture">
-    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <span>Back to Furniture</span>
-  </button>
+  <nav class="pd-crumbs" aria-label="Breadcrumb">
+    <button class="pd-back" (click)="goBack()" aria-label="Back to Furniture">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Furniture</span>
+    </button>
+    <span class="pd-crumb-sep" aria-hidden="true">/</span>
+    <span class="pd-crumb">{{ product.room }}</span>
+    <span class="pd-crumb-sep" aria-hidden="true">/</span>
+    <span class="pd-crumb pd-crumb-now" aria-current="page">{{ product.name }}</span>
+  </nav>
 
   <div class="pd-grid">
-    <figure class="pd-media reveal-scale" reveal>
+    <figure
+      class="pd-media reveal-scale"
+      reveal
+      [class.zoomed]="zoomed()"
+      (pointerenter)="onMediaEnter($event)"
+      (pointermove)="onMediaMove($event)"
+      (pointerleave)="onMediaLeave()"
+    >
       <span class="pd-tint" [style.background]="product.swatch" aria-hidden="true"></span>
-      <img [src]="product.image" [alt]="product.name" loading="eager" />
+      <img [src]="product.image" [alt]="product.name" loading="eager" [style.transform-origin]="zoomOrigin()" />
     </figure>
 
     <div class="pd-info" reveal>
@@ -90,4 +103,27 @@
       }
     </div>
   </div>
+
+  @if (look().length > 0) {
+    <section class="pd-look" aria-labelledby="pd-look-title" reveal>
+      <header class="pd-look-head">
+        <p class="kicker">Pair it with</p>
+        <h2 id="pd-look-title" class="pd-look-title">Complete the look</h2>
+      </header>
+      <ul class="pd-look-grid">
+        @for (p of look(); track p.id) {
+          <li>
+            <button type="button" class="pd-look-card" (click)="openProduct.emit(p.id)" [attr.aria-label]="'View ' + p.name">
+              <span class="pd-look-media">
+                <img [src]="p.image" [alt]="p.name" loading="lazy" />
+              </span>
+              <span class="pd-look-room">{{ p.room }} · {{ p.category }}</span>
+              <span class="pd-look-name">{{ p.name }}</span>
+              <span class="pd-look-price">₹{{ inr(p.price) }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
 </section>

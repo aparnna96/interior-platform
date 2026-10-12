@@ -1417,7 +1417,7 @@ describe('AppComponent', () => {
       expect(el(fixture).querySelector('.pubmenu')).toBeNull();
     });
 
-    it('gives customer pages a site footer and keeps the workspace bar for the design tools', () => {
+    it('gives customer pages and the design tools the same standard site footer', () => {
       const fixture = TestBed.createComponent(AppComponent);
       fixture.componentInstance.activeView.set('login');
       fixture.detectChanges();
@@ -1425,8 +1425,8 @@ describe('AppComponent', () => {
       expect(el(fixture).querySelector('footer.statusbar')).toBeNull();
       fixture.componentInstance.activeView.set('visualizer');
       fixture.detectChanges();
-      expect(el(fixture).querySelector('footer.site-footer')).toBeNull();
-      expect(el(fixture).querySelector('footer.statusbar')).toBeTruthy();
+      expect(el(fixture).querySelectorAll('footer.site-footer').length).toBe(1);
+      expect(el(fixture).querySelector('footer.statusbar')).toBeNull();
     });
 
     it('the Admin shell has no Account entry and keeps the customer site one click away', () => {

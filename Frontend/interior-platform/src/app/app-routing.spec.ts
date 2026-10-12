@@ -390,7 +390,7 @@ describe('AppComponent routing', () => {
     const noCustomerChrome = (el: HTMLElement) => {
       expect(el.querySelector('header.pubnav')).withContext('customer navbar').toBeNull();
       expect(el.querySelector('#app-sidebar')).withContext('customer sidebar').toBeNull();
-      expect(el.querySelector('footer.statusbar')).withContext('customer footer').toBeNull();
+      expect(el.querySelector('footer.site-footer')).withContext('customer footer').toBeNull();
     };
 
     it('shows a visitor the Admin login page on its own, apart from the customer site', async () => {

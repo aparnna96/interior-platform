@@ -224,10 +224,6 @@
 .proj-name { font-weight: 650; font-size: 13px; }
 
 
-/* Statusbar */
-.statusbar { margin-top: auto; border-top: 1px solid var(--border); background: var(--surface); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: space-between; padding: 10px 24px; font-size: 12.5px; }
-.statusbar strong { font-weight: 650; }
-
 /* ── Responsive ── */
 /* Manual icon rail on wide desktop (mirrors the automatic rail below). */
 @media (min-width: 1280px) {
@@ -277,7 +273,6 @@
   .mnav button.active { background: #1c1917; color: #faf8f5; border-color: #1c1917; }
   .ws-head { padding: 12px 14px; }
   .workspace, .content, .notice-wrap { padding-left: 14px; padding-right: 14px; }
-  .statusbar { padding: 10px 14px; }
 }
 @media (max-width: 719px) {
   .workspace { grid-template-columns: minmax(0, 1fr); }

@@ -53,6 +53,7 @@ input, select { font-family: inherit; }
 
 ::selection { background: #ecdcbc; }
 
+.main { overflow-x: clip; }
 /* Serif display headings on the customer pages. Admin and workspace headings keep the sans body face.
    Cormorant has a small x-height, so font-size-adjust lifts it to read at the size the page asked for.
    Letter-spacing and weight are forced because the page styles tighten them for sans type. */
@@ -115,7 +116,6 @@ input, select { font-family: inherit; }
 .pubmenu button{border:1px solid transparent;background:transparent;border-radius:7px;padding:10px 12px;min-height:44px;font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer;text-align:left;width:100%;min-width:0;max-width:100%}
 .pubmenu button.active{background:var(--accent-soft);border-color:#e6d5b8;color:var(--accent-ink)}
 .shell.public .content,.shell.public .notice-wrap{padding-left:14px;padding-right:14px}
-.shell.public .statusbar{padding:10px 14px}
 }
 
 /* Workspace sidebar: light premium theme matching white/navy/gold branding. */
@@ -176,26 +176,44 @@ div.shell .sidebar{background:#fffdf9;border-right:1px solid var(--border);color
 .shell.public main.content { animation: page-in .5s cubic-bezier(.22, 1, .36, 1) backwards; }
 @media (prefers-reduced-motion: reduce) { .shell.public main.content { animation: none; } }
 
-/* Customer site footer: brand, the main pages and the pricing note. */
-.site-footer { margin-top: auto; border-top: 3px solid var(--accent); background: var(--ink); color: #efe8dc; }
+/* Standard site footer, shared by every customer and workspace screen: brand block plus three
+   link columns, then a base bar. The logo has a white background, so it sits on a light tile. */
+.site-footer { margin-top: auto; border-top: 2px solid var(--accent); background: var(--ink); color: #efe8dc; }
 .site-footer-inner {
-  max-width: 1200px; margin: 0 auto; padding: 22px 24px;
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 28px;
+  max-width: 1200px; margin: 0 auto; padding: 28px 24px 18px;
+  display: grid; grid-template-columns: 1.6fr repeat(3, 1fr); gap: 20px 32px;
 }
-.site-footer-brand { font-size: 14px; }
-.site-footer-brand strong { font-family: var(--font-display); font-size: 20px; font-size-adjust: 0.47; font-weight: 600; letter-spacing: 0.02em; }
-.site-footer-links { display: flex; flex-wrap: wrap; gap: 0 4px; }
-.site-footer-links button {
-  border: 0; background: none; padding: 0 10px; min-height: 44px; font: inherit; font-size: 13px;
-  font-weight: 600; color: #d9cfbf; cursor: pointer;
+.site-footer-logo {
+  display: inline-grid; place-items: center; width: 48px; height: 48px; margin-bottom: 8px;
+  background: #fff; border-radius: 10px; overflow: hidden;
 }
-.site-footer-links button:hover { color: #e6c58f; text-decoration: underline; }
-.site-footer-note { font-size: 12.5px; color: #a89d8c; }
+.site-footer-logo img { width: 42px; height: 42px; object-fit: contain; display: block; }
+.site-footer-brand { margin: 0 0 4px; }
+.site-footer-brand strong { font-family: var(--font-display); font-size: 22px; font-size-adjust: 0.47; font-weight: 600; letter-spacing: 0.02em; }
+.site-footer-tag { margin: 0; max-width: 32ch; font-size: 14px; line-height: 1.6; color: #b9ad9b; }
+.site-footer-col { display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
+.site-footer-head {
+  margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #e6c58f;
+}
+.site-footer-col button {
+  border: 0; background: none; padding: 3px 0; min-height: 0; font: inherit; font-size: 14px;
+  color: #d9cfbf; cursor: pointer; text-align: left;
+}
+.site-footer-col button:hover { color: #e6c58f; text-decoration: underline; text-underline-offset: 3px; }
+.site-footer-base {
+  max-width: 1200px; margin: 0 auto; padding: 12px 24px 14px; border-top: 1px solid rgba(239, 232, 220, 0.14);
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 20px; font-size: 13px; color: #a89d8c;
+}
+.site-footer-base p { margin: 0; }
 @media (max-width: 900px) {
-  .site-footer-inner { padding: 18px 14px; }
-  .site-footer-links button { padding: 0 8px 0 0; margin-right: 8px; }
+  .site-footer-inner { grid-template-columns: repeat(3, 1fr); padding: 22px 18px 14px; gap: 16px 20px; }
+  .site-footer-about { grid-column: 1 / -1; }
+  .site-footer-base { padding: 10px 18px 14px; }
 }
-
+@media (max-width: 520px) {
+  .site-footer-inner { grid-template-columns: 1fr 1fr; }
+  .site-footer-col:last-of-type { grid-column: 1 / -1; }
+}
 /* Loading placeholders shaped like the content they stand in for. The sheen is a
    transform-only sweep and is dropped under reduced motion. */
 .skel { position: relative; display: block; overflow: hidden; background: var(--border-soft); border-radius: var(--radius-sm); }

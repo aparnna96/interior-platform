@@ -860,26 +860,37 @@
         <app-account-page (navigate)="activeView.set($event)" (loginRequested)="openLogin()" />
       </main>
     }
-    @if (isPublicView()) {
     <footer class="site-footer">
       <div class="site-footer-inner">
-        <p class="site-footer-brand"><strong>Confident Group</strong></p>
-        <nav class="site-footer-links" aria-label="Footer">
+        <div class="site-footer-about">
+          <span class="site-footer-logo"><img src="/branding/confident-group-logo_only.png" alt="" width="56" height="56" loading="lazy" /></span>
+          <p class="site-footer-brand"><strong>Confident Group</strong></p>
+          <p class="site-footer-tag">Interiors and furniture, planned to scale.</p>
+        </div>
+        <nav class="site-footer-col" aria-label="Explore">
+          <p class="site-footer-head">Explore</p>
+          <button type="button" (click)="activeView.set('home')">Home</button>
           <button type="button" (click)="activeView.set('interiors')">Interiors</button>
           <button type="button" (click)="activeView.set('catalogue')">Furniture</button>
+        </nav>
+        <nav class="site-footer-col" aria-label="Plan your space">
+          <p class="site-footer-head">Plan your space</p>
           <button type="button" (click)="activeView.set('visualizer')">Visualizer</button>
           <button type="button" (click)="activeView.set('estimates')">Estimates</button>
           <button type="button" (click)="activeView.set('proposals')">Proposals</button>
         </nav>
-        <p class="site-footer-note">Pricing subject to confirmation</p>
+        <nav class="site-footer-col" aria-label="Your account">
+          <p class="site-footer-head">Your account</p>
+          <button type="button" (click)="activeView.set('cart')">Cart</button>
+          <button type="button" (click)="activeView.set('orders')">Orders</button>
+          <button type="button" (click)="activeView.set('account')">Account</button>
+        </nav>
+      </div>
+      <div class="site-footer-base">
+        <p>© {{ currentYear }} Confident Group</p>
+        <p>Pricing subject to confirmation</p>
       </div>
     </footer>
-    } @else {
-    <footer class="statusbar">
-      <span><strong>Confident Group</strong> · Workspace</span>
-      <span class="sub small">Pricing subject to confirmation</span>
-    </footer>
-    }
   </div>
 </div>
 }

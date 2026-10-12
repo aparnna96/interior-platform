@@ -4,7 +4,7 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { ProductDetailsComponent } from './product-details.component';
+import { ProductDetailsComponent, completeTheLook } from './product-details.component';
 import { CatalogueComponent } from './catalogue.component';
 import type { CatalogueProduct } from './catalogue-products';
 import type { ProductDto } from './product.service';
@@ -108,7 +108,82 @@ describe('ProductDetailsComponent', () => {
 
     fixture.detectChanges();
     const backBtn = (fixture.nativeElement as HTMLElement).querySelector('.pd-back');
-    expect(backBtn?.textContent).toContain('Back to Furniture');
+    expect(backBtn?.getAttribute('aria-label')).toBe('Back to Furniture');
+  });
+
+  it('shows a breadcrumb of Furniture, the room and the piece', async () => {
+    const fixture = await setup();
+    const crumbs = (fixture.nativeElement as HTMLElement).querySelector('.pd-crumbs') as HTMLElement;
+    expect(crumbs.textContent).toContain('Furniture');
+    expect(crumbs.textContent).toContain(product.room);
+    expect(crumbs.querySelector('[aria-current="page"]')?.textContent).toContain(product.name);
+  });
+
+  it('zooms the photo under a mouse pointer and ignores touch', async () => {
+    const fixture = await setup();
+    const cmp = fixture.componentInstance;
+    const fig = (fixture.nativeElement as HTMLElement).querySelector('.pd-media') as HTMLElement;
+    const ev = (type: string, pointerType: string) => new PointerEvent(type, { pointerType, clientX: 0, clientY: 0 });
+    fig.dispatchEvent(ev('pointerenter', 'touch'));
+    expect(cmp.zoomed()).toBeFalse();
+    fig.dispatchEvent(ev('pointerenter', 'mouse'));
+    fixture.detectChanges();
+    expect(cmp.zoomed()).toBeTrue();
+    expect(fig.classList).toContain('zoomed');
+    fig.dispatchEvent(ev('pointerleave', 'mouse'));
+    expect(cmp.zoomed()).toBeFalse();
+    expect(cmp.zoomOrigin()).toBe('50% 50%');
+  });
+
+  describe('Complete the look', () => {
+    const mk = (id: string, category: CatalogueProduct['category'], room: CatalogueProduct['room']): CatalogueProduct => ({
+      ...product,
+      id,
+      name: id,
+      category,
+      room,
+    });
+    const all = [
+      product,
+      mk('sofa-2', 'Sofas', 'Living Room'),
+      mk('bed-1', 'Beds', 'Bedroom'),
+      mk('table-1', 'Tables', 'Living Room'),
+      mk('chair-1', 'Chairs', 'Living Room'),
+      mk('desk-1', 'Tables', 'Workspace'),
+    ];
+
+    it('prefers other categories in the same room and never lists the piece itself', () => {
+      const ids = completeTheLook(product, all).map((p) => p.id);
+      expect(ids).not.toContain(product.id);
+      expect(ids.slice(0, 2)).toEqual(['table-1', 'chair-1']);
+      expect(ids[2]).toBe('sofa-2');
+      expect(ids.length).toBe(4);
+    });
+
+    it('is empty when the catalogue has no other piece', () => {
+      expect(completeTheLook(product, [product])).toEqual([]);
+    });
+
+    it('renders the row and opens the chosen piece', async () => {
+      const fixture = await setup();
+      const cmp = fixture.componentInstance;
+      cmp.catalogue = all;
+      cmp.ngOnChanges({ catalogue: { currentValue: all, previousValue: [], firstChange: false, isFirstChange: () => false } });
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      const cards = el.querySelectorAll('.pd-look-card');
+      expect(cards.length).toBe(4);
+      expect(el.querySelector('.pd-look-title')?.textContent).toContain('Complete the look');
+      let opened: string | null = null;
+      cmp.openProduct.subscribe((id: string) => (opened = id));
+      (cards[0] as HTMLButtonElement).click();
+      expect(opened as string | null).toBe('table-1');
+    });
+
+    it('hides the row when there is nothing to suggest', async () => {
+      const fixture = await setup();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.pd-look')).toBeFalsy();
+    });
   });
 
   it('Add to Visualizer reports the product category and confirms', async () => {

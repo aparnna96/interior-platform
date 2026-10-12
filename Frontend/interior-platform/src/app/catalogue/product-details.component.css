@@ -14,25 +14,36 @@
   overflow-x: clip;
 }
 
+/* Breadcrumb: Furniture (back to the list) / room / this piece */
+.pd-crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
 .pd-back {
   appearance: none;
-  justify-self: start;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  border: 1px solid var(--border);
-  background: #fff;
-  border-radius: var(--radius-sm);
-  padding: 8px 14px;
+  gap: 6px;
+  border: 0;
+  background: none;
+  padding: 8px 4px;
   min-height: 40px;
   font-size: 12.5px;
   font-weight: 650;
+  letter-spacing: 0.04em;
   color: var(--ink);
   cursor: pointer;
   max-width: 100%;
 }
-.pd-back:hover { border-color: #1c1917; }
+.pd-back:hover { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px; }
 .pd-back svg { width: 14px; height: 14px; flex: none; }
+.pd-crumb-sep { color: var(--border); }
+.pd-crumb-now { color: var(--ink-2); font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 
 .pd-grid {
   display: grid;
@@ -59,6 +70,12 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.25s ease-out;
+}
+/* Hover zoom is for a mouse; touch screens keep the browser's pinch zoom. */
+@media (hover: hover) and (pointer: fine) {
+  .pd-media { overflow: hidden; cursor: zoom-in; }
+  .pd-media.zoomed img { transform: scale(2); }
 }
 
 .pd-info {
@@ -76,10 +93,8 @@
   color: var(--muted);
 }
 .pd-name {
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  line-height: 1.2;
+  font-size: 36px;
+  line-height: 1.1;
   overflow-wrap: anywhere;
 }
 .pd-finish { font-size: 13px; color: var(--ink-2); }
@@ -173,12 +188,60 @@
 }
 .pd-hint { font-size: 11.5px; color: var(--muted); margin-top: 10px; }
 
+/* ── Complete the look: other pieces from the catalogue ── */
+.pd-look { display: grid; gap: 16px; min-width: 0; margin-top: 16px; }
+.pd-look-title { font-family: var(--font-display); font-size-adjust: 0.47; font-weight: 600; font-size: 28px; line-height: 1.15; }
+.pd-look-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.pd-look-grid li { min-width: 0; }
+.pd-look-card {
+  appearance: none;
+  display: grid;
+  gap: 3px;
+  align-content: start;
+  width: 100%;
+  padding: 0 0 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: #fff;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.pd-look-card:hover { border-color: var(--accent); box-shadow: 0 10px 24px rgba(31, 26, 22, 0.10); }
+.pd-look-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pd-look-media { display: block; aspect-ratio: 4 / 5; background: #eee7d9; overflow: hidden; margin-bottom: 8px; }
+.pd-look-media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
+.pd-look-card:hover .pd-look-media img { transform: scale(1.05); }
+.pd-look-room,
+.pd-look-name,
+.pd-look-price { padding: 0 12px; min-width: 0; }
+.pd-look-room { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pd-look-name { font-size: 14px; font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
+.pd-look-price { font-size: 13px; font-weight: 700; color: var(--accent-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-look-media img { transition: none; }
+  .pd-look-card:hover .pd-look-media img { transform: none; }
+}
+
 /* ── Responsive: single column, image first, no page overflow ── */
+@media (max-width: 960px) {
+  .pd-look-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 719px) {
   .pd-grid { grid-template-columns: minmax(0, 1fr); }
   .pd-media { min-height: 0; aspect-ratio: 4 / 3; }
   .pd-info { padding: 20px 18px 22px; }
-  .pd-name { font-size: 20px; }
+  .pd-name { font-size: 30px; }
   .pd-price { font-size: 19px; }
   .pd-actions .btn-primary,
   .pd-actions .btn-outline { flex: 1 1 100%; min-height: 46px; }

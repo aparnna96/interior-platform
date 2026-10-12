@@ -64,23 +64,23 @@ export const HERO = {
   /** Autoplay hero slides — one scene per slide, no repeats. */
   slides: [
     {
-      image: px(1571453, 1600),
+      image: px(1571453, 2000),
       imageAlt: 'Elegant Scandinavian-style living room with a modern grey sofa',
     },
     {
-      image: px(6969875, 1600),
+      image: px(6969875, 2000),
       imageAlt: 'Sleek kitchen with white cabinets, black countertops and an island',
     },
     {
-      image: px(90319, 1600),
+      image: px(90319, 2000),
       imageAlt: 'Elegant bedroom with modern furniture and soft lighting',
     },
     {
-      image: px(3935321, 1600),
+      image: px(3935321, 2000),
       imageAlt: 'Spacious dining room with wooden furniture and natural light',
     },
     {
-      image: px(1571460, 1600),
+      image: px(1571460, 2000),
       imageAlt: 'Warm minimal living room with a neutral sofa and wooden staircase',
     },
   ],
@@ -90,28 +90,28 @@ export const SPACES: SpaceTile[] = [
   {
     name: 'Living Room',
     blurb: 'Sofas, centre tables and relaxed layouts.',
-    image: px(276583),
+    image: px(276583, 1200),
     imageAlt: 'Contemporary living room with a sectional sofa',
     destination: 'interiors',
   },
   {
     name: 'Bedroom',
     blurb: 'Beds, wardrobes and calm storage.',
-    image: px(164595),
+    image: px(164595, 1200),
     imageAlt: 'Cozy modern bedroom with soft lighting',
     destination: 'interiors',
   },
   {
     name: 'Kitchen',
     blurb: 'Cabinets, counters and dining corners.',
-    image: px(7045356),
+    image: px(7045356, 1200),
     imageAlt: 'Stylish kitchen with wooden cabinets and black accents',
     destination: 'interiors',
   },
   {
     name: 'Dining',
     blurb: 'Tables and chairs for gathering.',
-    image: px(3935321),
+    image: px(3935321, 1200),
     imageAlt: 'Spacious dining room with wooden furniture and natural light',
     destination: 'interiors',
   },

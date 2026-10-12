@@ -125,6 +125,9 @@ export class AppComponent {
   /** Session state — gates customer-only nav entries such as Orders. */
   readonly auth = inject(AuthService);
 
+  /** Year shown in the site footer. */
+  readonly currentYear = new Date().getFullYear();
+
   /** Public website views use the top navbar; workspace views keep the sidebar. */
   isPublicView = computed(
     () =>
