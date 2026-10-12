@@ -163,6 +163,71 @@ describe('AppComponent navbar scroll state', () => {
     fixture.detectChanges();
   });
 
+  it('opens the full bar when the pointer reaches the centred logo, and folds back after it leaves', () => {
+    jasmine.clock().install();
+    try {
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.detectChanges();
+      const app = fixture.componentInstance;
+      const header = fixture.nativeElement.querySelector('header.pubnav') as HTMLElement;
+      const compact = fixture.nativeElement.querySelector('.pubnav-compact') as HTMLButtonElement;
+
+      window.scrollTo(0, 0);
+      window.dispatchEvent(new Event('scroll'));
+      window.scrollTo(0, 400);
+      window.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+      expect(app.navHidden()).toBe(true);
+
+      // Pointer enters the header strip, then the logo: the bar opens.
+      header.dispatchEvent(new MouseEvent('mouseenter'));
+      compact.dispatchEvent(new MouseEvent('mouseenter'));
+      fixture.detectChanges();
+      expect(app.navHidden()).toBe(false);
+
+      // Scrolling down while still pointing at the bar does not fold it away.
+      window.scrollTo(0, 600);
+      window.dispatchEvent(new Event('scroll'));
+      expect(app.navHidden()).toBe(false);
+
+      // Leaving the bar folds it back to the logo after a short delay.
+      header.dispatchEvent(new MouseEvent('mouseleave'));
+      jasmine.clock().tick(200);
+      expect(app.navHidden()).toBe(false);
+      jasmine.clock().tick(400);
+      fixture.detectChanges();
+      expect(app.navHidden()).toBe(true);
+
+      window.scrollTo(0, 0);
+      window.dispatchEvent(new Event('scroll'));
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('does not open the folded bar just because the pointer is somewhere in the header strip', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const app = fixture.componentInstance;
+    const header = fixture.nativeElement.querySelector('header.pubnav') as HTMLElement;
+
+    window.scrollTo(0, 0);
+    window.dispatchEvent(new Event('scroll'));
+    window.scrollTo(0, 400);
+    window.dispatchEvent(new Event('scroll'));
+    expect(app.navHidden()).toBe(true);
+
+    header.dispatchEvent(new MouseEvent('mouseenter'));
+    window.scrollTo(0, 450);
+    window.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+    expect(app.navHidden()).toBe(true);
+
+    header.dispatchEvent(new MouseEvent('mouseleave'));
+    window.scrollTo(0, 0);
+    window.dispatchEvent(new Event('scroll'));
+  });
+
   it('keeps the compact centered logo keyboard-focusable with an accessible label', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();

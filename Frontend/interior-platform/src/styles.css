@@ -1,23 +1,30 @@
+/* Display face for customer headings: Cormorant Garamond (SIL OFL), self-hosted in /fonts.
+   Latin subset only, so prices and other symbols stay in the sans body font. */
+@font-face { font-family: "Cormorant Garamond"; font-style: normal; font-weight: 500; font-display: swap; src: url("/fonts/cormorant-garamond-latin-500.woff2") format("woff2"); }
+@font-face { font-family: "Cormorant Garamond"; font-style: normal; font-weight: 600; font-display: swap; src: url("/fonts/cormorant-garamond-latin-600.woff2") format("woff2"); }
+@font-face { font-family: "Cormorant Garamond"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/cormorant-garamond-latin-700.woff2") format("woff2"); }
+
 :root {
-  --bg: #f4f3f1;
+  --bg: #faf7f2;
   --surface: #ffffff;
-  --surface-soft: #f8f7f5;
-  --ink: #1c1917;
-  --ink-2: #57534e;
-  --muted: #8a8580;
-  --border: #e4ded4;
-  --border-soft: #ede8de;
-  --accent: #7c5c3e;
-  --accent-ink: #5f452d;
-  --accent-soft: #f3ebe0;
+  --surface-soft: #f6f1e8;
+  --ink: #1f1a16;
+  --ink-2: #4f463e;
+  --muted: #7a7066;
+  --border: #e6dfd2;
+  --border-soft: #eee8dc;
+  --accent: #a8793a;
+  --accent-ink: #7d5622;
+  --accent-soft: #f5ecdc;
   --success-bg: #eef3ec;
   --success-bd: #cfdfd2;
   --success-tx: #3d6a4c;
   --danger: #a44a35;
-  --radius: 8px;
-  --radius-sm: 6px;
-  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.06);
+  --radius: 4px;
+  --radius-sm: 3px;
+  --shadow-sm: 0 1px 2px rgba(31, 26, 22, 0.06);
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
 }
 
 * { box-sizing: border-box; }
@@ -44,7 +51,18 @@ input, select { font-family: inherit; }
   outline-offset: 2px;
 }
 
-::selection { background: #e7d9c3; }
+::selection { background: #ecdcbc; }
+
+/* Serif display headings on the customer pages. Admin and workspace headings keep the sans body face.
+   Cormorant has a small x-height, so font-size-adjust lifts it to read at the size the page asked for.
+   Letter-spacing and weight are forced because the page styles tighten them for sans type. */
+.hero-copy h1, .in-head h1, .sr-title h1, .cart-head h1, .orders-head h1, .proposals-head h1,
+.auth-head h1, .pd-name, .block-head h2, .design-copy h2, .cta h2 {
+  font-family: var(--font-display);
+  font-size-adjust: 0.47;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
 
 /* Public top navbar (Home / Interiors / Furniture). Workspace views keep the sidebar. */
 .pubnav{position:sticky;top:0;z-index:80;background:var(--surface);border-bottom:1px solid var(--border);min-width:0;max-width:100%;overflow-x:clip;visibility:visible;transition:box-shadow .25s ease,background-color .25s ease}
@@ -80,12 +98,13 @@ input, select { font-family: inherit; }
 .pubnav-links button:hover::after,.pubnav-links button:focus-visible::after{transform:scaleX(1)}
 .pubnav-links button.active::after{display:none}
 .pubnav-links button:hover{background:var(--surface-soft);color:var(--ink)}
-.pubnav-links button.active{background:var(--accent-soft);border-color:#e3d3bd;color:var(--accent-ink)}
+.pubnav-links button.active{background:var(--accent-soft);border-color:#e6d5b8;color:var(--accent-ink)}
 .pubmenu{display:none}
+.pubnav-sep{flex:none;width:1px;height:18px;margin:0 8px;background:var(--border)}
 @keyframes pubmenu-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .pubmenu{animation:pubmenu-in .25s ease}
 .pubmenu button{transition:background-color .25s ease,border-color .25s ease,color .25s ease}
-.cart-badge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;margin-left:6px;border-radius:99px;background:var(--accent-soft);border:1px solid #e3d3bd;color:var(--accent-ink);font-size:11px;font-weight:700;line-height:18px;vertical-align:1px}
+.cart-badge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;margin-left:6px;border-radius:99px;background:var(--accent-soft);border:1px solid #e6d5b8;color:var(--accent-ink);font-size:11px;font-weight:700;line-height:18px;vertical-align:1px}
 .shell.public{display:block}
 .shell.public .sidebar{display:none}
 .shell.public .main{max-width:100%}
@@ -94,7 +113,7 @@ input, select { font-family: inherit; }
 .pubnav-links{display:none}
 .pubmenu{display:grid;gap:2px;padding:6px 14px 12px;border-top:1px solid var(--border-soft);min-width:0;max-width:100%}
 .pubmenu button{border:1px solid transparent;background:transparent;border-radius:7px;padding:10px 12px;min-height:44px;font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer;text-align:left;width:100%;min-width:0;max-width:100%}
-.pubmenu button.active{background:var(--accent-soft);border-color:#e3d3bd;color:var(--accent-ink)}
+.pubmenu button.active{background:var(--accent-soft);border-color:#e6d5b8;color:var(--accent-ink)}
 .shell.public .content,.shell.public .notice-wrap{padding-left:14px;padding-right:14px}
 .shell.public .statusbar{padding:10px 14px}
 }
@@ -152,6 +171,51 @@ div.shell .sidebar{background:#fffdf9;border-right:1px solid var(--border);color
 .pubnav-links button::after{transition:none}
 .pubmenu{animation:none}
 }
+/* A page fades up when its view is swapped in (each view renders its own main.content). */
+@keyframes page-in { from { opacity: 0; transform: translateY(10px); } }
+.shell.public main.content { animation: page-in .5s cubic-bezier(.22, 1, .36, 1) backwards; }
+@media (prefers-reduced-motion: reduce) { .shell.public main.content { animation: none; } }
+
+/* Customer site footer: brand, the main pages and the pricing note. */
+.site-footer { margin-top: auto; border-top: 3px solid var(--accent); background: var(--ink); color: #efe8dc; }
+.site-footer-inner {
+  max-width: 1200px; margin: 0 auto; padding: 22px 24px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 28px;
+}
+.site-footer-brand { font-size: 14px; }
+.site-footer-brand strong { font-family: var(--font-display); font-size: 20px; font-size-adjust: 0.47; font-weight: 600; letter-spacing: 0.02em; }
+.site-footer-links { display: flex; flex-wrap: wrap; gap: 0 4px; }
+.site-footer-links button {
+  border: 0; background: none; padding: 0 10px; min-height: 44px; font: inherit; font-size: 13px;
+  font-weight: 600; color: #d9cfbf; cursor: pointer;
+}
+.site-footer-links button:hover { color: #e6c58f; text-decoration: underline; }
+.site-footer-note { font-size: 12.5px; color: #a89d8c; }
+@media (max-width: 900px) {
+  .site-footer-inner { padding: 18px 14px; }
+  .site-footer-links button { padding: 0 8px 0 0; margin-right: 8px; }
+}
+
+/* Loading placeholders shaped like the content they stand in for. The sheen is a
+   transform-only sweep and is dropped under reduced motion. */
+.skel { position: relative; display: block; overflow: hidden; background: var(--border-soft); border-radius: var(--radius-sm); }
+.skel::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: skel-sheen 1.4s ease-in-out infinite;
+}
+@keyframes skel-sheen { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .skel::after { animation: none; display: none; } }
+.skel-line { height: 12px; }
+.skel-title { height: 18px; }
+.skel-w30 { width: 30%; } .skel-w50 { width: 50%; } .skel-w70 { width: 70%; } .skel-w90 { width: 90%; }
+
+/* Customer status pills carry a tone (set with data-tone) on top of their own layout. */
+span.status-pill[data-tone="info"] { background: #e8eff9; border-color: #c3d4ec; color: #1d4a8a; }
+span.status-pill[data-tone="success"] { background: #e9f4ee; border-color: #c4dfd0; color: #1f6a45; }
+span.status-pill[data-tone="warn"] { background: #fdf3df; border-color: #ecd9a8; color: #7a4f0b; }
+span.status-pill[data-tone="danger"] { background: #fbeae8; border-color: #efc5c0; color: #9b2d24; }
+
 /* Phone touch targets: segmented controls and tab strips reach a comfortable
    tap height (the desktop sizes stay compact). */
 @media (max-width: 900px) {

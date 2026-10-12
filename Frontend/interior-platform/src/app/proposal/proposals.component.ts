@@ -84,6 +84,9 @@ export class ProposalsComponent {
   /** Requests returning to the existing Furniture catalogue. */
   browse = output<void>();
 
+  /** Asks the shell to open the login page (visitor landed here logged out). */
+  loginRequested = output<void>();
+
   /** Server-created proposal snapshot to open without refetching. */
   readonly createdDetail = input<ProposalDetailDto | null>(null);
 
@@ -138,6 +141,10 @@ export class ProposalsComponent {
         this.showCreated(created);
       }
     });
+  }
+
+  requestLogin(): void {
+    this.loginRequested.emit();
   }
 
   goBrowse(): void {

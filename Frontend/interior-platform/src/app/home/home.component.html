@@ -54,6 +54,13 @@
     </div>
   </header>
 
+  <!-- ── 1b · At a glance (counts come from the live catalogue and the page data) ── -->
+  <ul class="glance" aria-label="At a glance" reveal>
+    <li><strong class="glance-num" [countUp]="pieceCount()"></strong><span>Furniture pieces</span></li>
+    <li><strong class="glance-num" [countUp]="categoryCount()"></strong><span>Furniture categories</span></li>
+    <li><strong class="glance-num" [countUp]="roomCount()"></strong><span>Rooms furnished</span></li>
+  </ul>
+
   <!-- ── 2 · Explore spaces ───────────────────────── -->
   <section class="block" aria-label="Explore spaces">
     <div class="block-head" reveal>

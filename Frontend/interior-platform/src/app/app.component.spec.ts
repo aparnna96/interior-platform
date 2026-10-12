@@ -1417,6 +1417,18 @@ describe('AppComponent', () => {
       expect(el(fixture).querySelector('.pubmenu')).toBeNull();
     });
 
+    it('gives customer pages a site footer and keeps the workspace bar for the design tools', () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.componentInstance.activeView.set('login');
+      fixture.detectChanges();
+      expect(el(fixture).querySelector('footer.site-footer')).toBeTruthy();
+      expect(el(fixture).querySelector('footer.statusbar')).toBeNull();
+      fixture.componentInstance.activeView.set('visualizer');
+      fixture.detectChanges();
+      expect(el(fixture).querySelector('footer.site-footer')).toBeNull();
+      expect(el(fixture).querySelector('footer.statusbar')).toBeTruthy();
+    });
+
     it('the Admin shell has no Account entry and keeps the customer site one click away', () => {
       const { fixture, httpMock } = createAuthedApp(['Admin']);
       open(fixture, httpMock, 'admin-dashboard');

@@ -66,6 +66,7 @@ Interior design and furniture platform for the client "Confident Group". Used as
 - Admin shell: `src/app/admin-layout/`. Active when `auth.isAdmin() && isAdminShellView(activeView)`. `ADMIN_SHELL_VIEWS` is `ADMIN_AREA_VIEWS` minus `admin-login`: `admin-dashboard`, `admin-products`, `admin-orders`, `admin-proposals`, `admin-rates`, `admin-leads`.
 - Admin record pages: orders, proposals and leads open at `/admin/orders/:id`, `/admin/proposals/:id` and `/admin/leads/:id` (`ADMIN_RECORD_VIEWS`, `recordId` in `viewForPath`/`pathForView`). The view stays the list view; `AppComponent.routeRecordId` is passed to the page as `recordId` and the page reports opening or closing a record through `recordChange`. A page that is not in the shell (the FieldStaff Leads page) simply ignores both.
 - Admin kit: `src/app/shared/admin/` holds `TableState` (client-side search, sort, filter, paging), `th[admSort]`, `app-admin-pager`, `app-badge` with status tones, `app-admin-state` (loading, empty, error, login, denied) and `AdminAttentionService` (sidebar counts, reported by the pages; it makes no requests). `charts/` has hand-built SVG line, bar and donut charts; there is no chart library. Shared `adm-*` classes live in `src/styles.css`, so page stylesheets stay small.
+- Customer look: ivory/espresso/brass tokens in `:root` of `src/styles.css` (the Admin area overrides them in `.admin-theme`). Customer headings use Cormorant Garamond, self-hosted in `public/fonts/` (latin only, SIL OFL); body text stays on the system sans. Public navbar: scrolling down folds it to a centred logo; hovering the logo, clicking it or scrolling up reopens it, and it folds back shortly after the pointer leaves (`onCompactHover`, `onNavPointerLeave` in `AppComponent`). `shared/reveal.directive.ts` fades sections in on scroll, `shared/count-up.directive.ts` counts numbers up once (Home "at a glance" strip); both respect `prefers-reduced-motion`.
 - FieldStaff keep the workspace layout on `/leads` and `/field`. `staffGuard` sends an Admin without the FieldStaff role from `/leads` to `/admin/leads`; `/field` is FieldStaff only.
 - Feature folders in `src/app/`: `admin-dashboard`, `admin-layout`, `admin-login`, `admin-orders`, `admin-products`, `admin-proposals`, `admin-rates`, `auth`, `catalogue`, `elevation`, `estimate`, `finishes`, `floor-plan`, `home`, `leads`, `orders`, `proposal`, `register`, `room-visualizer`, `shared`, `whatsapp`.
 
@@ -79,7 +80,7 @@ Interior design and furniture platform for the client "Confident Group". Used as
 
 ## Features in place
 
-- Customer: Home, Interiors, Furniture catalogue and product pages, Cart, Orders, Account, Register and Login, Estimates, Projects, Proposals, payments (demo mode), checkout delivery details, room visualizer (floor plan, elevation, finishes).
+- Customer: Home, Interiors, Furniture catalogue (search, room tabs, sort) and product pages, Cart, Orders (colour-coded status), Account, Register and Login, Estimates, Projects, Proposals, payments (demo mode), checkout delivery details, room visualizer (floor plan, elevation, finishes). Public pages have a site footer; list pages show `.skel` placeholders while loading (global classes in `src/styles.css`).
 - Field Staff: Leads, Field visualizer.
 - Admin: separate login page, workspace shell (breadcrumb, user menu, page jump search, sidebar badges), dashboard (six summary cards, needs-attention list, five SVG charts, recent activity, refresh), and sortable, searchable, paged tables for Products (with a drawer form and image preview), Orders, Proposals, Leads and the Estimate Rate history. Order value on the dashboard is the sum of non-cancelled order subtotals, not money received.
 - WhatsApp action exists but is off: no business number is configured in the environment files.
@@ -89,7 +90,6 @@ Interior design and furniture platform for the client "Confident Group". Used as
 - No real Admin login has been tested against production data.
 - `PaymentsController.VerifyPayment` has no already-verified guard. Payments have no rate limiting. Production payment mode (Demo or Razorpay) is unconfirmed.
 - Admins on workspace pages (Visualizer, Estimates, Projects) have no direct Admin link.
-- Account page buttons still use old labels (Products, Manage orders, Manage proposals).
 - Admin logo spec hard-codes the 52/108/-23 crop values.
 - Existing build warnings (NG0913 logo, bundle budgets) are known. The API build also warns about `Microsoft.OpenApi` 2.0.0 (NU1903).
 

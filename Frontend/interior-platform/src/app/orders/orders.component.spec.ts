@@ -162,6 +162,23 @@ describe('OrdersComponent', () => {
     const fixture = setupAnonymous();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Log in to view your orders');
+    expect(el.textContent).not.toContain('Open Account');
+    let asked = false;
+    fixture.componentInstance.loginRequested.subscribe(() => (asked = true));
+    (el.querySelector('.orders-empty .btn-primary') as HTMLButtonElement).click();
+    expect(asked).toBeTrue();
+  });
+
+  it('colours the status pill by order status', () => {
+    const fixture = setupAuthenticated([
+      summary({ id: 'order-1', status: 0 }),
+      summary({ id: 'order-2', status: 3 }),
+      summary({ id: 'order-3', status: 4 }),
+    ]);
+    const tones = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.status-pill')).map((p) =>
+      p.getAttribute('data-tone'),
+    );
+    expect(tones).toEqual(['warn', 'success', 'danger']);
   });
 
   it('selecting an order loads its detail from snapshots, never the Product API', () => {

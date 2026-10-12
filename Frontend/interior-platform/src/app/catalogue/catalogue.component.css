@@ -60,7 +60,7 @@
   gap: 8px;
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 0 12px;
   flex: 1 1 220px;
   min-width: 0;
@@ -89,7 +89,7 @@
   color: #faf8f5;
   background: #1c1917;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 16px;
   min-height: 44px;
   white-space: nowrap;
@@ -120,7 +120,7 @@
   min-height: 36px;
   padding: 0 14px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: #faf8f5;
   color: #1c1917;
   font-size: 13px;
@@ -183,7 +183,7 @@
 .btn-primary,
 .addbtn {
   appearance: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   min-height: 42px;
   font-size: 13px;
   font-weight: 650;
@@ -220,6 +220,21 @@
 }
 .listing-title { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
 .listing-count { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.listing-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 16px; min-width: 0; }
+.listing-sort { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.listing-sort select {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.listing-sort select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tile-skel-media { aspect-ratio: 4 / 5; border-radius: 0; }
 
 /* ── Product grid: one consistent card treatment ── */
 .sr-grid {
@@ -353,7 +368,7 @@
   justify-items: center;
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 .sr-empty p { font-size: 14px; font-weight: 650; }
 .sr-empty span { font-size: 12.5px; color: var(--muted); }
@@ -372,7 +387,7 @@
   position: relative;
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   box-shadow: 0 24px 60px rgba(28, 25, 23, 0.3);
   width: 100%;
   max-width: 880px;
@@ -390,7 +405,7 @@
   z-index: 2;
   width: 36px;
   height: 36px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.95);
   color: var(--ink);
@@ -443,7 +458,7 @@
   color: var(--accent-ink);
   background: var(--accent-soft);
   border: 1px solid #e3d3bd;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   margin-top: 10px;
 }

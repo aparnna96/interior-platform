@@ -158,6 +158,11 @@ describe('ProposalsComponent', () => {
     const fixture = setupAnonymous();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Log in to view your proposals');
+    expect(el.textContent).not.toContain('Open Account');
+    let asked = false;
+    fixture.componentInstance.loginRequested.subscribe(() => (asked = true));
+    (el.querySelector('.proposals-empty .btn-primary') as HTMLButtonElement).click();
+    expect(asked).toBeTrue();
     httpMock.expectNone(PROPOSALS_URL);
   });
 

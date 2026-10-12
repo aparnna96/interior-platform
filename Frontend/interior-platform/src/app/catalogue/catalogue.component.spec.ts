@@ -189,6 +189,45 @@ describe('CatalogueComponent ProductService integration', () => {
     expect(el.textContent).toContain('Haven Queen Storage Bed');
   });
 
+  it('sorts by price and name, and ignores an unknown sort value', async () => {
+    const { cmp, httpMock } = await setup();
+    httpMock.expectOne(PRODUCTS_URL).flush(apiProducts);
+    cmp.setSort('price-asc');
+    expect(cmp.filtered().map((p) => p.id)).toEqual(['sona-loveseat', 'haven-queen-bed', 'aria-3s-sofa']);
+    cmp.setSort('price-desc');
+    expect(cmp.filtered().map((p) => p.id)).toEqual(['aria-3s-sofa', 'haven-queen-bed', 'sona-loveseat']);
+    cmp.setSort('name');
+    expect(cmp.filtered().map((p) => p.id)).toEqual(['aria-3s-sofa', 'haven-queen-bed', 'sona-loveseat']);
+    cmp.setSort('nonsense');
+    expect(cmp.sort()).toBe('featured');
+    expect(cmp.filtered().map((p) => p.id)).toEqual(['aria-3s-sofa', 'sona-loveseat', 'haven-queen-bed']);
+  });
+
+  it('offers Clear filters when nothing matches and restores the full list', async () => {
+    const { fixture, cmp, httpMock } = await setup();
+    httpMock.expectOne(PRODUCTS_URL).flush(apiProducts);
+    cmp.setSearch('xyz-no-match');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('No pieces match your filters');
+    const clear = Array.from(el.querySelectorAll('.sr-empty button')).find((b) => b.textContent?.includes('Clear filters')) as HTMLButtonElement;
+    expect(clear).toBeTruthy();
+    clear.click();
+    fixture.detectChanges();
+    expect(cmp.filtered().length).toBe(3);
+    expect(cmp.hasFilters()).toBeFalse();
+  });
+
+  it('shows placeholder tiles, not a lone message, while the first load is in flight', async () => {
+    const { fixture, httpMock } = await setup();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.sr-grid .tile .skel').length).toBeGreaterThan(0);
+    httpMock.expectOne(PRODUCTS_URL).flush(apiProducts);
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.skel').length).toBe(0);
+  });
+
   it('search and room filter work against loaded products', async () => {
     const { cmp, httpMock } = await setup();
     httpMock.expectOne(PRODUCTS_URL).flush(apiProducts);

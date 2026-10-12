@@ -418,6 +418,59 @@ export class AppComponent {
     }
   }
 
+  /** True while the pointer is over the header; the bar then stays open however the page scrolls. */
+  private navPointerInside = false;
+  private navLeaveTimer: ReturnType<typeof setTimeout> | null = null;
+  /** How long the open bar lingers after the pointer leaves it, before it folds back to the logo. */
+  private static readonly NAV_LEAVE_DELAY_MS = 450;
+
+  /** Pointing at the centred logo opens the full bar (the click and keyboard paths do the same). */
+  onCompactHover(): void {
+    this.expandNavbar();
+  }
+
+  onNavPointerEnter(): void {
+    this.navPointerInside = true;
+    this.clearNavLeaveTimer();
+  }
+
+  /** Once the pointer leaves, a bar that was opened by hovering folds back if the page is still scrolled down. */
+  onNavPointerLeave(): void {
+    this.navPointerInside = false;
+    this.clearNavLeaveTimer();
+    if (typeof window === 'undefined' || window.scrollY <= AppComponent.NAV_HIDE_AFTER) return;
+    this.navLeaveTimer = setTimeout(() => {
+      this.navLeaveTimer = null;
+      if (this.navPointerInside || this.drawerOpen() || this.navHasFocus()) return;
+      if (
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        return;
+      }
+      if (window.scrollY > AppComponent.NAV_HIDE_AFTER) {
+        this.navHidden.set(true);
+        this.lastScrollY = window.scrollY;
+      }
+    }, AppComponent.NAV_LEAVE_DELAY_MS);
+  }
+
+  private clearNavLeaveTimer(): void {
+    if (this.navLeaveTimer !== null) {
+      clearTimeout(this.navLeaveTimer);
+      this.navLeaveTimer = null;
+    }
+  }
+
+  /** Keyboard focus inside the full bar (not on the compact logo) keeps it open. */
+  private navHasFocus(): boolean {
+    const active = typeof document !== 'undefined' ? document.activeElement : null;
+    if (!active || active === document.body) return false;
+    const header = document.querySelector('header.pubnav');
+    const compact = header?.querySelector('.pubnav-compact');
+    return !!header?.contains(active) && !compact?.contains(active);
+  }
+
   @HostListener('window:scroll')
   onWindowScroll(): void {
     const y = window.scrollY ?? 0;
@@ -441,6 +494,13 @@ export class AppComponent {
     // be opened while collapsed; this branch covers scrolling with it open.
     if (this.drawerOpen()) {
       if (this.navHidden()) this.navHidden.set(false);
+      this.lastScrollY = y;
+      return;
+    }
+
+    // An open bar under the pointer stays open, so scrolling with the wheel while pointing at it
+    // does not fold it away under the cursor. A folded bar still opens only via the logo or scrolling up.
+    if (this.navPointerInside && !this.navHidden()) {
       this.lastScrollY = y;
       return;
     }

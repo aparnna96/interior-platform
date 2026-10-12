@@ -62,7 +62,7 @@
   justify-items: center;
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   min-width: 0;
 }
 .empty-icon {
@@ -87,7 +87,7 @@
   color: var(--danger);
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 14px;
   display: flex;
   flex-wrap: wrap;
@@ -99,7 +99,7 @@
 .order-confirm {
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 24px 20px;
   display: grid;
   gap: 10px;
@@ -144,7 +144,7 @@
   gap: 14px;
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 12px;
   min-width: 0;
 }
@@ -153,7 +153,7 @@
   margin: 0;
   width: 104px;
   aspect-ratio: 4 / 5;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   background: #eee7d9;
   min-width: 0;
@@ -200,7 +200,7 @@
   display: inline-flex;
   align-items: stretch;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   background: #fff;
   flex: none;
@@ -241,7 +241,7 @@
 .delivery {
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 20px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -267,7 +267,7 @@
   color: var(--ink);
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 .delivery textarea { resize: vertical; min-height: 84px; }
 .delivery input:focus-visible,
@@ -277,7 +277,7 @@
 .delivery .f-err:empty { display: none; }
 .delivery-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 4px; }
 
-.delivering-to { width: 100%; background: var(--surface-soft); border: 1px solid var(--border-soft); border-radius: 8px; padding: 12px 14px; display: grid; gap: 2px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+.delivering-to { width: 100%; background: var(--surface-soft); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 2px; font-size: 13px; color: var(--ink-2); min-width: 0; }
 .delivering-to h3 { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
 .delivering-to p { margin: 0; overflow-wrap: anywhere; }
 .delivering-to .d-name { color: var(--ink); font-weight: 650; }
@@ -287,7 +287,7 @@
 .summary {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
   padding: 18px;
   display: grid;
@@ -316,7 +316,7 @@
 
 .btn-primary {
   appearance: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   min-height: 44px;
   font-size: 13px;
   font-weight: 650;
@@ -333,7 +333,7 @@
 .cart-empty-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
 .btn-secondary {
   appearance: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   min-height: 44px;
   font-size: 13px;
   font-weight: 650;

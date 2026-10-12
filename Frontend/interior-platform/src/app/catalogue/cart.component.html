@@ -55,9 +55,17 @@
       <button class="btn-primary" (click)="goBrowse()">Continue browsing</button>
     </div>
     } @else if (cart.loading() && cart.lines().length === 0) {
-    <div class="cart-empty" aria-live="polite">
-      <p>Loading your cart…</p>
-      <span>Fetching your saved pieces.</span>
+    <div class="lines" aria-live="polite" aria-busy="true">
+      <p class="adm-sr-only">Loading your cart…</p>
+      @for (n of [1, 2]; track n) {
+        <div class="line" aria-hidden="true">
+          <span class="skel line-media"></span>
+          <div class="line-info">
+            <span class="skel skel-title skel-w70"></span>
+            <span class="skel skel-line skel-w30"></span>
+          </div>
+        </div>
+      }
     </div>
   } @else if (cart.lines().length === 0) {
     <div class="cart-empty">

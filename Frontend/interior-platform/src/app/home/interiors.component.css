@@ -58,7 +58,7 @@
   left: 12px;
   bottom: 12px;
   background: rgba(255, 255, 255, 0.94);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 8px 12px;
   display: flex;
   flex-direction: column;
@@ -71,7 +71,7 @@
 .in-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .hp-btn {
   appearance: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   min-height: 44px;
   font-size: 13px;
   font-weight: 650;

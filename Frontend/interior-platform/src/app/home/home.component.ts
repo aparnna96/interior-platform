@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, computed, inject, output, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RevealDirective } from '../shared/reveal.directive';
+import { CountUpDirective } from '../shared/count-up.directive';
 import type { CatalogueProduct } from '../catalogue/catalogue-products';
 import { ProductService } from '../catalogue/product.service';
 import {
@@ -18,7 +19,7 @@ import {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RevealDirective],
+  imports: [CommonModule, RevealDirective, CountUpDirective],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
 })
@@ -53,6 +54,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private readonly productService = inject(ProductService);
 
+  /** Live number of pieces in the catalogue. */
+  readonly pieceCount = computed(() => this.productService.products().length);
+  /** Distinct categories and rooms in the live catalogue, so the strip always matches the Furniture page. */
+  readonly categoryCount = computed(() => new Set(this.productService.products().map((p) => p.category)).size);
+  readonly roomCount = computed(() => new Set(this.productService.products().map((p) => p.room)).size);
   /** Featured pieces resolved from ProductService in curated FEATURED_PRODUCT_IDS order. */
   readonly featured = computed<CatalogueProduct[]>(() => {
     const products = this.productService.products();

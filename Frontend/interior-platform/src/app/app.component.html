@@ -202,7 +202,7 @@
   <div class="main" [attr.inert]="drawerOpen() && !isPublicView() ? '' : null">
     @if (isPublicView()) {
     <!-- Public top navbar (Home / Interiors / Furniture) -->
-    <header class="pubnav" [class.scrolled]="navScrolled()" [class.nav-hidden]="navHidden()" aria-label="Primary navigation">
+    <header class="pubnav" [class.scrolled]="navScrolled()" [class.nav-hidden]="navHidden()" aria-label="Primary navigation" (mouseenter)="onNavPointerEnter()" (mouseleave)="onNavPointerLeave()">
       <div class="pubnav-bar">
         <button
           class="pubnav-brand"
@@ -218,6 +218,7 @@
           <button [class.active]="activeView() === 'visualizer'" (click)="activeView.set('visualizer'); closeDrawer()">Visualizer</button>
           <button [class.active]="activeView() === 'estimates'" (click)="activeView.set('estimates'); closeDrawer()">Estimates</button>
           <button [class.active]="activeView() === 'projects'" (click)="activeView.set('projects'); closeDrawer()">Projects</button>
+          <span class="pubnav-sep" aria-hidden="true"></span>
           <button [class.active]="activeView() === 'cart'" (click)="activeView.set('cart'); closeDrawer()" aria-label="Open cart">Cart@if (cart.totalQty() > 0) { <span class="cart-badge">{{ cart.totalQty() }}</span> }</button>
           @if (auth.isAuthenticated()) {
             <button [class.active]="activeView() === 'orders'" (click)="activeView.set('orders'); closeDrawer()">Orders</button>
@@ -232,6 +233,7 @@
           type="button"
           class="pubnav-compact"
           (click)="expandNavbar()"
+          (mouseenter)="onCompactHover()"
           aria-label="Confident Group — show navigation"
           [attr.aria-hidden]="!navHidden()"
           [attr.tabindex]="navHidden() ? '0' : '-1'"
@@ -666,7 +668,7 @@
 
     @if (activeView() === 'orders') {
       <main class="content cat-main">
-        <app-orders (browse)="activeView.set('catalogue'); closeDrawer()" />
+        <app-orders (browse)="activeView.set('catalogue'); closeDrawer()" (loginRequested)="openLogin()" />
       </main>
     }
 
@@ -674,6 +676,7 @@
       <main class="content cat-main">
         <app-proposals
           [createdDetail]="createdProposal()"
+          (loginRequested)="openLogin()"
           (browse)="activeView.set('catalogue'); closeDrawer()" />
       </main>
     }
@@ -857,10 +860,26 @@
         <app-account-page (navigate)="activeView.set($event)" (loginRequested)="openLogin()" />
       </main>
     }
+    @if (isPublicView()) {
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <p class="site-footer-brand"><strong>Confident Group</strong></p>
+        <nav class="site-footer-links" aria-label="Footer">
+          <button type="button" (click)="activeView.set('interiors')">Interiors</button>
+          <button type="button" (click)="activeView.set('catalogue')">Furniture</button>
+          <button type="button" (click)="activeView.set('visualizer')">Visualizer</button>
+          <button type="button" (click)="activeView.set('estimates')">Estimates</button>
+          <button type="button" (click)="activeView.set('proposals')">Proposals</button>
+        </nav>
+        <p class="site-footer-note">Pricing subject to confirmation</p>
+      </div>
+    </footer>
+    } @else {
     <footer class="statusbar">
       <span><strong>Confident Group</strong> · Workspace</span>
       <span class="sub small">Pricing subject to confirmation</span>
     </footer>
+    }
   </div>
 </div>
 }

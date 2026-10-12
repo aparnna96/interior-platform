@@ -49,13 +49,32 @@
     <h2 class="listing-title">
       @if (room() === 'All') { All pieces } @else { {{ room() }} }
     </h2>
-    <p class="listing-count">{{ filtered().length }} piece{{ filtered().length === 1 ? '' : 's' }}</p>
+    <div class="listing-tools">
+      <label class="listing-sort">
+        <span>Sort</span>
+        <select aria-label="Sort products" [value]="sort()" (change)="setSort($any($event.target).value)">
+          @for (o of sortOptions; track o.value) {
+            <option [value]="o.value" [selected]="sort() === o.value">{{ o.label }}</option>
+          }
+        </select>
+      </label>
+      <p class="listing-count">{{ filtered().length }} piece{{ filtered().length === 1 ? '' : 's' }}</p>
+    </div>
   </div>
 
   @if (productService.loading() && productService.products().length === 0) {
-    <div class="sr-empty" aria-live="polite">
-      <p>Loading furniture…</p>
-      <span>Fetching the latest pieces.</span>
+    <div class="sr-grid" aria-busy="true" aria-live="polite">
+      <p class="adm-sr-only">Loading furniture…</p>
+      @for (n of skeletons; track n) {
+        <div class="tile" aria-hidden="true">
+          <span class="skel tile-skel-media"></span>
+          <div class="tile-info">
+            <span class="skel skel-line skel-w50"></span>
+            <span class="skel skel-title skel-w90"></span>
+            <span class="skel skel-line skel-w70"></span>
+          </div>
+        </div>
+      }
     </div>
   } @else if (productService.error() && productService.products().length === 0) {
     <div class="sr-empty" role="alert">
@@ -97,6 +116,9 @@
     <div class="sr-empty">
       <p>No pieces match your filters.</p>
       <span>Try a different search term or room.</span>
+      @if (hasFilters()) {
+        <button class="btn-outline" (click)="clearFilters()">Clear filters</button>
+      }
     </div>
   }
   }

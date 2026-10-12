@@ -84,6 +84,20 @@ describe('HomeComponent featured products', () => {
     fixture.destroy();
   });
 
+  it('derives the at-a-glance counts from the live catalogue', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance;
+    expect([cmp.pieceCount(), cmp.categoryCount(), cmp.roomCount()]).toEqual([0, 0, 0]);
+    httpMock.expectOne(PRODUCTS_URL).flush(API_PRODUCTS);
+    fixture.detectChanges();
+    expect(cmp.pieceCount()).toBe(5);
+    expect(cmp.categoryCount()).toBe(4);
+    expect(cmp.roomCount()).toBe(2);
+    const labels = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.glance li span')).map((s) => s.textContent);
+    expect(labels).toEqual(['Furniture pieces', 'Furniture categories', 'Rooms furnished']);
+    fixture.destroy();
+  });
+
   it('resolves featured products in FEATURED_PRODUCT_IDS order', () => {
     const fixture = setup();
     httpMock.expectOne(PRODUCTS_URL).flush(API_PRODUCTS);

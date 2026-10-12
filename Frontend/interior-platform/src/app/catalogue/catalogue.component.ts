@@ -11,6 +11,8 @@ import { CartService } from './cart.service';
 import { ProductService } from './product.service';
 import { ProductDetailsComponent, type AddToCartEvent } from './product-details.component';
 
+type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
+
 @Component({
   selector: 'app-catalogue',
   standalone: true,
@@ -58,6 +60,15 @@ export class CatalogueComponent implements OnInit {
 
   search = signal('');
   room = signal<RoomFilter>('All');
+  sort = signal<SortKey>('featured');
+  readonly sortOptions: { value: SortKey; label: string }[] = [
+    { value: 'featured', label: 'Featured' },
+    { value: 'price-asc', label: 'Price, low to high' },
+    { value: 'price-desc', label: 'Price, high to low' },
+    { value: 'name', label: 'Name, A to Z' },
+  ];
+  /** Placeholder tiles shown while the first load is in flight. */
+  readonly skeletons = [1, 2, 3, 4, 5, 6];
   /** Dedicated details view selection. Null = listing; set = details replaces listing. */
   selectedId = signal<string | null>(null);
 
@@ -65,9 +76,27 @@ export class CatalogueComponent implements OnInit {
     this.productService.load();
   }
 
-  filtered = computed(() =>
-    filterProducts(this.productService.products(), this.search(), this.room())
-  );
+  filtered = computed(() => {
+    const matches = filterProducts(this.productService.products(), this.search(), this.room());
+    switch (this.sort()) {
+      case 'price-asc': return [...matches].sort((a, b) => a.price - b.price);
+      case 'price-desc': return [...matches].sort((a, b) => b.price - a.price);
+      case 'name': return [...matches].sort((a, b) => a.name.localeCompare(b.name));
+      default: return matches;
+    }
+  });
+
+  hasFilters = computed(() => this.search().trim() !== '' || this.room() !== 'All');
+
+  clearFilters(): void {
+    this.search.set('');
+    this.room.set('All');
+  }
+
+  setSort(raw: string): void {
+    const known = this.sortOptions.find((o) => o.value === raw);
+    this.sort.set(known ? known.value : 'featured');
+  }
 
   cartCount = computed(() => this.cart.totalQty());
 

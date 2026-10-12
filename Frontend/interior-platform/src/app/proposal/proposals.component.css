@@ -61,7 +61,7 @@
   justify-items: center;
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   min-width: 0;
 }
 .empty-icon {
@@ -86,7 +86,7 @@
   color: var(--danger);
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 14px;
   display: flex;
   flex-wrap: wrap;
@@ -104,7 +104,7 @@
   justify-content: space-between;
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 14px 16px;
   min-width: 0;
 }
@@ -147,7 +147,7 @@
 .proposal-detail {
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 20px;
   display: grid;
   gap: 12px;
@@ -161,7 +161,7 @@
   color: var(--ink);
   background: var(--surface-soft);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 14px;
 }
 .sub { color: #57534e; }
@@ -204,7 +204,7 @@
 
 .btn-primary {
   appearance: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   min-height: 44px;
   font-size: 13px;
   font-weight: 650;
@@ -233,7 +233,7 @@
   color: var(--muted);
   background: var(--surface-soft);
   border: 1px dashed var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 14px;
 }
 

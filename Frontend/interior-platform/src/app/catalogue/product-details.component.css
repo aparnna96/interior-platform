@@ -22,7 +22,7 @@
   gap: 7px;
   border: 1px solid var(--border);
   background: #fff;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 8px 14px;
   min-height: 40px;
   font-size: 12.5px;
@@ -39,7 +39,7 @@
   grid-template-columns: 1.05fr 1fr;
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   overflow: hidden;
   min-width: 0;
 }
@@ -103,7 +103,7 @@
 
 .qty-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; min-width: 0; }
 .qty-label { font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-.qty-ctrl { display: inline-flex; align-items: stretch; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: #fff; flex: none; max-width: 100%; }
+.qty-ctrl { display: inline-flex; align-items: stretch; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: #fff; flex: none; max-width: 100%; }
 .qty-btn {
   appearance: none;
   border: 0;
@@ -134,7 +134,7 @@
 .btn-outline,
 .btn-primary {
   appearance: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   min-height: 42px;
   font-size: 13px;
   font-weight: 650;
@@ -166,8 +166,8 @@
   font-weight: 600;
   color: var(--accent-ink);
   background: var(--accent-soft);
-  border: 1px solid #e3d3bd;
-  border-radius: 6px;
+  border: 1px solid #e6d5b8;
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   margin-top: 10px;
 }

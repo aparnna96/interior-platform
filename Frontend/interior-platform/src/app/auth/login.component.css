@@ -6,7 +6,7 @@
   border: 1px solid #e4ded4; border-radius: 6px;
   background: #fff; font-size: 13.5px; color: #1c1917; outline: none;
 }
-.login input:focus { border-color: #7c5c3e; box-shadow: 0 0 0 3px #f3ebe0; }
+.login input:focus { border-color: #a8793a; box-shadow: 0 0 0 3px #f5ecdc; }
 .login input::placeholder { color: #8a8580; font-weight: 400; }
 .login-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
 .login-actions .btn { min-width: 140px; }

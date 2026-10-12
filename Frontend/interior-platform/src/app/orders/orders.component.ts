@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth.service';
+import { orderTone, type Tone } from '../shared/admin/badge.component';
 import {
   OrderService,
   orderStatusLabel,
@@ -30,6 +31,9 @@ export class OrdersComponent {
 
   /** Requests returning to the existing Furniture catalogue. */
   browse = output<void>();
+
+  /** Asks the shell to open the login page (visitor landed here logged out). */
+  loginRequested = output<void>();
 
   readonly list = signal<OrderSummaryDto[] | null>(null);
   readonly listLoading = signal(false);
@@ -61,8 +65,16 @@ export class OrdersComponent {
     this.browse.emit();
   }
 
+  requestLogin(): void {
+    this.loginRequested.emit();
+  }
+
   statusLabel(status: number): string {
     return orderStatusLabel(status);
+  }
+
+  tone(status: number): Tone {
+    return orderTone(status);
   }
 
   orderItemCount(order: OrderDetailDto): number {
