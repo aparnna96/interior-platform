@@ -321,3 +321,100 @@ describe('HomeComponent hero carousel controls', () => {
     fixture.destroy();
   });
 });
+describe('HomeComponent reviews', () => {
+  let httpMock: HttpTestingController;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [HomeComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  function setup() {
+    const fixture = TestBed.createComponent(HomeComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(PRODUCTS_URL).flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    return { fixture, cmp: fixture.componentInstance, el };
+  }
+
+  it('shows one card per review with its quote, name and place', () => {
+    const { fixture, cmp, el } = setup();
+    const cards = Array.from(el.querySelectorAll('section[aria-label="Customer reviews"] .rev-card'));
+    expect(cards.length).toBe(cmp.reviews.length);
+    const first = cards[0] as HTMLElement;
+    expect(first.querySelector('.rev-quote')!.textContent).toContain(cmp.reviews[0].quote);
+    expect(first.querySelector('.rev-who strong')!.textContent).toContain(cmp.reviews[0].name);
+    expect(first.querySelector('.rev-who')!.textContent).toContain(cmp.reviews[0].city);
+    fixture.destroy();
+  });
+
+  it('draws five stars per card and says the rating in words for screen readers', () => {
+    const { fixture, cmp, el } = setup();
+    for (const [i, card] of Array.from(el.querySelectorAll('.rev-card')).entries()) {
+      const rating = cmp.reviews[i].rating;
+      expect(card.querySelectorAll('.rev-star').length).toBe(5);
+      expect(card.querySelectorAll('.rev-star:not(.off)').length).toBe(rating);
+      expect(card.querySelector('.rev-stars')!.getAttribute('aria-label')).toBe(`Rated ${rating} out of 5`);
+    }
+    fixture.destroy();
+  });
+
+  it('shows initials instead of a photo', () => {
+    const { fixture, el } = setup();
+    expect(el.querySelectorAll('.rev-card img').length).toBe(0);
+    expect(el.querySelector('.rev-card .rev-avatar')!.getAttribute('aria-hidden')).toBe('true');
+    expect(fixture.componentInstance.initials('Meera Nair')).toBe('MN');
+    expect(fixture.componentInstance.initials('  Arjun  Rao Menon ')).toBe('AR');
+    expect(fixture.componentInstance.initials('Sana')).toBe('S');
+    expect(fixture.componentInstance.initials('')).toBe('');
+    fixture.destroy();
+  });
+
+  it('has labelled arrows, and the list can be reached by keyboard', () => {
+    const { fixture, el } = setup();
+    const arrows = el.querySelectorAll('.rev-arrow');
+    expect(arrows.length).toBe(2);
+    expect(arrows[0].getAttribute('aria-label')).toBe('Previous reviews');
+    expect(arrows[1].getAttribute('aria-label')).toBe('Next reviews');
+    expect(el.querySelector('.rev-track')!.getAttribute('tabindex')).toBe('0');
+    fixture.destroy();
+  });
+
+  it('the arrows scroll the list and switch off at each end', () => {
+    const { fixture, cmp, el } = setup();
+    const track = el.querySelector('.rev-track') as HTMLElement;
+    const prev = el.querySelectorAll('.rev-arrow')[0] as HTMLButtonElement;
+    const next = el.querySelectorAll('.rev-arrow')[1] as HTMLButtonElement;
+    cmp.onReviewScroll();
+    fixture.detectChanges();
+
+    // Narrow enough that the cards overflow, so there is more to the right and nothing to the left.
+    track.style.width = '320px';
+    track.style.gridAutoColumns = '280px';
+    cmp.onReviewScroll();
+    fixture.detectChanges();
+    expect(prev.disabled).toBeTrue();
+    expect(next.disabled).toBeFalse();
+
+    const spy = spyOn(track, 'scrollBy');
+    next.click();
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect((spy.calls.mostRecent().args[0] as ScrollToOptions).left).toBeGreaterThan(0);
+    prev.disabled = false;
+    cmp.scrollReviews(-1);
+    expect((spy.calls.mostRecent().args[0] as ScrollToOptions).left).toBeLessThan(0);
+
+    track.scrollLeft = track.scrollWidth;
+    cmp.onReviewScroll();
+    fixture.detectChanges();
+    expect(next.disabled).toBeTrue();
+    expect(prev.disabled).toBeFalse();
+    fixture.destroy();
+  });
+});

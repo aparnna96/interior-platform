@@ -6,6 +6,7 @@ import {
   DESIGN_STEPS,
   JOURNEY,
   FEATURED_PRODUCT_IDS,
+  REVIEWS,
 } from './home-data';
 
 describe('home demo content', () => {
@@ -45,6 +46,24 @@ describe('home demo content', () => {
     for (const id of FEATURED_PRODUCT_IDS) {
       expect(typeof id).toBe('string');
       expect(id.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('has sample reviews with a rating, a name, a place and a quote, and no photos', () => {
+    expect(REVIEWS.length).toBeGreaterThanOrEqual(4);
+    const names = REVIEWS.map((r) => r.name);
+    expect(new Set(names).size).toBe(names.length);
+    for (const r of REVIEWS) {
+      expect(Number.isInteger(r.rating)).toBeTrue();
+      expect(r.rating).toBeGreaterThanOrEqual(1);
+      expect(r.rating).toBeLessThanOrEqual(5);
+      expect(r.name.trim().length).toBeGreaterThan(0);
+      expect(r.city.trim().length).toBeGreaterThan(0);
+      expect(r.project.trim().length).toBeGreaterThan(0);
+      expect(r.quote.length).toBeGreaterThan(40);
+      // Long quotes break the card layout.
+      expect(r.quote.length).toBeLessThan(260);
+      expect(Object.keys(r)).not.toContain('image');
     }
   });
 

@@ -8,7 +8,8 @@ Interior design and furniture platform for the client "Confident Group". Used as
 - `Backend/InteriorPlatform.Api`: .NET 10 Web API, EF Core (SQL Server), ASP.NET Identity + JWT, QuestPDF.
 - `Backend/InteriorPlatform.Api.Tests`: backend tests.
 - `docs/`: `demo-guide.md`, `production-deployment-runbook.md`, `payments-test-mode.md`.
-- `.playwright-output/`: old screenshots, gitignored. Ignore it.
+- `.claude/skills/`: design skills (`impeccable`, `design-taste-frontend`), read by both Claude Code and opencode. `CLAUDE.md` imports this file.
+- No Playwright or browser-automation setup. Do not add one; the machine is low on memory.
 
 ## Environment
 
@@ -54,13 +55,16 @@ Interior design and furniture platform for the client "Confident Group". Used as
 
 ## Frontend architecture
 
-- `AppComponent` holds one `activeView` signal; the Router keeps the URL in sync both ways. `src/app/app-paths.ts` is the single source of truth for views, paths, titles and access levels (`public`, `guest`, `auth`, `staff`, `fieldstaff`, `admin`). Add new pages there first.
+- `AppComponent` holds one `activeView` signal; the Router keeps the URL in sync both ways. `src/app/app-paths.ts` is the single source of truth for views, paths, titles and access levels (`public`, `guest`, `auth`, `staff`, `fieldstaff`, `admin`, `adminlogin`). Admin views are prefixed `admin-` (`admin-dashboard`, `admin-products`, `admin-orders`, `admin-proposals`, `admin-rates`, `admin-leads`, `admin-login`). Add new pages there first.
 - Guards live in `src/app/auth/auth.guards.ts`. They are display logic only; the API enforces permissions with `[Authorize]`.
 - Roles are read from the JWT stored in `localStorage` key `ip.auth.token`. Role claim: `http://schemas.microsoft.com/ws/2008/06/identity/claims/role`.
 - After login: `returnUrl` (validated by `safeReturnUrl`) if present, else `landingPathFor(roles)`: Admin `/admin`, FieldStaff `/leads`, others `/`.
 - `/login` is intentionally a customer-layout page. The Admin shell appears only for an authenticated Admin on an Admin view.
-- Admin shell: `src/app/admin-layout/`. Active when `auth.isAdmin() && isAdminShellView(activeView)`. `ADMIN_SHELL_VIEWS` (in `app-paths.ts`): dashboard, products, orders, proposals, rates, leads. FieldStaff keep the workspace layout on `/leads` and `/field`.
-- Feature folders in `src/app/`: `admin-dashboard`, `admin-layout`, `admin-orders`, `admin-products`, `admin-proposals`, `admin-rates`, `auth`, `catalogue`, `elevation`, `estimate`, `finishes`, `floor-plan`, `home`, `leads`, `orders`, `proposal`, `register`, `room-visualizer`, `shared`, `whatsapp`.
+- Admin login: `/admin/login` (`src/app/admin-login/`, view `admin-login`, access `adminlogin`). `adminGuard` sends visitors and non-Admin roles there, never to `/login`, with a `returnUrl` limited to the Admin area (`safeAdminReturnUrl`). `adminLoginGuard` forwards a signed-in Admin to that `returnUrl` or `/admin`; customers and visitors still see the page. `safeReturnUrl` rejects `/admin/login`.
+- Admin area: `ADMIN_AREA_VIEWS` (in `app-paths.ts`) is every `/admin` view including login. It never shows the customer navigation.
+- Admin shell: `src/app/admin-layout/`. Active when `auth.isAdmin() && isAdminShellView(activeView)`. `ADMIN_SHELL_VIEWS` is `ADMIN_AREA_VIEWS` minus `admin-login`: `admin-dashboard`, `admin-products`, `admin-orders`, `admin-proposals`, `admin-rates`, `admin-leads`.
+- FieldStaff keep the workspace layout on `/leads` and `/field`. `staffGuard` sends an Admin without the FieldStaff role from `/leads` to `/admin/leads`; `/field` is FieldStaff only.
+- Feature folders in `src/app/`: `admin-dashboard`, `admin-layout`, `admin-login`, `admin-orders`, `admin-products`, `admin-proposals`, `admin-rates`, `auth`, `catalogue`, `elevation`, `estimate`, `finishes`, `floor-plan`, `home`, `leads`, `orders`, `proposal`, `register`, `room-visualizer`, `shared`, `whatsapp`.
 
 ## Backend
 
@@ -74,7 +78,7 @@ Interior design and furniture platform for the client "Confident Group". Used as
 
 - Customer: Home, Interiors, Furniture catalogue and product pages, Cart, Orders, Account, Register and Login, Estimates, Projects, Proposals, payments (demo mode), checkout delivery details, room visualizer (floor plan, elevation, finishes).
 - Field Staff: Leads, Field visualizer.
-- Admin: workspace shell, dashboard (summary cards, recent activity, quick actions), Products, Orders, Proposals, Estimate Rate.
+- Admin: separate login page, workspace shell, dashboard (summary cards, recent activity, quick actions), Products, Orders, Proposals, Leads, Estimate Rate.
 - WhatsApp action exists but is off: no business number is configured in the environment files.
 
 ## Known gaps

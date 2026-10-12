@@ -481,5 +481,6 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-# Playwright MCP output (screenshots, snapshots) from UI audits
-.playwright-output/
+# Claude Code local overrides
+.claude/settings.local.json
+CLAUDE.local.md

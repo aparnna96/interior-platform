@@ -1,56 +1,58 @@
 :host { display: block; }
 
-.admin-shell { min-height: 100vh; display: flex; background: var(--bg); color: var(--ink); }
+.admin-shell { min-height: 100vh; display: flex; background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.5; }
 
-/* ── Sidebar ── */
+/* ── Sidebar: navy, from the logo ── */
 .admin-sidebar {
-  width: 248px; flex: none;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
+  width: 256px; flex: none;
+  background: var(--nav-bg);
+  color: var(--nav-ink);
   display: flex; flex-direction: column;
   position: sticky; top: 0; height: 100vh;
-  overflow-y: auto; scrollbar-width: thin;
+  overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--nav-line) transparent;
 }
 .admin-brand {
   position: relative;
-  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
-  padding: 18px 16px 14px;
-  border-bottom: 1px solid var(--border-soft);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+  padding: 18px 16px 16px;
+  border-bottom: 1px solid var(--nav-line);
 }
-/* The logo file is mostly empty margin, so it is shown through a cropped window, exactly as
-   the customer sidebar does (.brand-mark / .brand-window / .brand-logo in styles.css). */
-.admin-logo-mark { display: block; padding: 8px 12px; min-width: 0; }
+/* The logo file has a white background and mostly empty margin, so it sits on a white plate
+   and is shown through a cropped window. */
+.admin-logo-mark { display: block; padding: 6px 12px; background: #fff; border-radius: 10px; min-width: 0; }
 .admin-logo-window { display: block; height: 52px; overflow: hidden; }
 .admin-logo { display: block; height: 108px; width: auto; max-width: none; margin-top: -23px; }
 .admin-brand-tag {
-  padding-left: 12px;
-  font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
-  color: var(--accent-ink);
+  padding-left: 2px;
+  font-size: 12px; font-weight: 650; letter-spacing: 0.04em;
+  color: var(--nav-gold);
 }
 .admin-nav { padding: 6px 10px; display: grid; gap: 2px; }
 .admin-nav-label {
-  margin: 0; padding: 10px 8px 4px;
-  font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
-  color: var(--muted);
+  margin: 0; padding: 12px 10px 4px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+  color: var(--nav-muted);
 }
 .admin-nav-item {
-  display: flex; align-items: center; gap: 9px;
-  width: 100%; min-height: 38px;
-  border: 1px solid transparent; background: transparent; border-radius: 7px;
-  padding: 8px 9px; font: inherit; font-size: 13.5px; font-weight: 550; color: var(--ink-2);
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 40px;
+  border: 0; background: transparent; border-radius: 8px;
+  padding: 8px 10px; font: inherit; font-size: 14px; font-weight: 550; color: var(--nav-ink);
   cursor: pointer; text-align: left;
 }
 .admin-nav-item svg {
-  width: 16px; height: 16px; flex: none;
+  width: 17px; height: 17px; flex: none;
   fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
 }
-.admin-nav-item:hover { background: var(--surface-soft); }
-.admin-nav-item.active { background: var(--accent-soft); border-color: #e3d3bd; color: var(--accent-ink); }
-.admin-nav-site { margin-top: auto; padding-bottom: 14px; border-top: 1px solid var(--border-soft); }
+.admin-nav-item:hover { background: var(--nav-hover); color: #fff; }
+.admin-nav-item.active { background: var(--nav-active); color: #fff; }
+.admin-nav-item.active svg { color: var(--nav-gold); }
+.admin-nav-site { margin-top: auto; padding-bottom: 14px; border-top: 1px solid var(--nav-line); }
 
 .admin-nav-item:focus-visible,
 .admin-menu-btn:focus-visible,
-.admin-drawer-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.admin-drawer-close:focus-visible { outline: 2px solid var(--nav-gold); outline-offset: 2px; }
+.admin-menu-btn:focus-visible { outline-color: var(--btn-bg); }
 
 /* ── Main column ── */
 .admin-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -65,15 +67,15 @@
   margin-left: auto;
   max-width: 340px;
   border: 1px solid var(--border); border-radius: 99px; background: var(--surface-soft);
-  padding: 3px 12px 3px 3px; font-size: 12.5px;
+  padding: 3px 12px 3px 3px; font-size: 13px;
 }
 .admin-chip-role {
   flex: none;
-  background: var(--accent-soft); color: var(--accent-ink); border-radius: 99px;
-  padding: 3px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--nav-bg); color: var(--nav-gold); border-radius: 99px;
+  padding: 3px 10px; font-size: 12px; font-weight: 650; letter-spacing: 0.02em;
 }
 .admin-chip-email { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
-.admin-content { flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: 20px 24px 32px; outline: none; }
+.admin-content { flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: 24px 24px 40px; outline: none; }
 
 .admin-sr-only {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
@@ -84,14 +86,15 @@
 .admin-menu-btn, .admin-drawer-close {
   display: none; align-items: center; justify-content: center;
   width: 40px; height: 40px; flex: none; padding: 0;
-  border: 1px solid var(--border); background: #fff; border-radius: 7px;
-  color: var(--ink); cursor: pointer;
+  border-radius: 8px; cursor: pointer;
 }
+.admin-menu-btn { border: 1px solid var(--border); background: #fff; color: var(--ink); }
+.admin-drawer-close { border: 1px solid var(--nav-line); background: transparent; color: var(--nav-ink); }
 .admin-menu-btn svg, .admin-drawer-close svg {
   width: 18px; height: 18px;
   fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round;
 }
-.admin-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(28, 25, 23, 0.45); }
+.admin-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(7, 22, 40, 0.55); }
 
 /* ── Mobile: the sidebar becomes an off-canvas drawer ── */
 @media (max-width: 959px) {
@@ -106,12 +109,12 @@
     transform: none; visibility: visible;
     transition: transform 0.22s ease, visibility 0s;
   }
-  .admin-nav-item { min-height: 40px; }
+  .admin-nav-item { min-height: 44px; }
   .admin-menu-btn { display: inline-flex; }
   .admin-drawer-close { display: inline-flex; position: absolute; top: 12px; right: 12px; }
   .admin-topbar { padding: 8px 14px; gap: 10px; }
   .admin-chip { max-width: 190px; }
-  .admin-content { padding: 14px 14px 24px; }
+  .admin-content { padding: 16px 14px 28px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

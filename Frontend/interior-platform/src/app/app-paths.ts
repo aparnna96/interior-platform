@@ -27,6 +27,8 @@ export type AppView =
   | 'admin-orders'
   | 'admin-proposals'
   | 'admin-rates'
+  | 'admin-leads'
+  | 'admin-login'
   | 'login'
   | 'register'
   | 'account';
@@ -38,12 +40,13 @@ export type AppView =
  * - auth:   any logged-in user
  * - staff:  FieldStaff or Admin
  * - fieldstaff: the FieldStaff role only (an Admin without that role is not let in)
- * - admin:  Admin only
+ * - admin:  Admin only; anyone else is sent to the Admin login page
+ * - adminlogin: the Admin login page itself; a signed-in Admin is sent on to the dashboard
  *
  * Display-only on the client: the API enforces the same rules with its own
  * [Authorize] attributes, so a forged token never gains data access.
  */
-export type ViewAccess = 'public' | 'guest' | 'auth' | 'staff' | 'fieldstaff' | 'admin';
+export type ViewAccess = 'public' | 'guest' | 'auth' | 'staff' | 'fieldstaff' | 'admin' | 'adminlogin';
 
 export interface ViewRoute {
   readonly view: AppView;
@@ -72,6 +75,8 @@ export const VIEW_ROUTES: readonly ViewRoute[] = [
   { view: 'admin-orders', path: 'admin/orders', title: 'Manage orders | Confident Group', access: 'admin' },
   { view: 'admin-proposals', path: 'admin/proposals', title: 'Manage proposals | Confident Group', access: 'admin' },
   { view: 'admin-rates', path: 'admin/rates', title: 'Manage estimate rate | Confident Group', access: 'admin' },
+  { view: 'admin-leads', path: 'admin/leads', title: 'Manage leads | Confident Group', access: 'admin' },
+  { view: 'admin-login', path: 'admin/login', title: 'Admin log in | Confident Group', access: 'adminlogin' },
   { view: 'login', path: 'login', title: 'Log in | Confident Group', access: 'guest' },
   { view: 'register', path: 'register', title: 'Create account | Confident Group', access: 'guest' },
 ];
@@ -147,24 +152,51 @@ export function safeReturnUrl(raw: string | null | undefined): string | null {
   // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/.test(value)) return null;
   const path = pathOf(value);
-  if (path === '/login' || path === '/register') return null;
+  if (path === '/login' || path === '/register' || path === '/admin/login') return null;
   return value;
 }
 
+/** True for /admin and anything under it. */
+export function isAdminPath(url: string): boolean {
+  const path = pathOf(url);
+  return path === '/admin' || path.startsWith('/admin/');
+}
+
 /**
- * Pages an Admin sees inside the Admin workspace shell (its own sidebar and
- * header) instead of the customer/workspace layout. A display choice only:
- * who may open a page is still decided by `access` above and by the API, and
- * FieldStaff keep the existing layout on /leads and /field.
+ * Like {@link safeReturnUrl}, but for the Admin login page: the Admin area is
+ * the only place it may send someone, so a customer address is ignored.
  */
-export const ADMIN_SHELL_VIEWS: readonly AppView[] = [
+export function safeAdminReturnUrl(raw: string | null | undefined): string | null {
+  const safe = safeReturnUrl(raw);
+  return safe !== null && isAdminPath(safe) ? safe : null;
+}
+
+/**
+ * Everything under /admin, the login page included. The Admin area has its own
+ * layout (the Admin shell, or the Admin login page) and never shows the
+ * customer navigation.
+ */
+export const ADMIN_AREA_VIEWS: readonly AppView[] = [
+  'admin-login',
   'admin-dashboard',
   'admin-products',
   'admin-orders',
   'admin-proposals',
   'admin-rates',
-  'leads',
+  'admin-leads',
 ];
+
+export function isAdminAreaView(view: AppView): boolean {
+  return ADMIN_AREA_VIEWS.includes(view);
+}
+
+/**
+ * Pages an Admin sees inside the Admin workspace shell (its own sidebar and
+ * header). A display choice only: who may open a page is still decided by
+ * `access` above and by the API. FieldStaff keep the customer/workspace
+ * layout on /leads and /field.
+ */
+export const ADMIN_SHELL_VIEWS: readonly AppView[] = ADMIN_AREA_VIEWS.filter((v) => v !== 'admin-login');
 
 export function isAdminShellView(view: AppView): boolean {
   return ADMIN_SHELL_VIEWS.includes(view);

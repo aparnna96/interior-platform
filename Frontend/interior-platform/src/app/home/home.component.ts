@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, computed, inject, output, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, computed, inject, output, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RevealDirective } from '../shared/reveal.directive';
 import type { CatalogueProduct } from '../catalogue/catalogue-products';
@@ -10,6 +10,7 @@ import {
   DESIGN_IMAGE,
   DESIGN_STEPS,
   JOURNEY,
+  REVIEWS,
   FEATURED_PRODUCT_IDS,
   type HomeDestination,
 } from './home-data';
@@ -21,7 +22,7 @@ import {
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
 })
-export class HomeComponent implements OnInit, OnDestroy {
+export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Requests the shell to switch to an existing view. No routing. */
   navigate = output<HomeDestination>();
 
@@ -41,6 +42,14 @@ export class HomeComponent implements OnInit, OnDestroy {
   designImage = DESIGN_IMAGE;
   designSteps = DESIGN_STEPS;
   journey = JOURNEY;
+  reviews = REVIEWS;
+  readonly starSlots = [1, 2, 3, 4, 5];
+
+  /** The sideways-scrolling review list. The arrows scroll it; touch and keyboard scroll it natively. */
+  private readonly reviewTrack = viewChild<ElementRef<HTMLElement>>('reviewTrack');
+  readonly canPrevReview = signal(false);
+  readonly canNextReview = signal(false);
+  private reviewResize: ResizeObserver | null = null;
 
   private readonly productService = inject(ProductService);
 
@@ -66,8 +75,48 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.startAutoplay();
   }
 
+  ngAfterViewInit(): void {
+    this.onReviewScroll();
+    const track = this.reviewTrack()?.nativeElement;
+    // The visible width changes with the window, so recheck which arrows make sense.
+    if (track && typeof ResizeObserver !== 'undefined') {
+      this.reviewResize = new ResizeObserver(() => this.onReviewScroll());
+      this.reviewResize.observe(track);
+    }
+  }
+
   ngOnDestroy(): void {
     this.stopAutoplay();
+    this.reviewResize?.disconnect();
+    this.reviewResize = null;
+  }
+
+  /** Enables each review arrow only when there is more to see in that direction. */
+  onReviewScroll(): void {
+    const el = this.reviewTrack()?.nativeElement;
+    if (!el) return;
+    this.canPrevReview.set(el.scrollLeft > 4);
+    this.canNextReview.set(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }
+
+  /** Moves the review list by one card (direction -1 or 1). Instant when reduced motion is preferred. */
+  scrollReviews(direction: -1 | 1): void {
+    const el = this.reviewTrack()?.nativeElement;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>('li');
+    const gap = parseFloat(getComputedStyle(el).columnGap) || 16;
+    const step = card ? card.getBoundingClientRect().width + gap : el.clientWidth;
+    el.scrollBy({ left: direction * step, behavior: this.prefersReducedMotion() ? 'auto' : 'smooth' });
+  }
+
+  /** "Meera Nair" gives "MN"; one-word names give one letter. */
+  initials(name: string): string {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]!.toUpperCase())
+      .join('');
   }
 
   goToSlide(i: number): void {

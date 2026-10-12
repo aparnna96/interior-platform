@@ -1,7 +1,6 @@
 <section class="admin-dashboard" aria-label="Admin dashboard">
   <header class="admin-dashboard-head">
     <div>
-      <p class="kicker">Operations · Overview</p>
       <h1>Dashboard</h1>
     </div>
   </header>
@@ -9,7 +8,7 @@
   @if (!isAuthenticated()) {
     <div class="admin-dashboard-empty">
       <p>Log in to access the Admin dashboard</p>
-      <span>The dashboard is for Admin accounts. Open Account in the menu to log in.</span>
+      <span>The dashboard is for Admin accounts. Use the Admin log in page.</span>
     </div>
   } @else if (!canAccess()) {
     <div class="admin-dashboard-empty" role="alert">

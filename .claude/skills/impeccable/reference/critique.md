@@ -15,7 +15,7 @@ Resolve one target, run two assessments, synthesize a design critique, and ask t
 
 1. **Resolve the target** to a concrete file path or route. Prefer the Angular component folder (`.ts`, `.html`, `.css`, `.spec.ts`) over a dev-server URL. Examples: "the homepage" -> `src/app/home/home.component.*`; "the admin dashboard" -> `src/app/admin-dashboard/`; "this page" -> the current route in `src/app/app-paths.ts`.
 2. **Read project context:** `AGENTS.md`, the `:root` tokens in `src/styles.css`, and neighboring components. Identify the surface mode (Persuade, Operate, Read, Experience).
-3. For customer-facing targets also read `.opencode/skills/design-taste-frontend/SKILL.md` and judge against its anti-slop rules.
+3. For customer-facing targets also read `.claude/skills/design-taste-frontend/SKILL.md` and judge against its anti-slop rules.
 
 ### Assessment Orchestration
 

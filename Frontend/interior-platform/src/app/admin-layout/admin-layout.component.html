@@ -1,4 +1,4 @@
-<div class="admin-shell" [class.drawer-open]="drawerOpen()">
+<div class="admin-shell admin-theme" [class.drawer-open]="drawerOpen()">
   <aside class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation" (keydown)="onSidebarKeydown($event)">
     <div class="admin-brand">
       <span class="admin-logo-mark"><span class="admin-logo-window"><img class="admin-logo" src="/branding/confident-group-horizontal.png" alt="Confident Group" /></span></span>
@@ -43,14 +43,6 @@
           }
         </svg>
         <span>View customer site</span>
-      </button>
-      <button type="button" class="admin-nav-item" (click)="select('account')">
-        <svg viewBox="0 0 16 16" aria-hidden="true">
-          @for (d of icons.account; track d) {
-            <path [attr.d]="d" />
-          }
-        </svg>
-        <span>Account</span>
       </button>
       <button type="button" class="admin-nav-item" (click)="logout()">
         <svg viewBox="0 0 16 16" aria-hidden="true">

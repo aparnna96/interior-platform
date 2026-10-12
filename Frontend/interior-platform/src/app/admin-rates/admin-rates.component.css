@@ -1,6 +1,6 @@
 /* ── Admin estimate rate: same showroom language as products/orders ──
-   Warm-white page (app shell), white surfaces, charcoal type,
-   hairline borders, one bronze accent. System font stack only. */
+   Cool-white page (Admin theme tokens), white surfaces, navy type,
+   hairline borders, one gold accent. System font stack only. */
 
 .admin-rates {
   display: grid;
@@ -52,9 +52,9 @@
   display: grid;
   gap: 6px;
   justify-items: center;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   min-width: 0;
 }
 .admin-rates-empty p { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
@@ -65,9 +65,9 @@
   margin: 0;
   font-size: 13px;
   color: var(--danger);
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 14px;
   display: flex;
   flex-wrap: wrap;
@@ -81,15 +81,15 @@
   color: var(--ink);
   background: var(--surface-soft);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px 14px;
 }
 
 /* ── Current rate ── */
 .rate-current {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 18px 20px;
   display: grid;
   gap: 4px;
@@ -114,9 +114,9 @@
 
 /* ── Form ── */
 .rate-form {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 20px;
   display: grid;
   gap: 12px;
@@ -140,7 +140,7 @@
   min-width: 0;
   width: 100%;
   max-width: 280px;
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
 }
 .rate-form input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -153,7 +153,7 @@
   gap: 10px;
   background: var(--surface-soft);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 14px 16px;
 }
 .confirm-box p { margin: 0; font-size: 13.5px; }
@@ -162,9 +162,9 @@
 .rate-history { display: grid; gap: 10px; min-width: 0; }
 .rate-rows { display: grid; gap: 10px; min-width: 0; }
 .rate-row {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 12px 16px;
   min-width: 0;
 }
@@ -206,13 +206,13 @@
   white-space: nowrap;
 }
 .btn-primary {
-  background: #1c1917;
+  background: var(--btn-bg);
   border: 1px solid transparent;
-  color: #faf8f5;
+  color: var(--btn-ink);
 }
-.btn-primary:hover:not(:disabled) { background: #2e2823; }
+.btn-primary:hover:not(:disabled) { background: var(--btn-bg-hover); }
 .btn-secondary {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-soft);
   color: var(--ink);
 }

@@ -1,0 +1,121 @@
+/* ── Admin login: navy brand panel + a plain form ──
+   Colors and the logo plate come from the Confident Group logo. Tokens live
+   in styles.css (.admin-theme). No animation. */
+
+:host { display: block; }
+
+.al {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(320px, 5fr) minmax(0, 6fr);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ── Brand panel ── */
+.al-brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 48px;
+  padding: 40px 48px;
+  background: var(--nav-bg);
+  color: var(--nav-ink);
+  min-width: 0;
+}
+/* The logo file has a white background and mostly empty margin, so it sits on a white
+   plate and is shown through a cropped window (same crop as the Admin sidebar, scaled up). */
+.al-logo-plate {
+  align-self: flex-start;
+  display: block;
+  padding: 10px 18px;
+  background: #fff;
+  border-radius: 12px;
+}
+.al-logo-window { display: block; height: 68px; overflow: hidden; }
+.al-logo { display: block; height: 141px; width: auto; max-width: none; margin-top: -30px; }
+
+.al-brand-copy { display: grid; gap: 14px; justify-items: start; }
+.al-brand-copy::before {
+  content: '';
+  width: 48px;
+  height: 2px;
+  background: var(--nav-gold);
+}
+.al-product { margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; color: #fff; }
+.al-lede { margin: 0; max-width: 34ch; color: var(--nav-ink); }
+
+/* ── Form panel ── */
+.al-panel {
+  display: grid;
+  place-items: center;
+  padding: 40px 24px;
+  min-width: 0;
+}
+.al-form { display: grid; gap: 18px; width: min(400px, 100%); }
+.al-form h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.al-sub { margin: -10px 0 4px; color: var(--ink-2); }
+
+.al-field { display: grid; gap: 6px; }
+.al-field label { font-size: 13.5px; font-weight: 650; color: var(--ink); }
+.al-field input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #7b8aa3;
+  border-radius: 8px;
+}
+.al-field input:hover { border-color: var(--ink-2); }
+.al-field input:focus-visible { outline: 2px solid var(--btn-bg); outline-offset: 1px; border-color: var(--btn-bg); }
+.al-field input[aria-invalid='true'] { border-color: var(--danger); }
+.al-field-error { margin: 0; font-size: 13px; color: var(--danger); }
+
+.al-error {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #8f2a21;
+  background: #fdf1ef;
+  border: 1px solid #f0c7c1;
+  border-radius: 8px;
+}
+
+.al-submit {
+  min-height: 48px;
+  margin-top: 4px;
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 650;
+  color: var(--btn-ink);
+  background: var(--btn-bg);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.al-submit:hover:not(:disabled) { background: var(--btn-bg-hover); }
+.al-submit:active:not(:disabled) { transform: translateY(1px); }
+.al-submit:focus-visible { outline: 2px solid var(--btn-bg); outline-offset: 2px; }
+.al-submit:disabled { opacity: 0.65; cursor: default; }
+
+/* ── Narrow screens: the brand panel becomes a short band above the form ── */
+@media (max-width: 860px) {
+  .al { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .al-brand { flex-direction: row; align-items: center; gap: 16px; padding: 16px 20px; }
+  .al-brand-copy::before, .al-lede { display: none; }
+  .al-product { font-size: 18px; text-align: right; }
+  .al-brand-copy { justify-items: end; }
+  .al-logo-plate { padding: 6px 12px; }
+  .al-logo-window { height: 44px; }
+  .al-logo { height: 91px; margin-top: -19px; }
+  .al-panel { place-items: start center; padding: 32px 20px 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .al-submit:active:not(:disabled) { transform: none; }
+}

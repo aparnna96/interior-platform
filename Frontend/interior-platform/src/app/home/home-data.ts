@@ -164,6 +164,68 @@ export const SHOWCASE: ShowcaseItem[] = [
   },
 ];
 
+export interface ReviewItem {
+  quote: string;
+  name: string;
+  /** What the customer planned or bought, shown under the name. */
+  project: string;
+  city: string;
+  /** Whole stars, 1 to 5. */
+  rating: number;
+}
+
+/**
+ * SAMPLE reviews for the client demo. These are placeholder texts and names,
+ * not real customers. Replace them with approved reviews from Confident Group
+ * customers (with their permission) before the site goes live. There are no
+ * photos on purpose: the cards show initials, so no stock face is passed off
+ * as a customer.
+ */
+export const REVIEWS: ReviewItem[] = [
+  {
+    quote: 'I tried the room layout before ordering anything. Seeing the sofa and table in the plan saved us from buying a piece that would not have fit.',
+    name: 'Meera Nair',
+    project: 'Living room',
+    city: 'Kochi',
+    rating: 5,
+  },
+  {
+    quote: 'The estimate gave us a clear starting number before we spoke to anyone. That made the first conversation with the design team much easier.',
+    name: 'Arjun Rao',
+    project: 'Bedroom and wardrobe',
+    city: 'Bengaluru',
+    rating: 5,
+  },
+  {
+    quote: 'Our designer listened first and then showed options that fit our budget. The finishes we picked on screen matched what we saw in person.',
+    name: 'Sana Iyer',
+    project: 'Full home interiors',
+    city: 'Chennai',
+    rating: 5,
+  },
+  {
+    quote: 'The furniture arrived well packed and matched the photos. One chair needed a small adjustment and the team sorted it out quickly.',
+    name: 'Kavya Menon',
+    project: 'Kitchen and dining',
+    city: 'Pune',
+    rating: 4,
+  },
+  {
+    quote: 'Easy to browse by room, and each product page gives the size and material up front. I ordered the dining table without a showroom visit.',
+    name: 'Rohit Shetty',
+    project: 'Dining room',
+    city: 'Hyderabad',
+    rating: 5,
+  },
+  {
+    quote: 'Good range for a small flat. I wish a couple of pieces came in more colours, but the build quality is solid.',
+    name: 'Anita Joseph',
+    project: 'Home office',
+    city: 'Mumbai',
+    rating: 4,
+  },
+];
+
 export const JOURNEY: NumberedStep[] = [
   { title: 'Explore', text: 'Discover interior ideas and furniture.' },
   { title: 'Design', text: 'Create your room using the 2D visualizer.' },

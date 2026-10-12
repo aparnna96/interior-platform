@@ -1,12 +1,16 @@
 ﻿import {
+  ADMIN_AREA_VIEWS,
   ADMIN_SHELL_VIEWS,
   VIEW_ROUTES,
   accessOf,
+  isAdminAreaView,
+  isAdminPath,
   isAdminShellView,
   landingPathFor,
   pathForView,
   pathOf,
   requiresLogin,
+  safeAdminReturnUrl,
   safeReturnUrl,
   viewForPath,
 } from './app-paths';
@@ -71,10 +75,23 @@ describe('app paths', () => {
     expect(pathForView('admin-rates')).toBe('/admin/rates');
     expect(viewForPath('/admin/rates')?.view).toBe('admin-rates');
     expect(accessOf('login')).toBe('guest');
+    expect(accessOf('admin-leads')).toBe('admin');
+    expect(accessOf('admin-login')).toBe('adminlogin');
     expect(requiresLogin('orders')).toBeTrue();
     expect(requiresLogin('admin-orders')).toBeTrue();
     expect(requiresLogin('home')).toBeFalse();
     expect(requiresLogin('login')).toBeFalse();
+    // The Admin login page is the way in, so it cannot itself require a login.
+    expect(requiresLogin('admin-login')).toBeFalse();
+  });
+
+  it('gives the Admin area its own login and leads addresses', () => {
+    expect(pathForView('admin-login')).toBe('/admin/login');
+    expect(viewForPath('/admin/login')?.view).toBe('admin-login');
+    expect(pathForView('admin-leads')).toBe('/admin/leads');
+    expect(viewForPath('/admin/leads')?.view).toBe('admin-leads');
+    // Customer login is a different page with a different address.
+    expect(pathForView('login')).toBe('/login');
   });
 
   it('the FieldStaff entry has its own address and access level, and /visualizer is still public', () => {
@@ -115,9 +132,41 @@ describe('app paths', () => {
     });
 
     it('never returns to the login or register pages (no redirect loop)', () => {
+      expect(safeReturnUrl('/admin/login')).toBeNull();
+      expect(safeReturnUrl('/admin/login?returnUrl=%2Fadmin')).toBeNull();
       expect(safeReturnUrl('/login')).toBeNull();
       expect(safeReturnUrl('/login?returnUrl=%2Forders')).toBeNull();
       expect(safeReturnUrl('/register')).toBeNull();
+    });
+  });
+
+  describe('Admin area addresses', () => {
+    it('isAdminPath is true for /admin and anything under it, and only for those', () => {
+      for (const yes of ['/admin', '/admin/', '/admin/orders', '/admin/login', '/admin/anything?x=1']) {
+        expect(isAdminPath(yes)).withContext(yes).toBeTrue();
+      }
+      for (const no of ['/', '/administrator', '/adminx', '/orders', '/login', '/furniture/admin']) {
+        expect(isAdminPath(no)).withContext(no).toBeFalse();
+      }
+    });
+
+    it('safeAdminReturnUrl only accepts safe addresses inside /admin', () => {
+      expect(safeAdminReturnUrl('/admin')).toBe('/admin');
+      expect(safeAdminReturnUrl('/admin/orders')).toBe('/admin/orders');
+      expect(safeAdminReturnUrl('/admin/orders?status=New')).toBe('/admin/orders?status=New');
+      for (const bad of ['/orders', '/', '/login', '/admin/login', '//admin', 'https://evil.example/admin', '/admin\\x', '/administrator', '', null, undefined]) {
+        expect(safeAdminReturnUrl(bad)).withContext(String(bad)).toBeNull();
+      }
+    });
+
+    it('ADMIN_AREA_VIEWS are exactly the views whose address is under /admin', () => {
+      const underAdmin = VIEW_ROUTES.filter((r) => isAdminPath(`/${r.path}`)).map((r) => r.view);
+      expect([...ADMIN_AREA_VIEWS].sort()).toEqual([...underAdmin].sort());
+      expect(isAdminAreaView('admin-login')).toBeTrue();
+      expect(isAdminAreaView('admin-dashboard')).toBeTrue();
+      expect(isAdminAreaView('leads')).toBeFalse();
+      expect(isAdminAreaView('login')).toBeFalse();
+      expect(isAdminAreaView('account')).toBeFalse();
     });
   });
 
@@ -129,21 +178,21 @@ describe('app paths', () => {
     expect(landingPathFor([])).toBe('/');
   });
 
-  it('marks exactly the Admin pages and Leads as Admin shell views', () => {
+  it('marks exactly the Admin pages as Admin shell views (the login page is not one)', () => {
     expect([...ADMIN_SHELL_VIEWS].sort()).toEqual([
       'admin-dashboard',
+      'admin-leads',
       'admin-orders',
       'admin-products',
       'admin-proposals',
       'admin-rates',
-      'leads',
     ]);
     for (const view of ADMIN_SHELL_VIEWS) {
       expect(isAdminShellView(view)).withContext(view).toBeTrue();
-      // Each is a page that needs a staff or admin login: the shell is never a way in.
-      expect(['staff', 'admin']).withContext(view).toContain(accessOf(view));
+      // Each is a page that needs an Admin login: the shell is never a way in.
+      expect(accessOf(view)).withContext(view).toBe('admin');
     }
-    for (const view of ['home', 'account', 'orders', 'proposals', 'estimates', 'visualizer', 'field', 'login'] as const) {
+    for (const view of ['home', 'account', 'orders', 'proposals', 'estimates', 'visualizer', 'field', 'login', 'leads', 'admin-login'] as const) {
       expect(isAdminShellView(view)).withContext(view).toBeFalse();
     }
   });

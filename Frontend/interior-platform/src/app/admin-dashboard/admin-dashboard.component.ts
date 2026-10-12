@@ -201,7 +201,7 @@ export class AdminDashboardComponent {
       description: 'Set the ₹ per sq.ft. rate used for new estimates.',
     },
     {
-      view: 'leads',
+      view: 'admin-leads',
       label: 'Leads',
       description: 'Follow up website enquiries and update their status.',
     },

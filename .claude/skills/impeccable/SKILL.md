@@ -15,7 +15,7 @@ There is no product or design doc file in this repo. The authorities are, in thi
 1. `AGENTS.md` (stack, standing rules, features, known gaps, frontend architecture).
 2. `Frontend/interior-platform/src/styles.css` (`:root` design tokens: `--bg`, `--surface`, `--ink`, `--accent`, `--radius`, `--font-sans`, and the rest) and the target's component CSS.
 3. Neighboring components in the same feature folder under `src/app/`.
-4. `.opencode/skills/design-taste-frontend/SKILL.md` for customer-facing anti-slop rules (conflicts: the stricter rule wins).
+4. `.claude/skills/design-taste-frontend/SKILL.md` for customer-facing anti-slop rules (conflicts: the stricter rule wins).
 
 Facts that shape every command:
 

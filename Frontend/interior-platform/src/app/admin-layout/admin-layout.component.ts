@@ -57,7 +57,6 @@ const ICONS = {
     'M5 12h3',
   ],
   site: ['M2 8.5 8 3l6 5.5', 'M4 7.5V13.5h8V7.5'],
-  account: ['M10.8 5.5a2.8 2.8 0 1 1-5.6 0 2.8 2.8 0 0 1 5.6 0z', 'M2.5 14c.8-2.6 3-4 5.5-4s4.7 1.4 5.5 4'],
   logout: ['M6.5 2.5H4A1.5 1.5 0 0 0 2.5 4v8A1.5 1.5 0 0 0 4 13.5h2.5', 'M10 5l3 3-3 3', 'M13 8H6'],
   menu: ['M2 4h12', 'M2 8h12', 'M2 12h12'],
   close: ['M3.5 3.5l9 9', 'M12.5 3.5l-9 9'],
@@ -75,7 +74,7 @@ const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = [
       { view: 'admin-products', label: 'Products', icon: ICONS.products },
       { view: 'admin-orders', label: 'Orders', icon: ICONS.orders },
       { view: 'admin-proposals', label: 'Proposals', icon: ICONS.proposals },
-      { view: 'leads', label: 'Leads', icon: ICONS.leads },
+      { view: 'admin-leads', label: 'Leads', icon: ICONS.leads },
       { view: 'admin-rates', label: 'Estimate rate', icon: ICONS.rate },
     ],
   },
@@ -87,8 +86,8 @@ type DrawerFocus = 'menu' | 'main' | null;
 /**
  * The Admin workspace shell: its own sidebar, header and content area.
  *
- * AppComponent shows it instead of the customer/workspace layout when an Admin
- * is on an Admin page. It only draws chrome and reports clicks: the page itself
+ * AppComponent shows it for every page under /admin once the user is an Admin
+ * (everyone else gets the Admin login page instead). It only draws chrome and reports clicks: the page itself
  * is projected into the content area, and the shell asks for navigation through
  * `navigate` (the app keeps one `activeView` and owns the address bar, so this
  * component never touches the Router).
@@ -124,10 +123,10 @@ export class AdminLayoutComponent {
     if (wasOpen) this.closeDrawer('main');
   }
 
-  /** Ends the session and moves to Home in the same click, so the app does not treat it as an expired session. */
+  /** Ends the session and moves to the Admin login page in the same click, so the app does not treat it as an expired session. */
   logout(): void {
     this.auth.logout();
-    this.navigate.emit('home');
+    this.navigate.emit('admin-login');
   }
 
   openDrawer(): void {

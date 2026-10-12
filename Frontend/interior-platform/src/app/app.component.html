@@ -1,24 +1,28 @@
-@if (isAdminShell()) {
-  <app-admin-layout [activeView]="activeView()" (navigate)="activeView.set($event)">
-    @if (activeView() === 'leads') {
-      <app-leads />
-    }
-    @if (activeView() === 'admin-dashboard') {
-      <app-admin-dashboard (navigate)="activeView.set($event)" />
-    }
-    @if (activeView() === 'admin-products') {
-      <app-admin-products />
-    }
-    @if (activeView() === 'admin-orders') {
-      <app-admin-orders />
-    }
-    @if (activeView() === 'admin-proposals') {
-      <app-admin-proposals />
-    }
-    @if (activeView() === 'admin-rates') {
-      <app-admin-rates />
-    }
-  </app-admin-layout>
+@if (isAdminArea()) {
+  @if (showAdminLogin()) {
+    <app-admin-login />
+  } @else {
+    <app-admin-layout [activeView]="activeView()" (navigate)="onAdminNavigate($event)">
+      @if (activeView() === 'admin-leads') {
+        <app-leads />
+      }
+      @if (activeView() === 'admin-dashboard') {
+        <app-admin-dashboard (navigate)="activeView.set($event)" />
+      }
+      @if (activeView() === 'admin-products') {
+        <app-admin-products />
+      }
+      @if (activeView() === 'admin-orders') {
+        <app-admin-orders />
+      }
+      @if (activeView() === 'admin-proposals') {
+        <app-admin-proposals />
+      }
+      @if (activeView() === 'admin-rates') {
+        <app-admin-rates />
+      }
+    </app-admin-layout>
+  }
 } @else {
 <div class="shell" [class.rail]="sidebarCollapsed()" [class.drawer]="drawerOpen()" [class.public]="isPublicView()">
   <!-- ── Sidebar (desktop) ─────────────────── -->
@@ -833,36 +837,6 @@
     @if (activeView() === 'leads') {
       <main class="content cat-main">
         <app-leads />
-      </main>
-    }
-
-    @if (activeView() === 'admin-dashboard') {
-      <main class="content cat-main">
-        <app-admin-dashboard (navigate)="activeView.set($event)" />
-      </main>
-    }
-
-    @if (activeView() === 'admin-products') {
-      <main class="content cat-main">
-        <app-admin-products />
-      </main>
-    }
-
-    @if (activeView() === 'admin-orders') {
-      <main class="content cat-main">
-        <app-admin-orders />
-      </main>
-    }
-
-    @if (activeView() === 'admin-proposals') {
-      <main class="content cat-main">
-        <app-admin-proposals />
-      </main>
-    }
-
-    @if (activeView() === 'admin-rates') {
-      <main class="content cat-main">
-        <app-admin-rates />
       </main>
     }
 

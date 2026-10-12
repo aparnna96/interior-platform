@@ -1,6 +1,6 @@
 /* ── Admin Dashboard: same workspace language as the other admin pages ──
-   Warm-white page (app shell), white surfaces, charcoal type,
-   hairline borders, one bronze accent. System font stack only.
+   Cool-white page (Admin theme tokens), white surfaces, navy type,
+   hairline borders, one gold accent. System font stack only.
    No animation. Shortcuts are wrapping cards so narrow screens stay usable. */
 
 .admin-dashboard {
@@ -38,9 +38,9 @@
   display: grid;
   gap: 6px;
   justify-items: center;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   min-width: 0;
 }
 .admin-dashboard-empty p { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
@@ -57,17 +57,16 @@
   min-width: 0;
 }
 
-/* Read-only figures: a bronze top edge sets them apart from the tappable quick actions. */
+/* Read-only figures: plain cards; the tappable quick actions get a hover border. */
 .summary-card {
   display: grid;
   gap: 6px;
   align-content: start;
   min-width: 0;
   padding: 14px 16px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
-  box-shadow: inset 0 3px 0 var(--accent);
+  border-radius: var(--radius);
 }
 .summary-label {
   margin: 0;
@@ -88,7 +87,7 @@
   min-width: 0;
 }
 .summary-value {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -128,9 +127,9 @@
   align-content: start;
   min-width: 0;
   padding: 14px 16px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 .recent-block h3 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
 .recent-body { min-width: 0; }
@@ -199,9 +198,9 @@
   min-height: 44px;
   min-width: 0;
   padding: 14px 16px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   color: var(--ink);
   font: inherit;
   cursor: pointer;

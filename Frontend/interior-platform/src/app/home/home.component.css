@@ -354,6 +354,80 @@
 .show-tile figcaption strong { font-size: 13px; }
 .show-tile figcaption span { font-size: 11.5px; color: var(--ink-2); }
 
+/* ── Reviews: sideways list, three cards wide on desktop ── */
+.rev-nav { display: flex; gap: 8px; flex: none; }
+.rev-arrow {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: border-color 0.25s ease, color 0.25s ease, opacity 0.25s ease;
+}
+.rev-arrow svg { width: 16px; height: 16px; }
+.rev-arrow:hover:not(:disabled) { border-color: var(--accent-ink); color: var(--accent-ink); }
+.rev-arrow:disabled { opacity: 0.4; cursor: default; }
+.rev-arrow:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rev-track {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 6px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 32px) / 3);
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  min-width: 0;
+}
+.rev-track::-webkit-scrollbar { display: none; }
+.rev-track:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+.rev-card {
+  scroll-snap-align: start;
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 18px 18px 16px;
+  min-width: 0;
+  display: flex;
+}
+.rev-card figure { margin: 0; display: flex; flex-direction: column; gap: 12px; width: 100%; min-width: 0; }
+.rev-stars { margin: 0; display: flex; gap: 2px; color: var(--accent); }
+.rev-star { width: 15px; height: 15px; fill: currentColor; }
+.rev-star.off { color: var(--border); }
+.rev-quote { margin: 0; }
+.rev-quote p { font-size: 14.5px; line-height: 1.55; color: var(--ink); }
+.rev-by {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.rev-avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+  font-size: 12.5px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+.rev-who { display: flex; flex-direction: column; min-width: 0; font-size: 12px; color: var(--ink-2); }
+.rev-who strong { font-size: 13.5px; color: var(--ink); }
+
 /* ── 6 · Journey (numbered, no cards) ── */
 .journey {
   list-style: none;
@@ -419,10 +493,12 @@
   .design-media { min-height: 0; aspect-ratio: 16 / 10; }
   .design-copy { padding: 22px 20px; }
   .journey { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rev-track { grid-auto-columns: calc((100% - 16px) / 2); }
 }
 
 @media (max-width: 640px) {
   .home { gap: 34px; }
+  .rev-track { grid-auto-columns: 86%; }
   .show-grid { grid-template-columns: minmax(0, 1fr); }
   .show-tile,
   .show-tile.show-lead,
@@ -457,6 +533,7 @@
   .hero-slide.active { animation: none; transform: none; }
   .hero-copy[data-hero-slide] > * { opacity: 1; transform: none; animation: none; }
   .hero-arrow, .hero-arrow svg { transition: none; }
+  .rev-arrow { transition: none; }
   .hero-prev:hover svg, .hero-prev:focus-visible svg,
   .hero-next:hover svg, .hero-next:focus-visible svg { transform: none; }
 }

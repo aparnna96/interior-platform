@@ -56,21 +56,29 @@ input, select { font-family: inherit; }
    overlays centered, so the header never jumps and the collapse animates
    smoothly. The hamburger stays reachable in both states. */
 .pubnav-bar{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px 16px;padding:12px 24px;min-width:0;max-width:1200px;width:100%;margin:0 auto}
-.pubnav-brand,.pubnav-links{transition:opacity .32s ease,transform .32s cubic-bezier(.22,1,.36,1),visibility 0s}
-.pubnav.nav-hidden .pubnav-brand,.pubnav.nav-hidden .pubnav-links{opacity:0;transform:translateY(-6px);visibility:hidden;pointer-events:none}
-.pubnav-compact{position:absolute;left:50%;top:50%;transform:translate(-50%,-46%) scale(.98);display:flex;align-items:center;justify-content:center;border:0;background:none;padding:4px 12px;cursor:pointer;min-width:0;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .32s ease,transform .38s cubic-bezier(.22,1,.36,1),visibility 0s linear .34s}
+/* Timing follows the Somany header: what leaves fades out fast, what arrives waits a beat and
+   fades in slower, so the two never overlap. Visibility switches only after the fade-out ends
+   (before, it vanished at once and the fade could not be seen). */
+.pubnav-brand,.pubnav-links{transition:opacity .35s cubic-bezier(.22,1,.36,1) .22s,transform .35s cubic-bezier(.22,1,.36,1) .22s,visibility 0s linear 0s}
+.pubnav.nav-hidden .pubnav-brand,.pubnav.nav-hidden .pubnav-links{opacity:0;transform:translateY(-6px);visibility:hidden;pointer-events:none;transition:opacity .15s cubic-bezier(.4,0,.6,1),transform .15s cubic-bezier(.4,0,.6,1),visibility 0s linear .15s}
+.pubnav-compact{position:absolute;left:50%;top:50%;transform:translate(-50%,-46%) scale(.98);display:flex;align-items:center;justify-content:center;border:0;background:none;padding:4px 12px;cursor:pointer;min-width:0;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s cubic-bezier(.4,0,.6,1),transform .15s cubic-bezier(.4,0,.6,1),visibility 0s linear .15s}
 .pubnav-compact .brand-logo{height:34px;width:auto;display:block;transition:transform .3s ease}
 .pubnav-compact:hover .brand-logo,.pubnav-compact:focus-visible .brand-logo{transform:scale(1.03)}
 /* The logo file is ~60% empty margin, so it is shown through a cropped window (as the full bar does).
    Without this the compact logo rendered at 30px high with ~12px-tall lettering. */
 .pubnav .pubnav-compact{display:block;height:48px;padding:0;overflow:hidden}
 .pubnav .pubnav-compact .brand-logo{display:block;height:118px;width:auto;max-width:none;margin-top:-28px}
-.pubnav.nav-hidden .pubnav-compact{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,-50%) scale(1);transition:opacity .32s ease,transform .38s cubic-bezier(.22,1,.36,1),visibility 0s}
+.pubnav.nav-hidden .pubnav-compact{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,-50%) scale(1);transition:opacity .35s cubic-bezier(.22,1,.36,1) .2s,transform .4s cubic-bezier(.22,1,.36,1) .2s,visibility 0s linear 0s}
 .pubnav-brand img{transition:transform .3s ease}
 .pubnav-brand:hover img,.pubnav-brand:focus-visible img{transform:scale(1.02)}
 .pubnav-brand{display:flex;align-items:center;gap:10px;border:0;background:none;padding:4px 2px;cursor:pointer;flex:none;min-width:0;color:var(--ink)}
 .pubnav-links{display:flex;align-items:center;gap:2px;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:thin}
 .pubnav-links button{flex:none;border:1px solid transparent;background:transparent;border-radius:7px;padding:8px 12px;font-size:13.5px;font-weight:550;color:var(--ink-2);cursor:pointer;white-space:nowrap;transition:background-color .25s ease,border-color .25s ease,color .25s ease}
+.pubnav-links button{position:relative}
+/* A thin gold line draws in from the left under a hovered or focused link (the current page keeps its pill). */
+.pubnav-links button::after{content:"";position:absolute;left:12px;right:12px;bottom:3px;height:2px;border-radius:2px;background:var(--accent);transform:scaleX(0);transform-origin:left center;transition:transform .3s cubic-bezier(.22,1,.36,1)}
+.pubnav-links button:hover::after,.pubnav-links button:focus-visible::after{transform:scaleX(1)}
+.pubnav-links button.active::after{display:none}
 .pubnav-links button:hover{background:var(--surface-soft);color:var(--ink)}
 .pubnav-links button.active{background:var(--accent-soft);border-color:#e3d3bd;color:var(--accent-ink)}
 .pubmenu{display:none}
@@ -141,6 +149,7 @@ div.shell .sidebar{background:#fffdf9;border-right:1px solid var(--border);color
 .pubnav-bar,.pubnav .pubnav-brand,.pubnav-brand,.pubnav-links,.pubnav-compact,.pubnav-compact .brand-logo{transition:none}
 .pubnav-brand img{transition:none}
 .pubnav-links button,.pubmenu button{transition:none}
+.pubnav-links button::after{transition:none}
 .pubmenu{animation:none}
 }
 /* Phone touch targets: segmented controls and tab strips reach a comfortable
@@ -148,3 +157,45 @@ div.shell .sidebar{background:#fffdf9;border-right:1px solid var(--border);color
 @media (max-width: 900px) {
   .room-switch button, .seg button, .tabs button { min-height: 40px; }
 }
+
+/* Admin area theme (the Admin shell and the Admin login page only).
+   Navy and gold are taken from the Confident Group logo. Everything inside
+   the Admin area reads the same token names as the rest of the app, so the
+   admin pages pick this palette up without any per-page overrides. The
+   customer site keeps the tokens in :root above. */
+.admin-theme {
+  --admin-font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --bg: #f2f4f8;
+  --surface: #ffffff;
+  --surface-soft: #f7f8fb;
+  --ink: #0b1a30;
+  --ink-2: #364761;
+  --muted: #5a6a84;
+  --border: #d3dae6;
+  --border-soft: #e4e9f1;
+  --accent: #9a6a17;
+  --accent-ink: #6f4b0c;
+  --accent-soft: #faf3e3;
+  --accent-line: #ecd9a8;
+  --gold: #c99a3e;
+  --btn-bg: #0b2447;
+  --btn-bg-hover: #16345f;
+  --btn-ink: #ffffff;
+  --danger: #a8342a;
+  --success-bg: #e9f4ee;
+  --success-bd: #c4dfd0;
+  --success-tx: #1f6a45;
+  --radius: 10px;
+  --radius-sm: 7px;
+  --shadow-sm: 0 1px 2px rgba(11, 26, 48, 0.06);
+  --nav-bg: #071628;
+  --nav-ink: #c8d3e6;
+  --nav-muted: #8fa1bd;
+  --nav-hover: #12263f;
+  --nav-active: #16304f;
+  --nav-line: #1a3050;
+  --nav-gold: #e2c07a;
+  font-family: var(--admin-font);
+  color: var(--ink);
+}
+.admin-theme ::selection { background: #e9d7a6; }

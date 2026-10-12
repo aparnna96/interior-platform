@@ -62,6 +62,11 @@ describe('AdminLayoutComponent', () => {
   afterEach(() => localStorage.clear());
 
   describe('structure and branding', () => {
+    it('uses the Admin theme and the Confident Group logo with an Admin workspace tag', async () => {
+      await setup();
+      expect(q('.admin-shell')!.classList.contains('admin-theme')).toBeTrue();
+    });
+
     it('uses the Confident Group logo and an Admin workspace tag', async () => {
       await setup();
       const logo = q<HTMLImageElement>('.admin-logo')!;
@@ -70,7 +75,7 @@ describe('AdminLayoutComponent', () => {
       expect(q('.admin-brand-tag')!.textContent).toContain('Admin workspace');
     });
 
-    it('shows the logo through the same cropped window the customer sidebar uses', async () => {
+    it('shows the logo through a cropped window on a white plate', async () => {
       await setup();
       const logo = q<HTMLImageElement>('.admin-logo')!;
       const windowEl = q('.admin-logo-window')!;
@@ -102,7 +107,6 @@ describe('AdminLayoutComponent', () => {
         'Leads',
         'Estimate rate',
         'View customer site',
-        'Account',
         'Log out',
       ]);
     });
@@ -139,7 +143,7 @@ describe('AdminLayoutComponent', () => {
       ['admin-products', 'Products'],
       ['admin-orders', 'Orders'],
       ['admin-proposals', 'Proposals'],
-      ['leads', 'Leads'],
+      ['admin-leads', 'Leads'],
       ['admin-rates', 'Estimate rate'],
     ];
 
@@ -183,10 +187,9 @@ describe('AdminLayoutComponent', () => {
       ['Products', 'admin-products'],
       ['Orders', 'admin-orders'],
       ['Proposals', 'admin-proposals'],
-      ['Leads', 'leads'],
+      ['Leads', 'admin-leads'],
       ['Estimate rate', 'admin-rates'],
       ['View customer site', 'home'],
-      ['Account', 'account'],
     ];
 
     for (const [label, view] of targets) {
@@ -197,14 +200,14 @@ describe('AdminLayoutComponent', () => {
       });
     }
 
-    it('Log out ends the session and sends the user to Home, not to the login page', async () => {
+    it('Log out ends the session and sends the user to the Admin login page', async () => {
       const host = await setup();
       const auth = TestBed.inject(AuthService);
       expect(auth.isAuthenticated()).toBeTrue();
       itemByLabel('Log out').click();
       expect(auth.isAuthenticated()).toBeFalse();
       expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
-      expect(host.picked).toEqual(['home']);
+      expect(host.picked).toEqual(['admin-login']);
     });
   });
 

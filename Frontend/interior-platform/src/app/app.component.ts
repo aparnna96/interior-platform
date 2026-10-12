@@ -18,7 +18,16 @@ import {
 import { LoginPageComponent } from './auth/login-page.component';
 import { RegisterPageComponent } from './auth/register-page.component';
 import { AccountPageComponent } from './auth/account-page.component';
-import { isAdminShellView, pathForView, requiresLogin, safeReturnUrl, viewForPath, type AppView } from './app-paths';
+import {
+  isAdminAreaView,
+  pathForView,
+  pathOf,
+  requiresLogin,
+  safeAdminReturnUrl,
+  safeReturnUrl,
+  viewForPath,
+  type AppView,
+} from './app-paths';
 import { CatalogueComponent } from './catalogue/catalogue.component';
 import { CartComponent } from './catalogue/cart.component';
 import { CartService } from './catalogue/cart.service';
@@ -37,6 +46,7 @@ import { AdminProposalsComponent } from './admin-proposals/admin-proposals.compo
 import { AdminRatesComponent } from './admin-rates/admin-rates.component';
 import { AdminDashboardComponent } from './admin-dashboard/admin-dashboard.component';
 import { AdminLayoutComponent } from './admin-layout/admin-layout.component';
+import { AdminLoginComponent } from './admin-login/admin-login.component';
 import { EstimateRateService } from './estimate/estimate-rate.service';
 import {
   calculateEstimateTotal,
@@ -84,7 +94,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent, AdminRatesComponent, AdminDashboardComponent, AdminLayoutComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent, AdminRatesComponent, AdminDashboardComponent, AdminLayoutComponent, AdminLoginComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -127,10 +137,18 @@ export class AppComponent {
   );
 
   /**
-   * An Admin on an Admin page gets the Admin workspace shell. Everyone else, including
-   * FieldStaff on /leads and /field, keeps the existing layouts.
+   * Everything under /admin is its own area: the Admin shell, or the Admin login
+   * page. It never shows the customer navigation. FieldStaff on /leads and
+   * /field keep the customer/workspace layout.
    */
-  isAdminShell = computed(() => this.auth.isAdmin() && isAdminShellView(this.activeView()));
+  isAdminArea = computed(() => isAdminAreaView(this.activeView()));
+
+  /**
+   * The Admin login page shows on /admin/login, and in place of an Admin page
+   * for anyone who is not an Admin (the guard has already moved them to
+   * /admin/login; this keeps the page empty of Admin data in the meantime).
+   */
+  showAdminLogin = computed(() => this.activeView() === 'admin-login' || !this.auth.isAdmin());
 
   /** The room controls header belongs to the design workspace views only. */
   showWorkspaceHeader = computed(
@@ -199,7 +217,22 @@ export class AppComponent {
     effect(() => {
       const authed = this.auth.isAuthenticated();
       untracked(() => {
-        if (!authed && requiresLogin(this.activeView())) this.openLogin();
+        const view = this.activeView();
+        // The Admin area has its own login page: it is handled by the effect below.
+        if (!authed && requiresLogin(view) && !isAdminAreaView(view)) this.openLogin();
+      });
+    });
+    // Someone who is not an Admin on an Admin page (an expired session, or a
+    // session that lost the role) goes to the Admin login page and comes back
+    // here afterwards. Only acts once the address already shows that page: a
+    // click is handled by the route guard instead, so the two never race.
+    effect(() => {
+      const view = this.activeView();
+      const admin = this.auth.isAdmin();
+      untracked(() => {
+        if (!isAdminAreaView(view) || view === 'admin-login' || admin) return;
+        if (viewForPath(this.router.url)?.view !== view) return;
+        this.openAdminLogin();
       });
     });
     effect(() => {
@@ -885,6 +918,25 @@ export class AppComponent {
     this.router
       .navigate(['/login'], returnUrl ? { queryParams: { returnUrl } } : {})
       .catch(() => undefined);
+  }
+
+  /** Opens the Admin login page, returning to the current Admin page afterwards. */
+  openAdminLogin(): void {
+    this.closeDrawer();
+    const returnUrl = safeAdminReturnUrl(this.router.url);
+    const useReturn = returnUrl !== null && pathOf(returnUrl) !== '/admin';
+    this.router
+      .navigate(['/admin/login'], useReturn ? { queryParams: { returnUrl } } : {})
+      .catch(() => undefined);
+  }
+
+  /**
+   * A page request from inside the Admin shell. Logging out also empties the
+   * per-user cart, so the next person on this browser never sees it.
+   */
+  onAdminNavigate(view: AppView): void {
+    if (view === 'admin-login') this.cart.clear();
+    this.activeView.set(view);
   }
 
   money(n: number): string {

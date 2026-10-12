@@ -42,7 +42,7 @@ const EXPECTED_ACTIONS: ReadonlyArray<readonly [string, AppView]> = [
   ['Manage orders', 'admin-orders'],
   ['Manage proposals', 'admin-proposals'],
   ['Estimate rate', 'admin-rates'],
-  ['Leads', 'leads'],
+  ['Leads', 'admin-leads'],
 ];
 
 // ── response rows (only the fields the cards read matter) ──
@@ -243,7 +243,7 @@ describe('AdminDashboardComponent', () => {
     expect(actionCards(fixture).length).toBe(5);
     actionCards(fixture)[4].click();
 
-    expect(opened).toEqual(['admin-products', 'leads']);
+    expect(opened).toEqual(['admin-products', 'admin-leads']);
   });
 
   // ── Stage 2: data requests ──────────────────────────────────────────────
@@ -588,7 +588,7 @@ describe('AdminDashboardComponent', () => {
       fixture.componentInstance.navigate.subscribe((view) => opened.push(view));
 
       fixture.componentInstance.open('admin-orders');
-      fixture.componentInstance.open('leads');
+      fixture.componentInstance.open('admin-leads');
       for (const metric of METRICS) {
         fixture.componentInstance.retry(metric);
         httpMock.expectNone(URLS[metric]);

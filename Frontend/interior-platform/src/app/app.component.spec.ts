@@ -632,14 +632,15 @@ describe('AppComponent', () => {
       httpMock.verify();
     });
 
-    it('direct navigation by Field Staff shows access-denied and loads no admin data', () => {
+    it('direct navigation by Field Staff shows the Admin login page and loads no admin data', () => {
       const { fixture, httpMock } = createAuthedApp(['FieldStaff']);
       fixture.componentInstance.activeView.set('admin-products');
       fixture.detectChanges();
 
-      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-        "You don't have access to this workspace."
-      );
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('app-admin-login')).toBeTruthy();
+      expect(root.querySelector('app-admin-layout')).toBeNull();
+      expect(root.querySelector('#app-sidebar')).toBeNull();
       httpMock.expectNone(ADMIN_URL);
       httpMock.verify();
     });
@@ -738,14 +739,15 @@ describe('AppComponent', () => {
       httpMock.verify();
     });
 
-    it('direct navigation by Field Staff shows access-denied and loads no admin data', () => {
+    it('direct navigation by Field Staff shows the Admin login page and loads no admin data', () => {
       const { fixture, httpMock } = createAuthedApp(['FieldStaff']);
       fixture.componentInstance.activeView.set('admin-orders');
       fixture.detectChanges();
 
-      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-        "You don't have access to this workspace."
-      );
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('app-admin-login')).toBeTruthy();
+      expect(root.querySelector('app-admin-layout')).toBeNull();
+      expect(root.querySelector('#app-sidebar')).toBeNull();
       httpMock.expectNone(ADMIN_ORDERS_URL);
       httpMock.verify();
     });
@@ -861,14 +863,15 @@ describe('AppComponent', () => {
       httpMock.verify();
     });
 
-    it('direct navigation by Field Staff shows access-denied and loads no admin data', () => {
+    it('direct navigation by Field Staff shows the Admin login page and loads no admin data', () => {
       const { fixture, httpMock } = createAuthedApp(['FieldStaff']);
       fixture.componentInstance.activeView.set('admin-proposals');
       fixture.detectChanges();
 
-      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-        "You don't have access to this workspace."
-      );
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('app-admin-login')).toBeTruthy();
+      expect(root.querySelector('app-admin-layout')).toBeNull();
+      expect(root.querySelector('#app-sidebar')).toBeNull();
       httpMock.expectNone(ADMIN_PROPOSALS_URL);
       httpMock.verify();
     });
@@ -1135,7 +1138,7 @@ describe('AppComponent', () => {
 
     it('gives an Admin the Admin shell on every Admin page, in place of the customer layout', () => {
       const { fixture, httpMock } = createAuthedApp(['Admin']);
-      for (const view of ['admin-dashboard', 'admin-products', 'admin-orders', 'admin-proposals', 'admin-rates', 'leads'] as const) {
+      for (const view of ['admin-dashboard', 'admin-products', 'admin-orders', 'admin-proposals', 'admin-rates', 'admin-leads'] as const) {
         open(fixture, httpMock, view);
         expect(hasShell(fixture)).withContext(view).toBeTrue();
         expect(hasCustomerChrome(fixture)).withContext(view).toBeFalse();
@@ -1152,7 +1155,7 @@ describe('AppComponent', () => {
         ['admin-orders', 'app-admin-orders'],
         ['admin-proposals', 'app-admin-proposals'],
         ['admin-rates', 'app-admin-rates'],
-        ['leads', 'app-leads'],
+        ['admin-leads', 'app-leads'],
       ] as const;
       for (const [view, tag] of pages) {
         open(fixture, httpMock, view);
@@ -1285,7 +1288,9 @@ describe('AppComponent', () => {
       fixture.componentInstance.activeView.set('admin-dashboard');
       fixture.detectChanges();
       expect(hasShell(fixture)).toBeFalse();
-      expect(el(fixture).textContent).toContain("You don't have access to this workspace.");
+      expect(el(fixture).querySelector('app-admin-login')).toBeTruthy();
+      expect(el(fixture).querySelector('app-admin-dashboard')).toBeNull();
+      expect(hasCustomerChrome(fixture)).toBeFalse();
       httpMock.verify();
     });
 
@@ -1312,7 +1317,7 @@ describe('AppComponent', () => {
 
     it('with both roles: the Admin shell on Leads, the workspace layout on the Field visualizer', () => {
       const { fixture, httpMock } = createAuthedApp(['Admin', 'FieldStaff']);
-      open(fixture, httpMock, 'leads');
+      open(fixture, httpMock, 'admin-leads');
       expect(hasShell(fixture)).toBeTrue();
       fixture.componentInstance.activeView.set('field');
       fixture.detectChanges();
@@ -1352,7 +1357,7 @@ describe('AppComponent', () => {
       expect(app.activeView()).toBe('admin-products');
       expect(current()).toEqual(['Products']);
       click('Leads');
-      expect(app.activeView()).toBe('leads');
+      expect(app.activeView()).toBe('admin-leads');
       expect(current()).toEqual(['Leads']);
       click('Estimate rate');
       expect(app.activeView()).toBe('admin-rates');
@@ -1374,20 +1379,7 @@ describe('AppComponent', () => {
       httpMock.verify();
     });
 
-    it('"Account" opens the account page in the customer layout', () => {
-      const { fixture, httpMock, app } = createAuthedApp(['Admin']);
-      open(fixture, httpMock, 'admin-orders');
-      Array.from(el(fixture).querySelectorAll<HTMLButtonElement>('app-admin-layout .admin-nav-item'))
-        .find((b) => b.textContent?.trim() === 'Account')!
-        .click();
-      fixture.detectChanges();
-      answerAll(fixture, httpMock);
-      expect(app.activeView()).toBe('account');
-      expect(hasShell(fixture)).toBeFalse();
-      httpMock.verify();
-    });
-
-    it('"Log out" ends the session and lands on Home in the customer layout', () => {
+    it('"Log out" ends the session and lands on the Admin login page', () => {
       const { fixture, httpMock, app } = createAuthedApp(['Admin']);
       open(fixture, httpMock, 'admin-dashboard');
       Array.from(el(fixture).querySelectorAll<HTMLButtonElement>('app-admin-layout .admin-nav-item'))
@@ -1397,8 +1389,10 @@ describe('AppComponent', () => {
       answerAll(fixture, httpMock);
       expect(app.auth.isAuthenticated()).toBeFalse();
       expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
-      expect(app.activeView()).toBe('home');
+      expect(app.activeView()).toBe('admin-login');
       expect(hasShell(fixture)).toBeFalse();
+      expect(el(fixture).querySelector('app-admin-login')).toBeTruthy();
+      expect(el(fixture).querySelector('header.pubnav')).toBeNull();
       httpMock.verify();
     });
 
@@ -1409,6 +1403,26 @@ describe('AppComponent', () => {
       fixture.detectChanges();
       expect(el(fixture).querySelector('app-admin-layout .admin-shell')!.classList.contains('drawer-open')).toBeTrue();
       expect(app.drawerOpen()).toBeFalse();
+      httpMock.verify();
+    });
+
+    it('shows the Admin login page on its own: no customer navigation, sidebar or footer', () => {
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.componentInstance.activeView.set('admin-login');
+      fixture.detectChanges();
+      expect(el(fixture).querySelector('app-admin-login')).toBeTruthy();
+      expect(hasShell(fixture)).toBeFalse();
+      expect(hasCustomerChrome(fixture)).toBeFalse();
+      expect(el(fixture).querySelector('footer.statusbar')).toBeNull();
+      expect(el(fixture).querySelector('.pubmenu')).toBeNull();
+    });
+
+    it('the Admin shell has no Account entry and keeps the customer site one click away', () => {
+      const { fixture, httpMock } = createAuthedApp(['Admin']);
+      open(fixture, httpMock, 'admin-dashboard');
+      const labels = shellItems(fixture);
+      expect(labels).not.toContain('Account');
+      expect(labels).toContain('View customer site');
       httpMock.verify();
     });
 

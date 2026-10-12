@@ -148,7 +148,43 @@
     </div>
   </section>
 
-  <!-- ── 6 · How it works ─────────────────────────── -->
+  <!-- ── 6 · Customer reviews (sample content, see home-data.ts) ── -->
+  <section class="block" aria-label="Customer reviews">
+    <div class="block-head split" reveal>
+      <div>
+        <h2>What customers say</h2>
+        <p class="block-sub">Notes from people who planned their rooms with us.</p>
+      </div>
+      <div class="rev-nav">
+        <button type="button" class="rev-arrow" (click)="scrollReviews(-1)" [disabled]="!canPrevReview()" aria-label="Previous reviews">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button type="button" class="rev-arrow" (click)="scrollReviews(1)" [disabled]="!canNextReview()" aria-label="Next reviews">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+    <ul #reviewTrack class="rev-track" reveal tabindex="0" aria-label="Customer reviews, scroll sideways for more" (scroll)="onReviewScroll()">
+      @for (r of reviews; track r.name) {
+        <li class="rev-card">
+          <figure>
+            <p class="rev-stars" role="img" [attr.aria-label]="'Rated ' + r.rating + ' out of 5'">
+              @for (s of starSlots; track s) {
+                <svg class="rev-star" [class.off]="s > r.rating" viewBox="0 0 16 16" aria-hidden="true"><polygon points="8,1.2 10.1,5.6 14.9,6.2 11.4,9.5 12.3,14.3 8,12 3.7,14.3 4.6,9.5 1.1,6.2 5.9,5.6"/></svg>
+              }
+            </p>
+            <blockquote class="rev-quote"><p>{{ r.quote }}</p></blockquote>
+            <figcaption class="rev-by">
+              <span class="rev-avatar" aria-hidden="true">{{ initials(r.name) }}</span>
+              <span class="rev-who"><strong>{{ r.name }}</strong><span>{{ r.project }}, {{ r.city }}</span></span>
+            </figcaption>
+          </figure>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <!-- ── 7 · How it works ─────────────────────────── -->
   <section class="block" aria-label="How it works">
     <div class="block-head" reveal>
       <div>
@@ -167,7 +203,7 @@
     </ol>
   </section>
 
-  <!-- ── 7 · Final CTA ────────────────────────────── -->
+  <!-- ── 8 · Final CTA ────────────────────────────── -->
   <section class="cta" reveal aria-label="Get started">
     <p class="kicker kicker-light">Get started</p>
     <h2>Ready to design your space?</h2>
