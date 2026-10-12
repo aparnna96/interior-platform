@@ -36,22 +36,26 @@ Also worth a quick look in the customer area:
 
 ## Admin demo (about 5 minutes)
 
-Log out, then log in as the admin, or open `/login` in a private window. The admin lands on the **Dashboard** (`/admin`), inside a separate Admin workspace with its own sidebar and header. The customer menus are replaced here, and the header shows an **Admin** badge with the signed-in email.
+Log out, then sign in at `/admin/login`. The admin lands on the **Dashboard** (`/admin`), inside a separate Admin workspace with its own sidebar and header. The customer menus are replaced here. The header shows a breadcrumb for where you are, a **Jump to page** search (press `/` to focus it) and a menu with the signed-in email, **View customer site** and **Log out**.
 
 The Admin sidebar has three groups:
 
 - **Overview:** **Dashboard**.
 - **Manage:** **Products**, **Orders**, **Proposals**, **Leads** and **Estimate rate**.
-- **Site:** **View customer site**, **Account** and **Log out**.
+- **Site:** **View customer site** and **Log out**.
+
+Orders, Leads and Proposals show a count badge in the sidebar when something is waiting (pending orders, new leads, proposals with a payment started but not verified). The counts appear once the Dashboard or that page has loaded.
 
 On a phone the sidebar becomes a drawer: open it with the menu button at the top left, and close it with the **X** button, by tapping outside it, or with the Escape key. From the customer site, the **Admin** link at the end of the top menu returns to the dashboard. It is shown to admins only.
 
-1. **Dashboard:** five summary cards (orders, new leads, proposals, products and the current estimate rate), the newest few orders, leads and proposals under **Recent activity**, and **Quick actions** that jump to each management page.
-2. **Orders:** every customer's orders with their status and totals. Open a **Pending** order (the sample customer has one; to add another, place an order from the customer side: add a piece to the cart, then **Place Order**) and move it along: **Confirm order**, then **Start processing**, then **Mark completed**. Only valid next steps are offered, and **Cancel order** asks for a second click. Completed and cancelled orders are final. The customer sees each status change in their own Orders page.
-3. **Proposals:** every proposal with its payment state ("Token payment verified" or "No payment attempt"). Open one to see the room details, furniture lines and payment record.
-4. **Leads:** the enquiries submitted through the site, filterable as New, In Progress and Closed. Open one to update its status.
-5. **Products:** the catalogue (eight pieces). Edit a price or description, or deactivate a product. A deactivated product disappears from the public store immediately.
-6. **Estimate rate:** the price per square foot used for new estimates. Setting a new rate changes the amount on estimates created afterwards.
+1. **Dashboard:** six summary cards (order value, orders, new leads, proposals, products and the current estimate rate), a **Needs attention** list that jumps to the page that deals with each item, five charts (orders per day, order value per day, orders by status, lead pipeline and proposal payments), and the newest few orders, leads and proposals under **Recent activity**. **Refresh** reloads everything and shows when it last updated. Order value adds up order subtotals, leaving out cancelled orders; it is the value of orders placed, not money received.
+2. **Orders:** a table of every customer's orders with colour-coded status and totals. Search by customer or order ID, filter by status, click a column heading to sort, and page through the list. Open a **Pending** order (the sample customer has one; to add another, place an order from the customer side: add a piece to the cart, then **Place Order**) and move it along: **Confirm order**, then **Start processing**, then **Mark completed**. Only valid next steps are offered, and **Cancel order** asks for a second click. Completed and cancelled orders are final. The customer sees each status change in their own Orders page.
+3. **Proposals:** every proposal with its payment state ("Token payment verified" or "No payment attempt"). Search, filter by payment state and sort as in Orders. Open one to see the room details, furniture lines and payment record as tables.
+4. **Leads:** the enquiries submitted through the site, in a searchable table, filterable as New, In Progress and Closed. Open one to update its status.
+5. **Products:** the catalogue (eight pieces) as a table with pictures, searchable and filterable by category, room and active state. **Add Product** and **Edit** open a side drawer with a live preview of the image URL. Edit a price or description, or deactivate a product. A deactivated product disappears from the public store immediately.
+6. **Estimate rate:** the price per square foot used for new estimates, with the full history in a table. Setting a new rate changes the amount on estimates created afterwards.
+
+Each order, proposal and lead has its own address (for example `/admin/orders/<id>`), so a refresh keeps you on the record and a link can be shared with another admin.
 
 ## Field Staff demo (about 2 minutes)
 

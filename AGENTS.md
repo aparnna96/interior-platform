@@ -33,6 +33,7 @@ Interior design and furniture platform for the client "Confident Group". Used as
 - Frontend: run only the specs touching the change, for example `npx ng test --watch=false --browsers=ChromeHeadless --include=src/app/<path>/**/*.spec.ts`. `npx ng build` is the compile check when a build is needed.
 - Backend: `dotnet build`, or `dotnet test` on a targeted filter.
 - Some drawer specs in the Admin layout skip themselves when the test browser is 960px wide or more.
+- On this machine ChromeHeadless can take over a minute to start, and Karma then drops it ("no message in 30000 ms") before any spec runs. Use a temporary Karma config with a longer `browserNoActivityTimeout` (kept outside the repo) rather than changing the project. `--include` keeps only the last pattern, so run each spec group separately.
 - Say what was and was not verified. Label forged-token or stubbed-API browser checks as simulated.
 
 ## Git and deployment
@@ -63,6 +64,8 @@ Interior design and furniture platform for the client "Confident Group". Used as
 - Admin login: `/admin/login` (`src/app/admin-login/`, view `admin-login`, access `adminlogin`). `adminGuard` sends visitors and non-Admin roles there, never to `/login`, with a `returnUrl` limited to the Admin area (`safeAdminReturnUrl`). `adminLoginGuard` forwards a signed-in Admin to that `returnUrl` or `/admin`; customers and visitors still see the page. `safeReturnUrl` rejects `/admin/login`.
 - Admin area: `ADMIN_AREA_VIEWS` (in `app-paths.ts`) is every `/admin` view including login. It never shows the customer navigation.
 - Admin shell: `src/app/admin-layout/`. Active when `auth.isAdmin() && isAdminShellView(activeView)`. `ADMIN_SHELL_VIEWS` is `ADMIN_AREA_VIEWS` minus `admin-login`: `admin-dashboard`, `admin-products`, `admin-orders`, `admin-proposals`, `admin-rates`, `admin-leads`.
+- Admin record pages: orders, proposals and leads open at `/admin/orders/:id`, `/admin/proposals/:id` and `/admin/leads/:id` (`ADMIN_RECORD_VIEWS`, `recordId` in `viewForPath`/`pathForView`). The view stays the list view; `AppComponent.routeRecordId` is passed to the page as `recordId` and the page reports opening or closing a record through `recordChange`. A page that is not in the shell (the FieldStaff Leads page) simply ignores both.
+- Admin kit: `src/app/shared/admin/` holds `TableState` (client-side search, sort, filter, paging), `th[admSort]`, `app-admin-pager`, `app-badge` with status tones, `app-admin-state` (loading, empty, error, login, denied) and `AdminAttentionService` (sidebar counts, reported by the pages; it makes no requests). `charts/` has hand-built SVG line, bar and donut charts; there is no chart library. Shared `adm-*` classes live in `src/styles.css`, so page stylesheets stay small.
 - FieldStaff keep the workspace layout on `/leads` and `/field`. `staffGuard` sends an Admin without the FieldStaff role from `/leads` to `/admin/leads`; `/field` is FieldStaff only.
 - Feature folders in `src/app/`: `admin-dashboard`, `admin-layout`, `admin-login`, `admin-orders`, `admin-products`, `admin-proposals`, `admin-rates`, `auth`, `catalogue`, `elevation`, `estimate`, `finishes`, `floor-plan`, `home`, `leads`, `orders`, `proposal`, `register`, `room-visualizer`, `shared`, `whatsapp`.
 
@@ -78,7 +81,7 @@ Interior design and furniture platform for the client "Confident Group". Used as
 
 - Customer: Home, Interiors, Furniture catalogue and product pages, Cart, Orders, Account, Register and Login, Estimates, Projects, Proposals, payments (demo mode), checkout delivery details, room visualizer (floor plan, elevation, finishes).
 - Field Staff: Leads, Field visualizer.
-- Admin: separate login page, workspace shell, dashboard (summary cards, recent activity, quick actions), Products, Orders, Proposals, Leads, Estimate Rate.
+- Admin: separate login page, workspace shell (breadcrumb, user menu, page jump search, sidebar badges), dashboard (six summary cards, needs-attention list, five SVG charts, recent activity, refresh), and sortable, searchable, paged tables for Products (with a drawer form and image preview), Orders, Proposals, Leads and the Estimate Rate history. Order value on the dashboard is the sum of non-cancelled order subtotals, not money received.
 - WhatsApp action exists but is off: no business number is configured in the environment files.
 
 ## Known gaps
