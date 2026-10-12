@@ -1,218 +1,85 @@
-/* ── Admin Dashboard: same workspace language as the other admin pages ──
-   Cool-white page (Admin theme tokens), white surfaces, navy type,
-   hairline borders, one gold accent. System font stack only.
-   No animation. Shortcuts are wrapping cards so narrow screens stay usable. */
+/* Admin Dashboard: summary cards, "needs attention", charts and recent activity.
+   Shared pieces (cards, badges, states, chart shells) come from the Admin kit in styles.css. */
 
-.admin-dashboard {
-  display: grid;
-  gap: 20px;
-  align-content: start;
-  min-width: 0;
-  max-width: 1152px;
-  width: 100%;
-  margin: 0 auto;
-  overflow-x: clip;
-}
-
-.kicker {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin: 0;
-}
-
-.admin-dashboard-head h1 {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  margin-top: 4px;
-}
-
-/* ── Empty / access states ── */
-.admin-dashboard-empty {
-  text-align: center;
-  padding: 48px 20px;
-  display: grid;
-  gap: 6px;
-  justify-items: center;
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius);
-  min-width: 0;
-}
-.admin-dashboard-empty p { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
-.admin-dashboard-empty span { font-size: 13px; color: var(--muted); }
+.admin-dashboard { max-width: 1152px; margin: 0 auto; overflow-x: clip; }
+.admin-dashboard h2 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
 
 /* ── Summary ── */
-.summary, .recent, .quick-actions { display: grid; gap: 12px; min-width: 0; }
-.summary h2, .recent h2, .quick-actions h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 12px;
-  min-width: 0;
-}
-
-/* Read-only figures: plain cards; the tappable quick actions get a hover border. */
+.summary { min-width: 0; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 12px; min-width: 0; }
 .summary-card {
-  display: grid;
-  gap: 6px;
-  align-content: start;
-  min-width: 0;
-  padding: 14px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius);
+  display: grid; gap: 6px; align-content: start; min-width: 0; padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
 }
-.summary-label {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
+.summary-label { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 /* One fixed-height row holds the loading text, the figure or the error, so cards never jump. */
-.summary-body {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  min-height: 40px;
-  min-width: 0;
-}
-.summary-value {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-}
+.summary-body { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 40px; min-width: 0; }
+.summary-value { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .summary-unavailable { font-size: 18px; color: var(--muted); }
 .summary-loading { font-size: 13px; color: var(--muted); }
 .summary-error { font-size: 13px; font-weight: 600; color: var(--danger); }
-.summary-retry,
-.recent-retry {
-  border: 0;
-  background: none;
-  padding: 8px 0;
-  min-height: 40px;
-  font-size: 12.5px;
-  font-weight: 650;
-  color: var(--accent-ink);
-  cursor: pointer;
-  white-space: nowrap;
+.summary-retry, .recent-retry {
+  border: 0; background: none; padding: 8px 0; min-height: 40px; font-size: 12.5px; font-weight: 650;
+  color: var(--accent-ink); cursor: pointer; white-space: nowrap;
 }
-.summary-retry:hover,
-.recent-retry:hover { text-decoration: underline; }
-.summary-retry:focus-visible,
-.recent-retry:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.summary-retry:hover, .recent-retry:hover { text-decoration: underline; }
+.summary-retry:focus-visible, .recent-retry:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .summary-caption { margin: 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 
-/* ── Recent activity ── */
-.recent-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-  gap: 12px;
-  min-width: 0;
+/* ── Needs attention ── */
+.attention { display: grid; gap: 8px; }
+.attention-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.attention-list li { border-top: 1px solid var(--border-soft); }
+.attention-list li:first-child { border-top: 0; }
+.attention-item {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; width: 100%; min-height: 44px; padding: 8px 4px;
+  border: 0; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer; border-radius: 6px;
 }
+.attention-item:hover { background: var(--surface-soft); }
+.attention-detail { flex: 1 1 220px; min-width: 0; font-size: 13px; color: var(--ink-2); }
+.attention-go { margin-left: auto; font-size: 12.5px; font-weight: 650; color: var(--accent-ink); }
+.attention-clear { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* ── Charts ── */
+.charts { min-width: 0; }
+.chart-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.chart-card { display: grid; gap: 10px; align-content: start; }
+.chart-card h3 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+.chart-card h3 span { font-weight: 500; font-size: 12px; color: var(--muted); margin-left: 6px; }
+.chart-state { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 120px; margin: 0; }
+@media (min-width: 1000px) {
+  .chart-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .chart-half { grid-column: span 3; }
+  .chart-third { grid-column: span 2; }
+}
+@media (min-width: 640px) and (max-width: 999px) {
+  .chart-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chart-half { grid-column: 1 / -1; }
+}
+
+/* ── Recent activity ── */
+.recent { display: grid; gap: 12px; min-width: 0; }
+.recent-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; min-width: 0; }
 .recent-block {
-  display: grid;
-  gap: 4px;
-  align-content: start;
-  min-width: 0;
-  padding: 14px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius);
+  display: grid; gap: 4px; align-content: start; min-width: 0; padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
 }
 .recent-block h3 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
 .recent-body { min-width: 0; }
-
 /* Loading, empty and error share one row height so the block does not jump while it settles. */
-.recent-state {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  min-height: 72px;
-  margin: 0;
-  font-size: 13px;
-  color: var(--muted);
-}
+.recent-state { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 72px; margin: 0; font-size: 13px; color: var(--muted); }
 .recent-error { font-weight: 600; color: var(--danger); }
-
 .recent-list { list-style: none; margin: 0; padding: 0; min-width: 0; }
-.recent-row {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  padding: 9px 0;
-  border-top: 1px solid var(--border-soft);
-}
+.recent-row { display: grid; gap: 2px; min-width: 0; padding: 9px 0; border-top: 1px solid var(--border-soft); }
 .recent-row:first-child { border-top: 0; }
-.recent-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 2px 12px;
-  min-width: 0;
-}
+.recent-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; min-width: 0; }
 .recent-title { font-size: 13.5px; font-weight: 650; min-width: 0; overflow-wrap: anywhere; }
 .recent-amount { font-size: 13px; font-weight: 650; white-space: nowrap; }
 .recent-detail { font-size: 12.5px; color: var(--ink-2); min-width: 0; overflow-wrap: anywhere; }
 .recent-meta { align-items: center; }
 .recent-when { font-size: 12px; color: var(--muted); }
-.status-pill {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  background: var(--surface-soft);
-  border: 1px solid var(--border-soft);
-  border-radius: 999px;
-  padding: 2px 9px;
-  color: var(--ink);
-}
-
-/* ── Quick actions ── */
-.action-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  min-width: 0;
-}
-
-.action-card {
-  appearance: none;
-  display: grid;
-  gap: 4px;
-  align-content: start;
-  text-align: left;
-  min-height: 44px;
-  min-width: 0;
-  padding: 14px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius);
-  color: var(--ink);
-  font: inherit;
-  cursor: pointer;
-}
-.action-card:hover { border-color: var(--accent); }
-.action-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.action-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
-.action-desc { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
 
 @media (max-width: 480px) {
-  .admin-dashboard-head h1 { font-size: 22px; }
-  .admin-dashboard-empty { padding: 36px 16px; }
   .summary-grid { grid-template-columns: 1fr; }
   .summary-value { font-size: 24px; }
 }

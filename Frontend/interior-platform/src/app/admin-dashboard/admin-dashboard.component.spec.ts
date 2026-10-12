@@ -37,13 +37,6 @@ const ADMIN_JWT = jwtWithRoles(['Admin']);
 const STAFF_JWT = jwtWithRoles(['FieldStaff']);
 const CUSTOMER_JWT = jwtWithRoles(['Customer']);
 
-const EXPECTED_ACTIONS: ReadonlyArray<readonly [string, AppView]> = [
-  ['Manage products', 'admin-products'],
-  ['Manage orders', 'admin-orders'],
-  ['Manage proposals', 'admin-proposals'],
-  ['Estimate rate', 'admin-rates'],
-  ['Leads', 'admin-leads'],
-];
 
 // ── response rows (only the fields the cards read matter) ──
 const AT = '2026-10-01T10:00:00Z';
@@ -175,7 +168,7 @@ describe('AdminDashboardComponent', () => {
   const valueOf = (f: Fixture, m: Metric) => cardEl(f, m).querySelector('.summary-value')?.textContent?.trim() ?? null;
   const cardText = (f: Fixture, m: Metric) => (cardEl(f, m).textContent ?? '').replace(/\s+/g, ' ').trim();
   const retryBtn = (f: Fixture, m: Metric) => cardEl(f, m).querySelector<HTMLButtonElement>('.summary-retry');
-  const actionCards = (f: Fixture) => Array.from(root(f).querySelectorAll<HTMLButtonElement>('.action-card'));
+  const attentionItems = (f: Fixture) => Array.from(root(f).querySelectorAll<HTMLButtonElement>('.attention-item'));
   const summaryCards = (f: Fixture) => root(f).querySelectorAll('.summary-card');
 
   // Recent activity helpers
@@ -198,54 +191,86 @@ describe('AdminDashboardComponent', () => {
     localStorage.clear();
   });
 
-  // ── Stage 1: shell and quick actions (unchanged behaviour) ──────────────
+  // ── Shell and "Needs attention" ─────────────────────────────────────────
 
-  it('shows the Dashboard heading and the five quick actions to an Admin', () => {
+  it('shows the Dashboard heading, a Refresh button and the Needs attention list to an Admin', () => {
     const { fixture } = openAdmin();
     const el = root(fixture);
 
     expect(el.querySelector('h1')?.textContent).toContain('Dashboard');
-    expect(el.querySelector('section[aria-label="Quick actions"]')).toBeTruthy();
-    const titles = actionCards(fixture).map((c) => c.querySelector('.action-title')?.textContent?.trim());
-    expect(titles).toEqual(EXPECTED_ACTIONS.map(([label]) => label));
-    for (const card of actionCards(fixture)) {
-      expect(card.querySelector('.action-desc')?.textContent?.trim().length ?? 0).toBeGreaterThan(10);
-    }
+    expect(el.querySelector('section[aria-label="Needs attention"]')).toBeTruthy();
+    expect(el.querySelector('section[aria-label="Quick actions"]')).toBeNull();
+    // Default data: 2 pending orders and 1 new lead are waiting; no payment is pending and a rate is set.
+    const items = attentionItems(fixture).map((b) => (b.textContent ?? '').replace(/\s+/g, ' '));
+    expect(items.length).toBe(2);
+    expect(items[0]).toContain('2 orders pending');
+    expect(items[1]).toContain('1 new lead to follow up');
+    expect(Array.from(el.querySelectorAll('button')).some((b) => b.textContent?.includes('Refresh'))).toBeTrue();
   });
 
-  it('each quick action asks the shell to open its page', () => {
+  it('each Needs attention item asks the shell to open the page that deals with it', () => {
     const { fixture } = openAdmin();
     const opened: AppView[] = [];
     fixture.componentInstance.navigate.subscribe((view) => opened.push(view));
 
-    for (const [label] of EXPECTED_ACTIONS) {
-      actionCards(fixture)
-        .find((c) => c.textContent?.includes(label))!
-        .click();
-    }
+    for (const item of attentionItems(fixture)) item.click();
 
-    expect(opened).toEqual(EXPECTED_ACTIONS.map(([, view]) => view));
+    expect(opened).toEqual(['admin-orders', 'admin-leads']);
   });
 
-  it('quick actions stay usable while the cards load and when every card has failed', () => {
+  it('flags a missing estimate rate and a pending payment, and says so when nothing needs attention', () => {
+    const flagged = openAdmin({
+      orders: [],
+      leads: [],
+      proposals: [{ ...proposals(1)[0], paymentAttemptCount: 2 }],
+      rate: ratesWith([[1500, false]]),
+    });
+    const texts = attentionItems(flagged.fixture).map((b) => (b.textContent ?? '').replace(/\s+/g, ' '));
+    expect(texts.some((t) => t.includes('1 proposal with a payment pending'))).toBeTrue();
+    expect(texts.some((t) => t.includes('No active estimate rate'))).toBeTrue();
+  });
+
+  it('says nothing needs attention when everything is in order', () => {
+    const { fixture } = openAdmin({ orders: [], leads: [], proposals: [], rate: ratesWith([[1500, true]]) });
+    expect(attentionItems(fixture).length).toBe(0);
+    expect(text(fixture)).toContain('Nothing needs attention right now.');
+  });
+
+  it('Needs attention waits for the figures instead of claiming all is well, and notes a failure', () => {
     const { fixture, httpMock } = create(ADMIN_JWT);
     const reqs = take(httpMock);
-    const opened: AppView[] = [];
-    fixture.componentInstance.navigate.subscribe((view) => opened.push(view));
+    expect(text(fixture)).toContain('Checking…');
+    expect(text(fixture)).not.toContain('Nothing needs attention');
 
-    // Still loading.
-    expect(actionCards(fixture).length).toBe(5);
-    actionCards(fixture)[0].click();
-
-    // Everything failed.
     answer(reqs, { orders: 'error', leads: 'error', proposals: 'error', products: 'error', rate: 'error' });
     fixture.detectChanges();
-    expect(actionCards(fixture).length).toBe(5);
-    actionCards(fixture)[4].click();
-
-    expect(opened).toEqual(['admin-products', 'admin-leads']);
+    expect(attentionItems(fixture).length).toBe(0);
+    expect(text(fixture)).not.toContain('Nothing needs attention');
+    expect(text(fixture)).toContain('could not be loaded');
   });
 
+  it('draws the charts from the loaded rows, with a text summary for each', () => {
+    const { fixture } = openAdmin();
+    const charts = Array.from(root(fixture).querySelectorAll('.chart-card')).map((c) => c.getAttribute('data-chart'));
+    expect(charts).toEqual(['orders-trend', 'value-trend', 'orders-status', 'lead-pipeline', 'proposal-payments']);
+    for (const svg of Array.from(root(fixture).querySelectorAll('svg[role="img"]'))) {
+      expect(svg.getAttribute('aria-label')?.length ?? 0).withContext('chart summary').toBeGreaterThan(10);
+    }
+  });
+
+  it('Refresh asks for all five endpoints again and keeps the numbers on screen meanwhile', () => {
+    const { fixture, httpMock } = openAdmin();
+    const refresh = Array.from(root(fixture).querySelectorAll('button')).find((b) => b.textContent?.includes('Refresh'))!;
+    refresh.click();
+    fixture.detectChanges();
+
+    // Old figures stay while the new answers are on their way.
+    expect(valueOf(fixture, 'orders')).toBe('2');
+    const again = take(httpMock);
+    answer(again, { orders: orders(7) });
+    fixture.detectChanges();
+    expect(valueOf(fixture, 'orders')).toBe('7');
+  });
   // ── Stage 2: data requests ──────────────────────────────────────────────
 
   it('requests exactly the five existing Admin endpoints, once each, with Bearer auth', () => {
@@ -262,15 +287,15 @@ describe('AdminDashboardComponent', () => {
     httpMock.expectNone(`${API}/api/admin/dashboard`);
   });
 
-  it('shows exactly five summary cards, in order, with no other metric', () => {
+  it('shows exactly six summary cards, in order, with no other metric', () => {
     const { fixture } = openAdmin();
 
     const labels = Array.from(root(fixture).querySelectorAll('.summary-label')).map((l) => l.textContent?.trim());
-    expect(labels).toEqual(['Orders', 'New leads', 'Proposals', 'Products', 'Current rate']);
-    expect(summaryCards(fixture).length).toBe(5);
+    expect(labels).toEqual(['Order value', 'Orders', 'New leads', 'Proposals', 'Products', 'Current rate']);
+    expect(summaryCards(fixture).length).toBe(6);
     expect(root(fixture).querySelector('section[aria-label="Summary"] h2')?.textContent).toContain('Summary');
-    // Still no revenue, user-count or chart metrics. (Recent activity arrived in Stage 3 and has its own tests below.)
-    expect(text(fixture)).not.toMatch(/revenue|users?\b|chart/i);
+    // Still no user-count or payments-received metric: order value is the sum of order subtotals.
+    expect(text(fixture)).not.toMatch(/revenue|users?\b/i);
   });
 
   it('shows the real value on every card once the responses arrive', () => {
@@ -418,7 +443,7 @@ describe('AdminDashboardComponent', () => {
     const { fixture } = openAdmin({ products: rows });
 
     expect(valueOf(fixture, 'products')).toBe('4');
-    expect(cardText(fixture, 'products')).toContain('Active and inactive');
+    expect(cardText(fixture, 'products')).toContain('2 active');
   });
 
   // ── Current rate ────────────────────────────────────────────────────────
@@ -523,7 +548,6 @@ describe('AdminDashboardComponent', () => {
         expect(valueOf(fixture, other)).withContext(other).toBe(DEFAULT_VALUES[other]);
         expect(cardText(fixture, other)).withContext(other).not.toContain('Unable to load');
       }
-      expect(actionCards(fixture).length).toBe(5);
     });
   }
 
@@ -561,7 +585,7 @@ describe('AdminDashboardComponent', () => {
     const { fixture, httpMock } = create(null);
 
     expect(text(fixture)).toContain('Log in to access the Admin dashboard');
-    expect(actionCards(fixture).length).toBe(0);
+    expect(attentionItems(fixture).length).toBe(0);
     expect(summaryCards(fixture).length).toBe(0);
     for (const metric of METRICS) {
       httpMock.expectNone(URLS[metric]);
@@ -574,7 +598,7 @@ describe('AdminDashboardComponent', () => {
 
       expect(text(fixture)).toContain("You don't have access to this workspace.");
       expect(text(fixture)).toContain('This workspace is for Admin accounts.');
-      expect(actionCards(fixture).length).toBe(0);
+      expect(attentionItems(fixture).length).toBe(0);
       expect(summaryCards(fixture).length).toBe(0);
       expect(root(fixture).querySelector('[role="alert"]')).toBeTruthy();
       for (const metric of METRICS) {
@@ -617,16 +641,16 @@ describe('AdminDashboardComponent', () => {
     expect(fixture.componentInstance.cards().every((c) => c.status === 'loading' && c.display === '')).toBeTrue();
   });
 
-  it('logging out removes the numbers and the shortcuts so the next session starts clean', () => {
+  it('logging out removes the numbers and the attention list so the next session starts clean', () => {
     const { fixture } = openAdmin();
-    expect(summaryCards(fixture).length).toBe(5);
-    expect(actionCards(fixture).length).toBe(5);
+    expect(summaryCards(fixture).length).toBe(6);
+    expect(attentionItems(fixture).length).toBe(2);
 
     TestBed.inject(AuthService).logout();
     fixture.detectChanges();
 
     expect(summaryCards(fixture).length).toBe(0);
-    expect(actionCards(fixture).length).toBe(0);
+    expect(attentionItems(fixture).length).toBe(0);
     expect(text(fixture)).toContain('Log in to access the Admin dashboard');
     expect(text(fixture)).not.toMatch(/1,500|₹/);
   });
@@ -660,12 +684,13 @@ describe('AdminDashboardComponent', () => {
 
   // ── Stage 3: Recent activity ────────────────────────────────────────────
 
-  it('shows the Summary, then Recent activity, then Quick actions', () => {
+  it('shows the Summary, then Needs attention, then the charts, then Recent activity', () => {
     const { fixture } = openAdmin();
     const sections = [
       'section[aria-label="Summary"]',
+      'section[aria-label="Needs attention"]',
+      'section[aria-label="Charts"]',
       'section[aria-label="Recent activity"]',
-      'section[aria-label="Quick actions"]',
     ].map((sel) => root(fixture).querySelector(sel)!);
 
     expect(sections.every((s) => !!s)).toBeTrue();
@@ -682,7 +707,7 @@ describe('AdminDashboardComponent', () => {
     const titles = Array.from(root(fixture).querySelectorAll('.recent-block h3')).map((h) => h.textContent?.trim());
 
     expect(titles).toEqual(['Recent orders', 'Recent leads', 'Recent proposals']);
-    expect(text(fixture)).not.toMatch(/revenue|users?\b|chart/i);
+    expect(text(fixture)).not.toMatch(/revenue|users?\b/i);
   });
 
   it('Recent activity adds no request: still exactly one GET per endpoint, five in all', () => {
@@ -808,7 +833,6 @@ describe('AdminDashboardComponent', () => {
       for (const other of others) {
         expect(blockText(fixture, other.metric)).withContext(other.title).toContain('Unable to load');
       }
-      expect(actionCards(fixture).length).toBe(5);
     });
   }
 

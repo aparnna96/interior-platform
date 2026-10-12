@@ -1,23 +1,32 @@
-<section class="admin-dashboard" aria-label="Admin dashboard">
-  <header class="admin-dashboard-head">
+<section class="adm-page admin-dashboard" aria-label="Admin dashboard">
+  <header class="adm-head">
     <div>
       <h1>Dashboard</h1>
+      <p class="adm-head-sub">Orders, leads and proposals at a glance.</p>
     </div>
+    @if (isAuthenticated() && canAccess()) {
+      <div class="adm-head-actions">
+        @if (updatedText()) {
+          <span class="adm-hint" aria-live="polite">{{ updatedText() }}</span>
+        }
+        <button type="button" class="adm-btn adm-btn-sm" (click)="refresh()" [disabled]="busy()">
+          {{ busy() ? 'Refreshing…' : 'Refresh' }}
+        </button>
+      </div>
+    }
   </header>
 
   @if (!isAuthenticated()) {
-    <div class="admin-dashboard-empty">
-      <p>Log in to access the Admin dashboard</p>
-      <span>The dashboard is for Admin accounts. Use the Admin log in page.</span>
-    </div>
+    <app-admin-state
+      kind="login"
+      title="Log in to access the Admin dashboard"
+      message="The dashboard is for Admin accounts. Use the Admin log in page."
+    />
   } @else if (!canAccess()) {
-    <div class="admin-dashboard-empty" role="alert">
-      <p>You don't have access to this workspace.</p>
-      <span>This workspace is for Admin accounts.</span>
-    </div>
+    <app-admin-state kind="denied" title="You don't have access to this workspace." message="This workspace is for Admin accounts." />
   } @else {
     <section class="summary" aria-label="Summary">
-      <h2>Summary</h2>
+      <h2 class="adm-sr-only">Summary</h2>
       <div class="summary-grid">
         @for (card of cards(); track card.key) {
           <article
@@ -51,6 +60,90 @@
         }
       </div>
     </section>
+
+    <section class="attention adm-card adm-card-pad" aria-label="Needs attention">
+      <h2>Needs attention</h2>
+      @if (attentionItems().length > 0) {
+        <ul class="attention-list">
+          @for (item of attentionItems(); track item.view) {
+            <li>
+              <button type="button" class="attention-item" (click)="open(item.view)">
+                <app-badge [tone]="item.tone">{{ item.label }}</app-badge>
+                <span class="attention-detail">{{ item.detail }}</span>
+                <span class="attention-go" aria-hidden="true">Open →</span>
+              </button>
+            </li>
+          }
+        </ul>
+      } @else if (attentionState() === 'clear') {
+        <p class="attention-clear">Nothing needs attention right now.</p>
+      } @else if (attentionState() === 'incomplete') {
+        <p class="attention-clear">Some figures could not be loaded, so this list may be incomplete.</p>
+      } @else {
+        <p class="attention-clear">Checking…</p>
+      }
+    </section>
+
+    <section class="charts" aria-label="Charts">
+      <h2 class="adm-sr-only">Charts</h2>
+      <div class="chart-grid">
+        <article class="adm-card adm-card-pad chart-card chart-half" data-chart="orders-trend" [attr.aria-busy]="statusOf('orders') === 'loading'">
+          <h3>Orders per day <span>last 14 days</span></h3>
+          @if (statusOf('orders') === 'ready') {
+            <app-line-chart [data]="ordersTrend()" [heading]="trendTitle" axisLabel="Day" />
+          } @else {
+            <ng-container *ngTemplateOutlet="chartState; context: { key: 'orders', name: 'orders chart' }" />
+          }
+        </article>
+
+        <article class="adm-card adm-card-pad chart-card chart-half" data-chart="value-trend" [attr.aria-busy]="statusOf('orders') === 'loading'">
+          <h3>Order value per day <span>last 14 days, excluding cancelled</span></h3>
+          @if (statusOf('orders') === 'ready') {
+            <app-line-chart [data]="valueTrend()" [heading]="valueTitle" axisLabel="Day" color="#b07d1f" [format]="formatRupees" />
+          } @else {
+            <ng-container *ngTemplateOutlet="chartState; context: { key: 'orders', name: 'order value chart' }" />
+          }
+        </article>
+
+        <article class="adm-card adm-card-pad chart-card chart-third" data-chart="orders-status" [attr.aria-busy]="statusOf('orders') === 'loading'">
+          <h3>Orders by status</h3>
+          @if (statusOf('orders') === 'ready') {
+            <app-donut-chart [data]="ordersByStatus()" heading="Orders by status" centerLabel="orders" />
+          } @else {
+            <ng-container *ngTemplateOutlet="chartState; context: { key: 'orders', name: 'orders by status chart' }" />
+          }
+        </article>
+
+        <article class="adm-card adm-card-pad chart-card chart-third" data-chart="lead-pipeline" [attr.aria-busy]="statusOf('leads') === 'loading'">
+          <h3>Lead pipeline</h3>
+          @if (statusOf('leads') === 'ready') {
+            <app-bar-chart [data]="leadPipeline()" heading="Leads by status" />
+          } @else {
+            <ng-container *ngTemplateOutlet="chartState; context: { key: 'leads', name: 'lead pipeline chart' }" />
+          }
+        </article>
+
+        <article class="adm-card adm-card-pad chart-card chart-third" data-chart="proposal-payments" [attr.aria-busy]="statusOf('proposals') === 'loading'">
+          <h3>Proposal payments</h3>
+          @if (statusOf('proposals') === 'ready') {
+            <app-donut-chart [data]="proposalPayments()" heading="Proposals by payment state" centerLabel="proposals" />
+          } @else {
+            <ng-container *ngTemplateOutlet="chartState; context: { key: 'proposals', name: 'proposal payments chart' }" />
+          }
+        </article>
+      </div>
+    </section>
+
+    <ng-template #chartState let-key="key" let-name="name">
+      @if (statusOf(key) === 'error') {
+        <div class="chart-state">
+          <span class="summary-error" role="alert">Unable to load</span>
+          <button type="button" class="summary-retry chart-retry" (click)="retry(key)" [attr.aria-label]="'Retry loading ' + name">Retry</button>
+        </div>
+      } @else {
+        <p class="chart-state summary-loading">Loading…</p>
+      }
+    </ng-template>
 
     <section class="recent" aria-label="Recent activity">
       <h2>Recent activity</h2>
@@ -97,7 +190,7 @@
                           }
                           <div class="recent-line recent-meta">
                             <span class="recent-when">{{ row.when }}</span>
-                            <span class="status-pill">{{ row.pill }}</span>
+                            <app-badge [tone]="row.tone">{{ row.pill }}</app-badge>
                           </div>
                         </li>
                       }
@@ -107,18 +200,6 @@
               }
             </div>
           </article>
-        }
-      </div>
-    </section>
-
-    <section class="quick-actions" aria-label="Quick actions">
-      <h2>Quick actions</h2>
-      <div class="action-grid">
-        @for (action of actions; track action.view) {
-          <button type="button" class="action-card" (click)="open(action.view)">
-            <span class="action-title">{{ action.label }}</span>
-            <span class="action-desc">{{ action.description }}</span>
-          </button>
         }
       </div>
     </section>

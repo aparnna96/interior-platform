@@ -1059,7 +1059,7 @@ describe('AppComponent', () => {
       httpMock.verify();
     });
 
-    it('only admins get the Dashboard page, in the Admin shell, with its shortcuts', () => {
+    it('only admins get the Dashboard page, in the Admin shell, with its attention list', () => {
       for (const roles of [['Customer'], ['FieldStaff']]) {
         TestBed.resetTestingModule();
         localStorage.clear();
@@ -1089,12 +1089,12 @@ describe('AppComponent', () => {
         httpMock.expectOne(`${environment.apiBaseUrl}${path}`).flush([]);
       }
       fixture.detectChanges();
-      // A dashboard shortcut moves the shell to that page.
-      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('app-admin-dashboard .action-card')!.click();
+      // With no rate set, "Needs attention" points at Estimate rate; choosing it moves the shell to that page.
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('app-admin-dashboard .attention-item')!.click();
       fixture.detectChanges();
-      expect(fixture.componentInstance.activeView()).toBe('admin-products');
-      // The Products page loads its own list; leaving the dashboard asks for nothing else.
-      httpMock.expectOne(`${environment.apiBaseUrl}/api/products/admin`).flush([]);
+      expect(fixture.componentInstance.activeView()).toBe('admin-rates');
+      // The Rates page loads its own history; leaving the dashboard asks for nothing else.
+      httpMock.expectOne(`${environment.apiBaseUrl}/api/admin/estimate-rates`).flush([]);
       httpMock.verify();
     });
   });
