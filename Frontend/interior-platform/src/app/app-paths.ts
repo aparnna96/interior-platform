@@ -15,6 +15,7 @@ import { ROOMS, type RoomFilter } from './catalogue/catalogue-products';
 export type AppView =
   | 'home'
   | 'interiors'
+  | 'about'
   | 'visualizer'
   | 'catalogue'
   | 'cart'
@@ -63,6 +64,7 @@ export interface ViewRoute {
 export const VIEW_ROUTES: readonly ViewRoute[] = [
   { view: 'home', path: '', title: 'Confident Group | Interior Platform', access: 'public' },
   { view: 'interiors', path: 'interiors', title: 'Interiors | Confident Group', access: 'public' },
+  { view: 'about', path: 'about', title: 'About | Confident Group', access: 'public' },
   { view: 'catalogue', path: 'furniture', title: 'Furniture | Confident Group', access: 'public' },
   { view: 'visualizer', path: 'visualizer', title: 'Visualizer | Confident Group', access: 'public' },
   { view: 'estimates', path: 'estimates', title: 'Estimates | Confident Group', access: 'public' },

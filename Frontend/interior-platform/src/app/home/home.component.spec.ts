@@ -121,6 +121,32 @@ describe('HomeComponent featured products', () => {
     fixture.destroy();
   });
 
+  it('opens a featured piece from its photo and saves it with the heart', () => {
+    localStorage.removeItem('ip.wishlist');
+    const fixture = setup();
+    httpMock.expectOne(PRODUCTS_URL).flush(API_PRODUCTS);
+    fixture.detectChanges();
+    const cmp = fixture.componentInstance;
+    const el = fixture.nativeElement as HTMLElement;
+    const opened: string[] = [];
+    cmp.openProduct.subscribe((id: string) => opened.push(id));
+
+    (el.querySelector('.feat .feat-media') as HTMLButtonElement).click();
+    expect(opened).toEqual([FEATURED_PRODUCT_IDS[0]]);
+
+    const heart = el.querySelector('.feat .heart-btn') as HTMLButtonElement;
+    expect(heart.getAttribute('aria-pressed')).toBe('false');
+    heart.click();
+    fixture.detectChanges();
+    expect(heart.getAttribute('aria-pressed')).toBe('true');
+    expect(cmp.isSaved(FEATURED_PRODUCT_IDS[0])).toBeTrue();
+    heart.click();
+    fixture.detectChanges();
+    expect(cmp.isSaved(FEATURED_PRODUCT_IDS[0])).toBeFalse();
+    fixture.destroy();
+    localStorage.removeItem('ip.wishlist');
+  });
+
   it('does not crash when the API fails', () => {
     const fixture = setup();
     httpMock
@@ -376,6 +402,13 @@ describe('HomeComponent reviews', () => {
       expect(card.querySelectorAll('.rev-star:not(.off)').length).toBe(rating);
       expect(card.querySelector('.rev-stars')!.getAttribute('aria-label')).toBe(`Rated ${rating} out of 5`);
     }
+    fixture.destroy();
+  });
+
+  it('labels the reviews as samples', () => {
+    const { fixture, el } = setup();
+    const head = el.querySelector('section[aria-label="Customer reviews"] .block-head')!;
+    expect(head.querySelector('.rev-sample')!.textContent).toContain('Sample reviews');
     fixture.destroy();
   });
 

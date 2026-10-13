@@ -4,6 +4,7 @@ import { RevealDirective } from '../shared/reveal.directive';
 import { CountUpDirective } from '../shared/count-up.directive';
 import type { CatalogueProduct } from '../catalogue/catalogue-products';
 import { ProductService } from '../catalogue/product.service';
+import { WishlistService } from '../catalogue/wishlist.service';
 import {
   HERO,
   SPACES,
@@ -26,6 +27,8 @@ import {
 export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Requests the shell to switch to an existing view. No routing. */
   navigate = output<HomeDestination>();
+  /** A featured piece was chosen; the id of the piece whose page should open. */
+  openProduct = output<string>();
 
   hero = HERO;
   slides = HERO.slides;
@@ -53,6 +56,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   private reviewResize: ResizeObserver | null = null;
 
   private readonly productService = inject(ProductService);
+  private readonly wishlist = inject(WishlistService);
 
   /** Live number of pieces in the catalogue. */
   readonly pieceCount = computed(() => this.productService.products().length);
@@ -69,6 +73,14 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   go(d: HomeDestination): void {
     this.navigate.emit(d);
+  }
+
+  isSaved(id: string): boolean {
+    return this.wishlist.has(id);
+  }
+
+  toggleSaved(id: string): void {
+    this.wishlist.toggle(id);
   }
 
   ngOnInit(): void {

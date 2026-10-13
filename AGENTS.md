@@ -73,10 +73,12 @@ Interior design and furniture platform for the client "Confident Group". Used as
 - Product page (`catalogue/product-details`): breadcrumb, hover zoom for mouse pointers only (touch uses the browser's pinch-zoom, no lightbox), and a "Complete the look" row of up to four pieces, same room first.
 - Saved (wishlist): heart buttons on catalogue cards and the product page, a "Saved" page at `/saved` (view `wishlist`, public) and a navbar/footer link with a count. `WishlistService` keeps product ids in `localStorage` key `ip.wishlist`; it is per browser, with no API or database, so it does not follow an account. Syncing to an account would need a table and endpoints.
 
+- About: short page at `/about` (view `about`, public, `src/app/about/`), linked from the footer. It says only what the platform does; no address, phone, team or years in business, because the client has not supplied them. Add those there when they exist. Home reviews are sample content and are labelled "Sample reviews" on the page; replace `REVIEWS` in `home-data.ts` with approved ones and drop the label.
+
 - Rooms: Living Room, Bedroom, Kitchen, Dining, Workspace (frontend `ROOMS` in `catalogue-products.ts`, `PRODUCT_ROOMS` in `product.service.ts`, backend `AllowedRooms` in `ProductsController`; keep the three in step). A room tile on Interiors opens `/furniture?room=Bedroom` (`openRoom` in `AppComponent`); the catalogue tabs update the same query with `replaceUrl`. `roomOf`, `pathForView(..., room)` and `ResolvedPath.room` in `app-paths.ts` carry it. Kitchen pieces are seeded in `ProductSeeder` using the existing categories, because the Visualizer only knows those.
 
 - FieldStaff keep the workspace layout on `/leads` and `/field`. `staffGuard` sends an Admin without the FieldStaff role from `/leads` to `/admin/leads`; `/field` is FieldStaff only.
-- Feature folders in `src/app/`: `admin-dashboard`, `admin-layout`, `admin-login`, `admin-orders`, `admin-products`, `admin-proposals`, `admin-rates`, `auth`, `catalogue`, `elevation`, `estimate`, `finishes`, `floor-plan`, `home`, `leads`, `orders`, `proposal`, `register`, `room-visualizer`, `shared`, `whatsapp`.
+- Feature folders in `src/app/`: `about`, `admin-dashboard`, `admin-layout`, `admin-login`, `admin-orders`, `admin-products`, `admin-proposals`, `admin-rates`, `auth`, `catalogue`, `elevation`, `estimate`, `finishes`, `floor-plan`, `home`, `leads`, `orders`, `proposal`, `register`, `room-visualizer`, `shared`, `whatsapp`.
 
 ## Backend
 

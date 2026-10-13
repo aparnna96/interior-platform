@@ -31,6 +31,7 @@ describe('app paths', () => {
     expect(pathForView('login')).toBe('/login');
     expect(pathForView('account')).toBe('/account');
     expect(pathForView('wishlist')).toBe('/saved');
+    expect(pathForView('about')).toBe('/about');
   });
 
   it('gives a product details page its own address', () => {

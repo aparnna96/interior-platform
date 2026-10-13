@@ -1,0 +1,59 @@
+<section class="about" aria-label="About Confident Group">
+  <header class="ab-head" reveal>
+    <p class="kicker">About</p>
+    <h1>Confident Group</h1>
+    <p class="standfirst">
+      We help people plan and furnish their homes. This site is where that planning starts: browse ideas,
+      try a layout, see a starting cost, then talk to the design team.
+    </p>
+  </header>
+
+  <figure class="ab-banner" reveal>
+    <img [src]="banner.image" [alt]="banner.imageAlt" loading="lazy" />
+  </figure>
+
+  <section class="block" aria-label="What you can do here">
+    <div class="block-head" reveal>
+      <p class="kicker">What you can do</p>
+      <h2>Everything in one place</h2>
+    </div>
+    <ul class="offer-grid">
+      @for (o of offers; track o.title; let i = $index) {
+        <li class="offer" reveal [revealDelay]="(i % 4) * 70">
+          <strong>{{ o.title }}</strong>
+          <span>{{ o.text }}</span>
+          <button type="button" class="offer-link" (click)="go(o.destination)">{{ o.action }} →</button>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="block" aria-label="How we work">
+    <div class="block-head" reveal>
+      <p class="kicker">Our approach</p>
+      <h2>How we work</h2>
+    </div>
+    <ol class="principles">
+      @for (p of principles; track p.title; let i = $index) {
+        <li reveal [revealDelay]="(i % 3) * 70">
+          <span class="principle-no" aria-hidden="true">0{{ i + 1 }}</span>
+          <strong>{{ p.title }}</strong>
+          <span>{{ p.text }}</span>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <section class="ab-cta" aria-label="Get in touch" reveal>
+    <h2>Ready to talk?</h2>
+    <p>Tell us about your space and the design team will get back to you.</p>
+    <div class="ab-actions">
+      <button type="button" class="hp-btn hp-primary" (click)="toggleEnquiry()" [attr.aria-expanded]="showEnquiry()">Talk to us</button>
+      <button type="button" class="hp-btn hp-outline" (click)="go('catalogue')">Explore furniture</button>
+    </div>
+  </section>
+
+  @if (showEnquiry()) {
+    <app-lead-form contextLabel="About Enquiry" source="About Enquiry" />
+  }
+</section>

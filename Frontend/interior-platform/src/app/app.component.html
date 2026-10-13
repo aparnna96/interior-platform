@@ -639,13 +639,19 @@
 
     @if (activeView() === 'home') {
       <main class="content home-main">
-        <app-home (navigate)="activeView.set($event)" />
+        <app-home (navigate)="activeView.set($event)" (openProduct)="openProduct($event)" />
       </main>
     }
 
     @if (activeView() === 'interiors') {
       <main class="content home-main">
         <app-interiors (navigate)="activeView.set($event)" (roomSelected)="openRoom($event)" />
+      </main>
+    }
+
+    @if (activeView() === 'about') {
+      <main class="content home-main">
+        <app-about (navigate)="activeView.set($event)" />
       </main>
     }
 
@@ -885,6 +891,7 @@
           <button type="button" (click)="activeView.set('home')">Home</button>
           <button type="button" (click)="activeView.set('interiors')">Interiors</button>
           <button type="button" (click)="activeView.set('catalogue')">Furniture</button>
+          <button type="button" (click)="activeView.set('about')">About us</button>
         </nav>
         <nav class="site-footer-col" aria-label="Plan your space">
           <p class="site-footer-head">Plan your space</p>

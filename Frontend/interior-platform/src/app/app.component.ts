@@ -32,6 +32,7 @@ import { CatalogueComponent } from './catalogue/catalogue.component';
 import { CartComponent } from './catalogue/cart.component';
 import { CartService } from './catalogue/cart.service';
 import { WishlistComponent } from './catalogue/wishlist.component';
+import { AboutComponent } from './about/about.component';
 import { WishlistService } from './catalogue/wishlist.service';
 import type { RoomFilter } from './catalogue/catalogue-products';
 import { AuthService } from './auth.service';
@@ -97,7 +98,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, WishlistComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent, AdminRatesComponent, AdminDashboardComponent, AdminLayoutComponent, AdminLoginComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, WishlistComponent, AboutComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent, AdminRatesComponent, AdminDashboardComponent, AdminLayoutComponent, AdminLoginComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -142,6 +143,7 @@ export class AppComponent {
     () =>
       this.activeView() === 'home' ||
       this.activeView() === 'interiors' ||
+      this.activeView() === 'about' ||
       this.activeView() === 'catalogue' ||
       this.activeView() === 'cart' ||
       this.activeView() === 'wishlist' ||
