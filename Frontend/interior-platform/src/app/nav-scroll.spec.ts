@@ -282,4 +282,56 @@ describe('AppComponent navbar scroll state', () => {
     window.dispatchEvent(new Event('scroll'));
     fixture.detectChanges();
   });
+
+  it('collapses on a slow touch swipe made of small scroll steps, and expands on a slow swipe back', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const app = fixture.componentInstance;
+
+    const scrollToY = (y: number): void => {
+      window.scrollTo(0, y);
+      window.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+    };
+
+    scrollToY(0);
+    scrollToY(300);
+    expect(app.navHidden()).toBe(true);
+    scrollToY(250);
+    expect(app.navHidden()).toBe(false);
+
+    // 4px per event: each step is below the tolerance, the swipe as a whole is not.
+    scrollToY(254);
+    scrollToY(258);
+    expect(app.navHidden()).toBe(false);
+    scrollToY(262);
+    expect(app.navHidden()).toBe(true);
+
+    scrollToY(259);
+    expect(app.navHidden()).toBe(true);
+    scrollToY(256);
+    expect(app.navHidden()).toBe(false);
+
+    scrollToY(0);
+  });
+
+  it('ignores the mouse events a phone emulates after a tap, so a tap does not pin the bar open', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const app = fixture.componentInstance;
+    const header = fixture.nativeElement.querySelector('header.pubnav') as HTMLElement;
+
+    window.scrollTo(0, 0);
+    window.dispatchEvent(new Event('scroll'));
+    header.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }));
+    header.dispatchEvent(new MouseEvent('mouseenter'));
+
+    window.scrollTo(0, 400);
+    window.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+    expect(app.navHidden()).toBe(true);
+
+    window.scrollTo(0, 0);
+    window.dispatchEvent(new Event('scroll'));
+  });
 });

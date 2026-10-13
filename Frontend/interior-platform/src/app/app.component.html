@@ -202,7 +202,7 @@
   <div class="main" [attr.inert]="drawerOpen() && !isPublicView() ? '' : null">
     @if (isPublicView()) {
     <!-- Public top navbar (Home / Interiors / Furniture) -->
-    <header class="pubnav" [class.scrolled]="navScrolled()" [class.nav-hidden]="navHidden()" aria-label="Primary navigation" (mouseenter)="onNavPointerEnter()" (mouseleave)="onNavPointerLeave()">
+    <header class="pubnav" [class.scrolled]="navScrolled()" [class.nav-hidden]="navHidden()" aria-label="Primary navigation" (mouseenter)="onNavPointerEnter()" (pointerdown)="onNavPointerDown($event)" (mouseleave)="onNavPointerLeave()">
       <div class="pubnav-bar">
         <button
           class="pubnav-brand"

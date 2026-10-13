@@ -431,14 +431,20 @@ export class AppComponent {
 
   /** Last seen scrollY, used for scroll-direction detection with tolerance. */
   private lastScrollY = 0;
+  /** Current scroll direction (1 down, -1 up, 0 unknown) and where that run of travel began. Touch scrolling
+   *  reports only a few pixels per event, so travel is summed over the whole swipe, not judged per event. */
+  private scrollDir = 0;
+  private scrollAnchor = 0;
+  /** When a touch last started on the header; the mouse events a phone emulates after a tap are ignored. */
+  private lastNavTouchAt = 0;
 
   /** Scroll past this point before the header is allowed to collapse. */
   private static readonly NAV_HIDE_AFTER = 140;
   /** Downward travel required to collapse (filters out jitter/bounce). */
-  private static readonly NAV_DOWN_TOLERANCE = 8;
+  private static readonly NAV_DOWN_TOLERANCE = 12;
   /** Upward travel required to expand. Smaller than the down tolerance so
    *  the header feels responsive without flickering. */
-  private static readonly NAV_UP_TOLERANCE = 4;
+  private static readonly NAV_UP_TOLERANCE = 6;
 
   /**
    * Expand the full navbar from the compact centered-logo state.
@@ -467,8 +473,31 @@ export class AppComponent {
   }
 
   onNavPointerEnter(): void {
+    // A phone emulates mouseenter after a tap and never sends the matching mouseleave, which would pin the bar open.
+    if (this.isEmulatedMouse()) return;
     this.navPointerInside = true;
     this.clearNavLeaveTimer();
+  }
+
+  /** Called on pointerdown over the header; a touch or pen press marks the mouse events that follow as emulated. */
+  onNavPointerDown(ev: PointerEvent): void {
+    if (ev.pointerType === 'mouse') return;
+    this.lastNavTouchAt = Date.now();
+    this.navPointerInside = false;
+    this.clearNavLeaveTimer();
+  }
+
+  private isEmulatedMouse(): boolean {
+    return Date.now() - this.lastNavTouchAt < 1000;
+  }
+
+  /** Keyboard focus only. A button that was tapped or clicked keeps focus but must not pin the bar open. */
+  private hasVisibleFocus(el: Element): boolean {
+    try {
+      return el.matches(':focus-visible');
+    } catch {
+      return true;
+    }
   }
 
   /** Once the pointer leaves, a bar that was opened by hovering folds back if the page is still scrolled down. */
@@ -505,12 +534,21 @@ export class AppComponent {
     if (!active || active === document.body) return false;
     const header = document.querySelector('header.pubnav');
     const compact = header?.querySelector('.pubnav-compact');
-    return !!header?.contains(active) && !compact?.contains(active);
+    return !!header?.contains(active) && !compact?.contains(active) && this.hasVisibleFocus(active);
   }
 
   @HostListener('window:scroll')
   onWindowScroll(): void {
-    const y = window.scrollY ?? 0;
+    const y = Math.max(0, window.scrollY ?? 0);
+    // Sum the travel of the current swipe; the anchor restarts whenever the direction flips.
+    const delta = y - this.lastScrollY;
+    if (delta !== 0) {
+      const dir = delta > 0 ? 1 : -1;
+      if (dir !== this.scrollDir) {
+        this.scrollDir = dir;
+        this.scrollAnchor = this.lastScrollY;
+      }
+    }
     const scrolled = y > 8;
     if (scrolled !== this.navScrolled()) {
       this.navScrolled.set(scrolled);
@@ -552,7 +590,7 @@ export class AppComponent {
           ? document.querySelector('header.pubnav')
           : null;
       const compact = header?.querySelector('.pubnav-compact');
-      if (header?.contains(active) && !(compact?.contains(active))) {
+      if (header?.contains(active) && !(compact?.contains(active)) && this.hasVisibleFocus(active)) {
         if (this.navHidden()) this.navHidden.set(false);
         this.lastScrollY = y;
         return;
@@ -561,9 +599,9 @@ export class AppComponent {
 
     if (y <= AppComponent.NAV_HIDE_AFTER) {
       if (this.navHidden()) this.navHidden.set(false);
-    } else if (y > this.lastScrollY + AppComponent.NAV_DOWN_TOLERANCE) {
+    } else if (this.scrollDir > 0 && y - this.scrollAnchor >= AppComponent.NAV_DOWN_TOLERANCE) {
       if (!this.navHidden()) this.navHidden.set(true);
-    } else if (y < this.lastScrollY - AppComponent.NAV_UP_TOLERANCE) {
+    } else if (this.scrollDir < 0 && this.scrollAnchor - y >= AppComponent.NAV_UP_TOLERANCE) {
       if (this.navHidden()) this.navHidden.set(false);
     }
     this.lastScrollY = y;
