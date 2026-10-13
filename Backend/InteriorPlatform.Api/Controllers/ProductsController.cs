@@ -21,7 +21,7 @@ public class ProductsController : ControllerBase
         ["Sofas", "Beds", "Tables", "Chairs", "Wardrobes"];
 
     private static readonly string[] AllowedRooms =
-        ["Living Room", "Bedroom", "Dining", "Workspace"];
+        ["Living Room", "Bedroom", "Kitchen", "Dining", "Workspace"];
 
     private readonly ApplicationDbContext _db;
 

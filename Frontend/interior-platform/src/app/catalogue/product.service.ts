@@ -60,7 +60,7 @@ export interface ProductUpsertRequest {
 export const PRODUCT_CATEGORIES = ['Sofas', 'Beds', 'Tables', 'Chairs', 'Wardrobes'];
 
 /** Backend room allowlist, mirrored for admin dropdowns (server owns validation). */
-export const PRODUCT_ROOMS = ['Living Room', 'Bedroom', 'Dining', 'Workspace'];
+export const PRODUCT_ROOMS = ['Living Room', 'Bedroom', 'Kitchen', 'Dining', 'Workspace'];
 
 /** Frontend-only field with no backend column: safe default until Task 2. */
 export const PRODUCT_SWATCH_DEFAULT = '';

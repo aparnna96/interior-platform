@@ -219,6 +219,7 @@
           <button [class.active]="activeView() === 'estimates'" (click)="activeView.set('estimates'); closeDrawer()">Estimates</button>
           <button [class.active]="activeView() === 'projects'" (click)="activeView.set('projects'); closeDrawer()">Projects</button>
           <span class="pubnav-sep" aria-hidden="true"></span>
+          <button [class.active]="activeView() === 'wishlist'" (click)="activeView.set('wishlist'); closeDrawer()" aria-label="Open saved pieces">Saved@if (wishlist.count() > 0) { <span class="cart-badge">{{ wishlist.count() }}</span> }</button>
           <button [class.active]="activeView() === 'cart'" (click)="activeView.set('cart'); closeDrawer()" aria-label="Open cart">Cart@if (cart.totalQty() > 0) { <span class="cart-badge">{{ cart.totalQty() }}</span> }</button>
           @if (auth.isAuthenticated()) {
             <button [class.active]="activeView() === 'orders'" (click)="activeView.set('orders'); closeDrawer()">Orders</button>
@@ -258,6 +259,7 @@
         <button [class.active]="activeView() === 'visualizer'" (click)="activeView.set('visualizer'); closeDrawer()">Visualizer</button>
         <button [class.active]="activeView() === 'estimates'" (click)="activeView.set('estimates'); closeDrawer()">Estimates</button>
         <button [class.active]="activeView() === 'projects'" (click)="activeView.set('projects'); closeDrawer()">Projects</button>
+        <button [class.active]="activeView() === 'wishlist'" (click)="activeView.set('wishlist'); closeDrawer()" aria-label="Open saved pieces">Saved@if (wishlist.count() > 0) { <span class="cart-badge">{{ wishlist.count() }}</span> }</button>
         <button [class.active]="activeView() === 'cart'" (click)="activeView.set('cart'); closeDrawer()" aria-label="Open cart">Cart@if (cart.totalQty() > 0) { <span class="cart-badge">{{ cart.totalQty() }}</span> }</button>
         @if (auth.isAuthenticated()) {
           <button [class.active]="activeView() === 'orders'" (click)="activeView.set('orders'); closeDrawer()">Orders</button>
@@ -643,7 +645,7 @@
 
     @if (activeView() === 'interiors') {
       <main class="content home-main">
-        <app-interiors (navigate)="activeView.set($event)" />
+        <app-interiors (navigate)="activeView.set($event)" (roomSelected)="openRoom($event)" />
       </main>
     }
 
@@ -651,6 +653,8 @@
       <main class="content cat-main">
         <app-catalogue
           [productId]="routeProductId()"
+          [routeRoom]="routeRoom()"
+          (roomRoute)="onRoomRoute($event)"
           (productRoute)="onProductRoute($event)"
           (visualizerRequested)="onVisualizerRequested($event)"
           (openCart)="activeView.set('cart'); closeDrawer()"
@@ -662,6 +666,15 @@
       <main class="content cat-main">
         <app-cart
           (browse)="activeView.set('catalogue'); closeDrawer()"
+          (loginRequested)="openLogin()" />
+      </main>
+    }
+
+    @if (activeView() === 'wishlist') {
+      <main class="content cat-main">
+        <app-wishlist
+          (browse)="activeView.set('catalogue'); closeDrawer()"
+          (openProduct)="openProduct($event)"
           (loginRequested)="openLogin()" />
       </main>
     }
@@ -881,6 +894,7 @@
         </nav>
         <nav class="site-footer-col" aria-label="Your account">
           <p class="site-footer-head">Your account</p>
+          <button type="button" (click)="activeView.set('wishlist')">Saved</button>
           <button type="button" (click)="activeView.set('cart')">Cart</button>
           <button type="button" (click)="activeView.set('orders')">Orders</button>
           <button type="button" (click)="activeView.set('account')">Account</button>

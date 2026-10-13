@@ -2,6 +2,7 @@ import { Component, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RevealDirective } from '../shared/reveal.directive';
 import { LeadFormComponent } from '../leads/lead-form.component';
+import type { RoomFilter } from '../catalogue/catalogue-products';
 import {
   SPACES,
   SHOWCASE,
@@ -19,6 +20,9 @@ export class InteriorsComponent {
   /** Requests the shell to switch to an existing view. No routing. */
   navigate = output<HomeDestination>();
 
+  /** Asks the shell to open Furniture filtered to this room (/furniture?room=…). */
+  roomSelected = output<RoomFilter>();
+
   spaces = SPACES;
   showcase = SHOWCASE;
 
@@ -27,6 +31,10 @@ export class InteriorsComponent {
 
   go(d: HomeDestination): void {
     this.navigate.emit(d);
+  }
+
+  openRoom(room: RoomFilter): void {
+    this.roomSelected.emit(room);
   }
 
   toggleEnquiry(): void {

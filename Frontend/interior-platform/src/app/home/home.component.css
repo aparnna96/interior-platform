@@ -541,7 +541,7 @@
       linear-gradient(90deg, rgba(20, 16, 12, 0.35) 0%, rgba(20, 16, 12, 0) 60%);
   }
   .hero-copy { padding: 24px 20px 60px; max-width: 100%; }
-  .hero-copy h1 { font-size: 30px; }
+  .hero-copy h1 { font-size: 40px; }
   /* Arrows stay available on phones: they flank the dots along the bottom edge. */
   .hero-arrow { top: auto; bottom: 2px; width: 44px; height: 44px; transform: none; }
   .hero-prev { left: calc(50% - 104px); }
@@ -574,7 +574,7 @@
 @media (max-width: 480px) {
   .feat-name { font-size: 13px; }
   .feat-price { font-size: 14.5px; }
-  .hero-copy h1 { font-size: 28px; }
+  .hero-copy h1 { font-size: 36px; }
   .hero-actions .hp-btn,
   .cta-actions .hp-btn { flex: 1 1 100%; }
   .block-head.split .hp-btn { width: 100%; }

@@ -71,6 +71,10 @@ Interior design and furniture platform for the client "Confident Group". Used as
 - Home: the hero is full-bleed (edge to edge, square corners, navbar overlays it) and the category cards are tall 3:4 portraits with the name on the photo.
 - Footer: one standard site footer on every page, in `app.component.html` with its CSS in `src/styles.css` (`.site-footer*`): brand block with the CG logo on a white tile (swap for a transparent logo later), three link columns, and a bottom bar.
 - Product page (`catalogue/product-details`): breadcrumb, hover zoom for mouse pointers only (touch uses the browser's pinch-zoom, no lightbox), and a "Complete the look" row of up to four pieces, same room first.
+- Saved (wishlist): heart buttons on catalogue cards and the product page, a "Saved" page at `/saved` (view `wishlist`, public) and a navbar/footer link with a count. `WishlistService` keeps product ids in `localStorage` key `ip.wishlist`; it is per browser, with no API or database, so it does not follow an account. Syncing to an account would need a table and endpoints.
+
+- Rooms: Living Room, Bedroom, Kitchen, Dining, Workspace (frontend `ROOMS` in `catalogue-products.ts`, `PRODUCT_ROOMS` in `product.service.ts`, backend `AllowedRooms` in `ProductsController`; keep the three in step). A room tile on Interiors opens `/furniture?room=Bedroom` (`openRoom` in `AppComponent`); the catalogue tabs update the same query with `replaceUrl`. `roomOf`, `pathForView(..., room)` and `ResolvedPath.room` in `app-paths.ts` carry it. Kitchen pieces are seeded in `ProductSeeder` using the existing categories, because the Visualizer only knows those.
+
 - FieldStaff keep the workspace layout on `/leads` and `/field`. `staffGuard` sends an Admin without the FieldStaff role from `/leads` to `/admin/leads`; `/field` is FieldStaff only.
 - Feature folders in `src/app/`: `admin-dashboard`, `admin-layout`, `admin-login`, `admin-orders`, `admin-products`, `admin-proposals`, `admin-rates`, `auth`, `catalogue`, `elevation`, `estimate`, `finishes`, `floor-plan`, `home`, `leads`, `orders`, `proposal`, `register`, `room-visualizer`, `shared`, `whatsapp`.
 

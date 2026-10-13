@@ -30,10 +30,10 @@
   min-width: 0;
 }
 .cart-head h1 {
-  font-size: 26px;
+  font-size: 40px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.1;
+  line-height: 1.05;
   margin-top: 4px;
 }
 .standfirst { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
@@ -77,7 +77,7 @@
   margin-bottom: 6px;
 }
 .empty-icon svg { width: 24px; height: 24px; }
-.cart-empty p { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.cart-empty p { font-family: var(--font-display); font-size-adjust: 0.47; font-size: 28px; font-weight: 600; line-height: 1.15; }
 .cart-empty span { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
 
 /* ── Inline API error (same danger tone as catalogue alerts) ── */
@@ -365,7 +365,7 @@
   .delivery { grid-template-columns: minmax(0, 1fr); padding: 16px 14px; }
   .delivery-actions { flex-direction: column-reverse; }
   .delivery-actions .btn-primary, .delivery-actions .btn-secondary { width: 100%; }
-  .cart-head h1 { font-size: 22px; }
+  .cart-head h1 { font-size: 32px; }
   .line { grid-template-columns: 72px minmax(0, 1fr); }
   .line-media { width: 72px; }
   .line-sub { grid-column: 2; justify-self: start; }

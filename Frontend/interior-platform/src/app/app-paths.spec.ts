@@ -30,6 +30,7 @@ describe('app paths', () => {
     expect(pathForView('admin-orders')).toBe('/admin/orders');
     expect(pathForView('login')).toBe('/login');
     expect(pathForView('account')).toBe('/account');
+    expect(pathForView('wishlist')).toBe('/saved');
   });
 
   it('gives a product details page its own address', () => {
@@ -221,5 +222,19 @@ describe('app paths', () => {
   it('keeps a record address inside the Admin area for return addresses', () => {
     expect(safeAdminReturnUrl('/admin/orders/o-1')).toBe('/admin/orders/o-1');
     expect(isAdminPath('/admin/leads/l-3')).toBeTrue();
+  });
+
+  it('reads the room from /furniture?room=… and ignores unknown rooms', () => {
+    expect(viewForPath('/furniture?room=Kitchen')).toEqual({ view: 'catalogue', productId: null, room: 'Kitchen' });
+    expect(viewForPath('/furniture?room=living%20room')?.room).toBe('Living Room');
+    expect(viewForPath('/furniture?room=Garage')?.room).toBeNull();
+    expect(viewForPath('/furniture')?.room).toBeNull();
+  });
+
+  it('builds a furniture address that carries the room', () => {
+    expect(pathForView('catalogue', null, null, 'Bedroom')).toBe('/furniture?room=Bedroom');
+    expect(pathForView('catalogue', null, null, 'Living Room')).toBe('/furniture?room=Living%20Room');
+    expect(pathForView('catalogue', null, null, 'All')).toBe('/furniture');
+    expect(pathForView('catalogue', 'aria-3s-sofa', null, 'Bedroom')).toBe('/furniture/aria-3s-sofa');
   });
 });

@@ -1,8 +1,9 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RevealDirective } from '../shared/reveal.directive';
 import { LeadFormComponent } from '../leads/lead-form.component';
 import type { CatalogueProduct } from './catalogue-products';
+import { WishlistService } from './wishlist.service';
 
 export interface AddToCartEvent {
   id: string;
@@ -41,6 +42,8 @@ export function completeTheLook(product: CatalogueProduct, all: readonly Catalog
   styleUrl: './product-details.component.css',
 })
 export class ProductDetailsComponent implements OnChanges {
+  private readonly wishlist = inject(WishlistService);
+
   @Input({ required: true }) product!: CatalogueProduct;
   /** The whole loaded catalogue, used to suggest pieces for "Complete the look". */
   @Input() catalogue: readonly CatalogueProduct[] = [];
@@ -128,6 +131,15 @@ export class ProductDetailsComponent implements OnChanges {
 
   toggleEnquiry(): void {
     this.showEnquiry.update((v) => !v);
+  }
+
+  /** Whether this piece is on the visitor's saved list. */
+  isSaved(): boolean {
+    return this.wishlist.has(this.product.id);
+  }
+
+  toggleSaved(): void {
+    this.wishlist.toggle(this.product.id);
   }
 
   goBack(): void {

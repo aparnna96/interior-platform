@@ -93,6 +93,16 @@
               <span class="in-cart">In cart · {{ qtyOf(p.id) }}</span>
             }
           </button>
+          <button
+            type="button"
+            class="heart-btn"
+            [class.on]="isSaved(p.id)"
+            (click)="toggleSaved(p.id)"
+            [attr.aria-pressed]="isSaved(p.id)"
+            [attr.aria-label]="(isSaved(p.id) ? 'Remove ' + p.name + ' from saved' : 'Save ' + p.name + ' for later')"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.6S2 10.2 2 6.1A3 3 0 0 1 8 4.7a3 3 0 0 1 6 1.4c0 4.1-6 7.5-6 7.5z"/></svg>
+          </button>
           <div class="tile-info">
             <p class="tile-room">{{ p.room }} · {{ p.category }}</p>
             <h3 class="tile-name">
@@ -114,8 +124,13 @@
     </div>
   } @else {
     <div class="sr-empty">
-      <p>No pieces match your filters.</p>
-      <span>Try a different search term or room.</span>
+      @if (room() !== 'All' && search().trim() === '') {
+        <p>{{ room() }} pieces are coming soon.</p>
+        <span>Browse the other rooms, or talk to us about a custom {{ room().toLowerCase() }}.</span>
+      } @else {
+        <p>No pieces match your filters.</p>
+        <span>Try a different search term or room.</span>
+      }
       @if (hasFilters()) {
         <button class="btn-outline" (click)="clearFilters()">Clear filters</button>
       }

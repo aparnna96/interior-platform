@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { landingPathFor, safeReturnUrl } from '../app-paths';
 import { LoginComponent } from './login.component';
+import { AUTH_LOGIN_IMAGE } from '../home/home-data';
 
 /**
  * The /login page. After a successful login the visitor goes back to the page
@@ -16,25 +17,31 @@ import { LoginComponent } from './login.component';
   imports: [LoginComponent],
   styleUrl: './auth-pages.css',
   template: `
-    <section class="auth-page" aria-label="Log in">
-      <header class="auth-head">
-        <p class="kicker">Account</p>
-        <h1>Log in</h1>
-        <p class="sub">Log in to use your cart, estimates, proposals and orders. You can browse without an account.</p>
-      </header>
-      <div class="auth-card">
-        <app-login (loggedIn)="onLoggedIn()" />
+    <section class="auth-page auth-split" aria-label="Log in">
+      <div class="auth-photo" aria-hidden="true">
+        <img [src]="photo.image" alt="" />
       </div>
-      <p class="auth-switch">
-        New here?
-        <button type="button" class="linklike" (click)="goRegister()">Create an account</button>
-      </p>
+      <div class="auth-main">
+        <header class="auth-head">
+          <p class="kicker">Account</p>
+          <h1>Log in</h1>
+          <p class="sub">Log in to use your cart, estimates, proposals and orders. You can browse without an account.</p>
+        </header>
+        <div class="auth-card">
+          <app-login (loggedIn)="onLoggedIn()" />
+        </div>
+        <p class="auth-switch">
+          New here?
+          <button type="button" class="linklike" (click)="goRegister()">Create an account</button>
+        </p>
+      </div>
     </section>
   `,
 })
 export class LoginPageComponent implements AfterViewInit {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
+  readonly photo = AUTH_LOGIN_IMAGE;
 
   ngAfterViewInit(): void {
     setTimeout(() => document.getElementById('login-email')?.focus(), 0);

@@ -130,6 +130,18 @@ export const DESIGN_IMAGE: HomeImage = {
   imageAlt: 'Home workspace with a wooden desk, laptop and lamp',
 };
 
+/** Photo beside the Log in form: a navy sofa in a living room with a sea view (https://www.pexels.com/photo/1457842/). */
+export const AUTH_LOGIN_IMAGE: HomeImage = {
+  image: px(1457842, 1100),
+  imageAlt: 'Living room with a navy sofa and a large window overlooking the sea',
+};
+
+/** Portrait photo beside the Create account form: a copper pendant lamp and wall planters (https://www.pexels.com/photo/1129413/). */
+export const AUTH_REGISTER_IMAGE: HomeImage = {
+  image: px(1129413, 1100),
+  imageAlt: 'Copper pendant lamp and wooden planters on a dark wall by a window',
+};
+
 export const DESIGN_STEPS: NumberedStep[] = [
   { title: 'Set dimensions', text: 'Enter your room size in feet.' },
   { title: 'Place furniture', text: 'Add beds, sofas, tables and more.' },

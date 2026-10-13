@@ -21,7 +21,9 @@
           <figcaption>
             <strong>{{ s.name }}</strong>
             <span>{{ s.blurb }}</span>
+            <span class="room-cta" aria-hidden="true">Shop {{ s.name }} →</span>
           </figcaption>
+          <button type="button" class="room-link" (click)="openRoom(s.name)" [attr.aria-label]="'Shop ' + s.name + ' furniture'"></button>
         </figure>
       }
     </div>

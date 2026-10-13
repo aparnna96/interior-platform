@@ -26,7 +26,7 @@
 
 export type CatalogueCategory = 'Sofas' | 'Beds' | 'Tables' | 'Chairs' | 'Wardrobes';
 
-export type RoomFilter = 'All' | 'Living Room' | 'Bedroom' | 'Dining' | 'Workspace';
+export type RoomFilter = 'All' | 'Living Room' | 'Bedroom' | 'Kitchen' | 'Dining' | 'Workspace';
 
 export interface CatalogueProduct {
   id: string;
@@ -59,7 +59,7 @@ function px(id: number, w = 900): string {
   return `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${w}`;
 }
 
-export const ROOMS: RoomFilter[] = ['All', 'Living Room', 'Bedroom', 'Dining', 'Workspace'];
+export const ROOMS: RoomFilter[] = ['All', 'Living Room', 'Bedroom', 'Kitchen', 'Dining', 'Workspace'];
 
 /**
  * Pure product filter: matches room exactly (unless 'All') and matches

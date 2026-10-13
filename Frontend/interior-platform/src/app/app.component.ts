@@ -31,6 +31,9 @@ import {
 import { CatalogueComponent } from './catalogue/catalogue.component';
 import { CartComponent } from './catalogue/cart.component';
 import { CartService } from './catalogue/cart.service';
+import { WishlistComponent } from './catalogue/wishlist.component';
+import { WishlistService } from './catalogue/wishlist.service';
+import type { RoomFilter } from './catalogue/catalogue-products';
 import { AuthService } from './auth.service';
 import { OrdersComponent } from './orders/orders.component';
 import { ProposalsComponent } from './proposal/proposals.component';
@@ -94,7 +97,7 @@ interface SavedProject {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent, AdminRatesComponent, AdminDashboardComponent, AdminLayoutComponent, AdminLoginComponent],
+  imports: [CommonModule, RoomVisualizerComponent, FloorPlanComponent, ElevationViewComponent, TextureChipsComponent, LoginPageComponent, RegisterPageComponent, AccountPageComponent, CatalogueComponent, CartComponent, WishlistComponent, OrdersComponent, ProposalsComponent, SavedEstimatesComponent, HomeComponent, InteriorsComponent, LeadsComponent, AdminProductsComponent, AdminOrdersComponent, AdminProposalsComponent, AdminRatesComponent, AdminDashboardComponent, AdminLayoutComponent, AdminLoginComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -119,8 +122,14 @@ export class AppComponent {
   /** Record id from an /admin/orders/:id style address; the Admin list shows that record's page. */
   routeRecordId = signal<string | null>(viewForPath(this.router.url)?.recordId ?? null);
 
+  /** Room from a /furniture?room=Bedroom address (or the last room picked); the catalogue opens filtered to it. */
+  routeRoom = signal<RoomFilter | null>(viewForPath(this.router.url)?.room ?? null);
+
   /** Shared frontend cart store (Pillar 2) — badge count in the navbar. */
   readonly cart = inject(CartService);
+
+  /** Saved pieces (browser-only wishlist) — badge count in the navbar. */
+  readonly wishlist = inject(WishlistService);
 
   /** Session state — gates customer-only nav entries such as Orders. */
   readonly auth = inject(AuthService);
@@ -135,6 +144,7 @@ export class AppComponent {
       this.activeView() === 'interiors' ||
       this.activeView() === 'catalogue' ||
       this.activeView() === 'cart' ||
+      this.activeView() === 'wishlist' ||
       this.activeView() === 'orders' ||
       this.activeView() === 'proposals' ||
       this.activeView() === 'login' ||
@@ -279,6 +289,8 @@ export class AppComponent {
     if (this.routeProductId() !== resolved.productId) this.routeProductId.set(resolved.productId);
     const recordId = resolved.recordId ?? null;
     if (this.routeRecordId() !== recordId) this.routeRecordId.set(recordId);
+    // A product page keeps the room that was picked, so closing it returns to the same list.
+    if (resolved.view === 'catalogue' && !resolved.productId) this.routeRoom.set(resolved.room ?? null);
     this.closeDrawer();
   }
 
@@ -303,7 +315,27 @@ export class AppComponent {
   onProductRoute(productId: string | null): void {
     if (this.routeProductId() === productId) return;
     this.routeProductId.set(productId);
+    this.router.navigateByUrl(pathForView('catalogue', productId, null, this.routeRoom())).catch(() => undefined);
+  }
+
+  /** The catalogue changed its room tab: mirror it in the address, replacing the entry so Back leaves the page. */
+  onRoomRoute(room: RoomFilter): void {
+    const next = room === 'All' ? null : room;
+    if (this.routeRoom() === next) return;
+    this.routeRoom.set(next);
+    this.router.navigateByUrl(pathForView('catalogue', null, null, next), { replaceUrl: true }).catch(() => undefined);
+  }
+
+  /** A saved piece was chosen on the Saved page: open its product page (a new history entry). */
+  openProduct(productId: string): void {
+    this.closeDrawer();
     this.router.navigateByUrl(pathForView('catalogue', productId)).catch(() => undefined);
+  }
+
+  /** A room tile on Interiors: open Furniture filtered to that room (a new history entry, so Back returns to Interiors). */
+  openRoom(room: RoomFilter): void {
+    this.closeDrawer();
+    this.router.navigateByUrl(pathForView('catalogue', null, null, room)).catch(() => undefined);
   }
 
   /**

@@ -92,6 +92,10 @@
         <button class="btn-outline" (click)="toggleEnquiry()" [attr.aria-expanded]="showEnquiry()" [attr.aria-label]="'Enquire about ' + product.name">
           Enquire
         </button>
+        <button class="btn-outline pd-save" type="button" [class.on]="isSaved()" (click)="toggleSaved()" [attr.aria-pressed]="isSaved()">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.6S2 10.2 2 6.1A3 3 0 0 1 8 4.7a3 3 0 0 1 6 1.4c0 4.1-6 7.5-6 7.5z"/></svg>
+          {{ isSaved() ? 'Saved' : 'Save for later' }}
+        </button>
       </div>
 
       @if (showEnquiry()) {

@@ -1,0 +1,85 @@
+<section class="wl" aria-label="Saved pieces">
+  <header class="wl-head">
+    <div>
+      <p class="kicker">Furniture · Saved</p>
+      <h1>Saved pieces</h1>
+      @if (wishlist.count() > 0) {
+        <p class="standfirst">{{ wishlist.count() }} piece{{ wishlist.count() === 1 ? '' : 's' }} saved on this device</p>
+      }
+    </div>
+    @if (wishlist.count() > 0) {
+      <button class="linklike" (click)="browse.emit()">Continue browsing</button>
+    }
+  </header>
+
+  @if (wishlist.count() === 0) {
+    <div class="wl-empty">
+      <span class="wl-empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><path d="M8 13.6S2 10.2 2 6.1A3 3 0 0 1 8 4.7a3 3 0 0 1 6 1.4c0 4.1-6 7.5-6 7.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      </span>
+      <p>Nothing saved yet</p>
+      <span>Tap the heart on any piece to keep it here for later.</span>
+      <button class="btn-primary" (click)="browse.emit()">Browse Furniture</button>
+    </div>
+  } @else if (productService.loading() && productService.products().length === 0) {
+    <div class="wl-grid" aria-busy="true" aria-live="polite">
+      <p class="adm-sr-only">Loading your saved pieces…</p>
+      @for (n of skeletons; track n) {
+        <div class="wl-card" aria-hidden="true">
+          <span class="skel wl-skel-media"></span>
+          <div class="wl-info">
+            <span class="skel skel-line skel-w50"></span>
+            <span class="skel skel-title skel-w90"></span>
+            <span class="skel skel-line skel-w70"></span>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (productService.error() && productService.products().length === 0) {
+    <div class="wl-empty" role="alert">
+      <p>Could not load your saved pieces.</p>
+      <span>{{ productService.error() }}</span>
+      <button class="btn-primary" (click)="productService.load()">Retry</button>
+    </div>
+  } @else {
+    <div class="wl-grid">
+      @for (p of saved(); track p.id) {
+        <article class="wl-card" [attr.aria-label]="p.name">
+          <button class="wl-media" (click)="openProduct.emit(p.id)" [attr.aria-label]="'View ' + p.name + ' details'">
+            <img [src]="p.image" [alt]="p.name" loading="lazy" />
+          </button>
+          <button
+            type="button"
+            class="heart-btn on"
+            (click)="wishlist.remove(p.id)"
+            aria-pressed="true"
+            [attr.aria-label]="'Remove ' + p.name + ' from saved'"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.6S2 10.2 2 6.1A3 3 0 0 1 8 4.7a3 3 0 0 1 6 1.4c0 4.1-6 7.5-6 7.5z" fill="currentColor" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="wl-info">
+            <p class="wl-room">{{ p.room }} · {{ p.category }}</p>
+            <h2 class="wl-name">
+              <button class="wl-name-btn" (click)="openProduct.emit(p.id)">{{ p.name }}</button>
+            </h2>
+            <p class="wl-sub">{{ p.material }} · {{ p.finish }}</p>
+            <div class="wl-row">
+              <p class="wl-price">₹{{ inr(p.price) }}</p>
+              <button class="btn-primary wl-add" (click)="addToCart(p.id)" [attr.aria-label]="'Add ' + p.name + ' to cart'">
+                @if (qtyOf(p.id) > 0) { Added · {{ qtyOf(p.id) }} } @else { Add to Cart }
+              </button>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+
+  @if (cartNotice()) {
+    <div class="wl-toast" role="status">
+      <span>{{ cartNotice() }}</span>
+      <button type="button" class="wl-toast-login" (click)="requestLogin()">Log in</button>
+      <button type="button" class="wl-toast-close" (click)="dismissNotice()" aria-label="Dismiss message">&times;</button>
+    </div>
+  }
+</section>

@@ -10,12 +10,15 @@
  * config and the shell all import it without creating a cycle.
  */
 
+import { ROOMS, type RoomFilter } from './catalogue/catalogue-products';
+
 export type AppView =
   | 'home'
   | 'interiors'
   | 'visualizer'
   | 'catalogue'
   | 'cart'
+  | 'wishlist'
   | 'orders'
   | 'proposals'
   | 'estimates'
@@ -65,6 +68,7 @@ export const VIEW_ROUTES: readonly ViewRoute[] = [
   { view: 'estimates', path: 'estimates', title: 'Estimates | Confident Group', access: 'public' },
   { view: 'projects', path: 'projects', title: 'Projects | Confident Group', access: 'public' },
   { view: 'cart', path: 'cart', title: 'Cart | Confident Group', access: 'public' },
+  { view: 'wishlist', path: 'saved', title: 'Saved | Confident Group', access: 'public' },
   { view: 'orders', path: 'orders', title: 'Orders | Confident Group', access: 'auth' },
   { view: 'proposals', path: 'proposals', title: 'Proposals | Confident Group', access: 'auth' },
   { view: 'account', path: 'account', title: 'Account | Confident Group', access: 'auth' },
@@ -121,9 +125,17 @@ export function pathOf(url: string): string {
  * URL path for a view. The furniture view can carry a product id, giving the
  * product details page its own address (/furniture/:id).
  */
-export function pathForView(view: AppView, productId: string | null = null, recordId: string | null = null): string {
+export function pathForView(
+  view: AppView,
+  productId: string | null = null,
+  recordId: string | null = null,
+  room: string | null = null
+): string {
   if (view === 'catalogue' && productId) {
     return `/furniture/${encodeURIComponent(productId)}`;
+  }
+  if (view === 'catalogue' && room && room !== 'All') {
+    return `/furniture?room=${encodeURIComponent(room)}`;
   }
   if (recordId && ADMIN_RECORD_VIEWS.includes(view)) {
     const base = BY_VIEW.get(view)?.path ?? 'admin';
@@ -138,6 +150,17 @@ export interface ResolvedPath {
   readonly productId: string | null;
   /** Record id of an Admin detail address (/admin/orders/:id and the like), else null. */
   readonly recordId?: string | null;
+  /** Room filter of a /furniture?room=Bedroom address, else null (all rooms). */
+  readonly room?: RoomFilter | null;
+}
+
+/** The room named by the room query parameter, matched ignoring case, or null when absent or unknown. */
+export function roomOf(url: string): RoomFilter | null {
+  const query = /\?([^#]*)/.exec(url ?? '')?.[1];
+  if (!query) return null;
+  const raw = new URLSearchParams(query).get('room')?.trim().toLowerCase();
+  if (!raw) return null;
+  return ROOMS.find((r) => r !== 'All' && r.toLowerCase() === raw) ?? null;
 }
 
 /** The view a URL path stands for, or null when the path is unknown. */
@@ -145,7 +168,7 @@ export function viewForPath(url: string): ResolvedPath | null {
   const path = pathOf(url);
   if (path === '/') return { view: 'home', productId: null };
   const exact = BY_PATH.get(path);
-  if (exact) return { view: exact.view, productId: null };
+  if (exact) return { view: exact.view, productId: null, room: exact.view === 'catalogue' ? roomOf(url) : null };
   const product = PRODUCT_PATH.exec(path);
   if (product) {
     try {

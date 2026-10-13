@@ -34,6 +34,38 @@
   min-width: 0;
 }
 .auth-switch { font-size: 13px; color: var(--ink-2); }
+
+/* Log in and Create account: photo on one side, the form on the other. */
+.auth-split {
+  max-width: 1000px;
+  gap: 0;
+  padding-top: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.auth-photo { position: relative; min-height: 100%; background: #211c16; }
+.auth-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.auth-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(20, 16, 12, 0.35) 0%, rgba(20, 16, 12, 0) 55%);
+}
+.auth-main { display: grid; gap: 22px; align-content: center; padding: 48px 44px; min-width: 0; }
+.auth-split .auth-head h1 { font-size: 40px; line-height: 1.05; }
+.auth-split .auth-head .kicker { color: var(--accent-ink); }
+.auth-split .auth-card { border: 0; box-shadow: none; background: none; padding: 0; }
+
+@media (max-width: 800px) {
+  .auth-split { grid-template-columns: minmax(0, 1fr); }
+  .auth-photo { min-height: 0; height: 150px; }
+  .auth-main { padding: 28px 20px 24px; }
+  .auth-split .auth-head h1 { font-size: 32px; }
+}
 .linklike {
   border: 0;
   background: none;

@@ -10,6 +10,7 @@ import {
 import { CartService } from './cart.service';
 import { ProductService } from './product.service';
 import { ProductDetailsComponent, type AddToCartEvent } from './product-details.component';
+import { WishlistService } from './wishlist.service';
 
 type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
 
@@ -25,6 +26,7 @@ export class CatalogueComponent implements OnInit {
 
   private readonly cart = inject(CartService);
   readonly productService = inject(ProductService);
+  private readonly wishlist = inject(WishlistService);
 
   /**
    * Product id from a /furniture/:id address. The shell owns the address bar;
@@ -35,9 +37,21 @@ export class CatalogueComponent implements OnInit {
   /** Tells the shell a details page was opened (id) or closed (null) so the address follows. */
   productRoute = output<string | null>();
 
+  /** Room from a /furniture?room=Bedroom address (null = all rooms). The shell owns the address bar. */
+  routeRoom = input<RoomFilter | null>(null);
+
+  /** Tells the shell a room tab was picked so the address follows. */
+  roomRoute = output<RoomFilter>();
+
   private lastRouteId: string | null = null;
 
   constructor() {
+    effect(() => {
+      const wanted = this.routeRoom() ?? 'All';
+      untracked(() => {
+        if (wanted !== this.room()) this.room.set(wanted);
+      });
+    });
     effect(() => {
       const id = this.productId();
       untracked(() => {
@@ -90,7 +104,7 @@ export class CatalogueComponent implements OnInit {
 
   clearFilters(): void {
     this.search.set('');
-    this.room.set('All');
+    this.setRoom('All');
   }
 
   setSort(raw: string): void {
@@ -115,6 +129,7 @@ export class CatalogueComponent implements OnInit {
 
   setRoom(r: RoomFilter): void {
     this.room.set(r);
+    this.roomRoute.emit(r);
   }
 
   /** Number of loaded pieces in a room (used for the room navigation counts). */
@@ -129,6 +144,14 @@ export class CatalogueComponent implements OnInit {
 
   addToCart(id: string): void {
     this.cart.add(id, 1);
+  }
+
+  isSaved(id: string): boolean {
+    return this.wishlist.has(id);
+  }
+
+  toggleSaved(id: string): void {
+    this.wishlist.toggle(id);
   }
 
   /** Details-view add: honours the selected quantity (min 1). */

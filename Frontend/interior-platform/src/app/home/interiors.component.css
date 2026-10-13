@@ -1,7 +1,7 @@
-/* Interiors showcase — same editorial language as Home and Furniture. */
+/* Interiors showcase — same editorial language as Home: large photography, names on the photo, serif headings. */
 .interiors {
   display: grid;
-  gap: 30px;
+  gap: 44px;
   align-content: start;
   min-width: 0;
   max-width: 1152px;
@@ -14,59 +14,114 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--accent-ink);
 }
 
-.in-head h1 { font-size: 32px; font-weight: 750; letter-spacing: -0.025em; line-height: 1.08; margin-top: 6px; }
-.standfirst { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
+.in-head { padding-top: 12px; }
+.in-head h1 { font-size: 52px; line-height: 1.02; margin-top: 8px; }
+.in-head h1::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 2px;
+  margin-top: 18px;
+  background: var(--accent);
+}
+.standfirst { font-size: 15px; color: var(--ink-2); margin-top: 14px; max-width: 46ch; }
 
-.block { display: grid; gap: 16px; min-width: 0; }
-.block-head h2 { font-size: 22px; font-weight: 750; letter-spacing: -0.02em; margin-top: 4px; }
+.block { display: grid; gap: 20px; min-width: 0; }
+.block-head h2 { font-size: 34px; line-height: 1.08; margin-top: 4px; }
 
-.rooms-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
+/* Rooms: tall portraits, name and line on the photo. */
+.rooms-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; min-width: 0; }
 .room-tile {
+  position: relative;
   margin: 0;
-  background: #fff;
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.05);
+  background: #211c16;
+  border-radius: var(--radius);
   overflow: hidden;
   min-width: 0;
 }
-.room-media { display: block; position: relative; aspect-ratio: 16 / 10; background: #eee7d9; }
-.room-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.35s ease; }
-.room-tile:hover .room-media img { transform: scale(1.03); }
-.room-tile figcaption { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 2px; }
-.room-tile figcaption strong { font-size: 14.5px; letter-spacing: -0.005em; }
-.room-tile figcaption span { font-size: 12.5px; color: var(--ink-2); }
-.note { font-size: 12.5px; color: var(--muted); }
+.room-media { display: block; position: relative; aspect-ratio: 3 / 4; background: #eee7d9; overflow: hidden; }
+.room-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.room-tile:hover .room-media img { transform: scale(1.06); }
+/* The whole tile is one button that opens Furniture on that room. */
+.room-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: inherit;
+}
+.room-link:focus-visible { outline: 2px solid var(--brass, #b08d57); outline-offset: -4px; }
+.room-tile figcaption .room-cta {
+  margin-top: 6px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e9d9b4;
+}
+.room-tile figcaption,
+.look-tile figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 64px 18px 18px;
+  min-width: 0;
+  color: #faf8f5;
+  background: linear-gradient(0deg, rgba(20, 16, 12, 0.78) 0%, rgba(20, 16, 12, 0.4) 55%, rgba(20, 16, 12, 0) 100%);
+  pointer-events: none;
+}
+.room-tile figcaption strong,
+.look-tile figcaption strong {
+  font-family: var(--font-display);
+  font-size-adjust: 0.47;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.room-tile figcaption span,
+.look-tile figcaption span { font-size: 12.5px; color: #e4dccf; }
+.note { font-size: 13px; color: var(--muted); }
 
-.looks-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
+/* Recent looks: two wide landscape photos per row. */
+.looks-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; min-width: 0; }
 .look-tile {
   position: relative;
   margin: 0;
-  border-radius: 10px;
+  border-radius: var(--radius);
   overflow: hidden;
-  aspect-ratio: 4 / 3;
-  background: #e9e2d5;
+  aspect-ratio: 3 / 2;
+  background: #211c16;
   min-width: 0;
 }
-.look-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.35s ease; }
-.look-tile:hover img { transform: scale(1.03); }
-.look-tile figcaption {
+.look-tile img {
   position: absolute;
-  left: 12px;
-  bottom: 12px;
-  background: rgba(255, 255, 255, 0.94);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  max-width: calc(100% - 24px);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-.look-tile figcaption strong { font-size: 13px; }
-.look-tile figcaption span { font-size: 11.5px; color: var(--ink-2); }
+.look-tile:hover img { transform: scale(1.05); }
+.look-tile figcaption strong { font-size: 28px; }
 
 .in-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .hp-btn {
@@ -79,7 +134,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 11px 20px;
+  padding: 11px 22px;
   white-space: nowrap;
 }
 .hp-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -88,11 +143,21 @@
 .hp-outline { background: #fff; border: 1px solid var(--border); color: var(--ink); }
 .hp-outline:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
 
+@media (max-width: 960px) {
+  .rooms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 640px) {
-  .interiors { gap: 28px; }
+  .interiors { gap: 32px; }
+  .in-head h1 { font-size: 38px; }
+  .block-head h2 { font-size: 28px; }
   .rooms-grid,
   .looks-grid { grid-template-columns: minmax(0, 1fr); }
-  .in-head h1 { font-size: 26px; }
+  .room-media { aspect-ratio: 4 / 3; }
+  .look-tile { aspect-ratio: 4 / 3; }
+  .room-tile figcaption,
+  .look-tile figcaption { padding: 48px 16px 16px; }
+  .look-tile figcaption strong { font-size: 24px; }
   .in-actions .hp-btn { flex: 1 1 100%; }
 }
 
